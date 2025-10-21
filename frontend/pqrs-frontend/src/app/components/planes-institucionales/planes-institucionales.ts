@@ -357,8 +357,49 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
     }
 
     guardarPlan(): void {
+        console.log('=== GUARDANDO PLAN ===');
+        console.log('Plan Form:', this.planForm);
+        console.log('Modo Edición:', this.modoEdicion);
+
         if (!this.canCreatePlanes() && !this.modoEdicion) {
             this.alertService.error('No tiene permisos para crear planes');
+            return;
+        }
+
+        // Validar campos requeridos
+        if (!this.planForm.nombre || this.planForm.nombre.trim().length < 3) {
+            this.alertService.error('El nombre del plan debe tener al menos 3 caracteres');
+            return;
+        }
+
+        if (!this.planForm.descripcion || this.planForm.descripcion.trim().length < 10) {
+            this.alertService.error('La descripción debe tener al menos 10 caracteres');
+            return;
+        }
+
+        if (!this.planForm.anio || this.planForm.anio < 2020 || this.planForm.anio > 2030) {
+            this.alertService.error('El año debe estar entre 2020 y 2030');
+            return;
+        }
+
+        if (!this.planForm.fecha_inicio) {
+            this.alertService.error('La fecha de inicio es obligatoria');
+            return;
+        }
+
+        if (!this.planForm.fecha_fin) {
+            this.alertService.error('La fecha de fin es obligatoria');
+            return;
+        }
+
+        // Validar que fecha_fin sea posterior a fecha_inicio
+        if (new Date(this.planForm.fecha_inicio) >= new Date(this.planForm.fecha_fin)) {
+            this.alertService.error('La fecha de fin debe ser posterior a la fecha de inicio');
+            return;
+        }
+
+        if (!this.planForm.estado) {
+            this.alertService.error('Debe seleccionar un estado para el plan');
             return;
         }
 
@@ -366,6 +407,7 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
             // Actualizar plan existente
             if (!this.planForm.id) return;
 
+            console.log('Actualizando plan ID:', this.planForm.id);
             this.planService.updatePlan(this.planForm.id, this.planForm).subscribe({
                 next: (planActualizado) => {
                     const index = this.planes.findIndex(p => p.id === planActualizado.id);
@@ -382,8 +424,10 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
             });
         } else {
             // Crear nuevo plan
+            console.log('Creando nuevo plan...');
             this.planService.createPlan(this.planForm).subscribe({
                 next: (nuevoPlan) => {
+                    console.log('Plan creado exitosamente:', nuevoPlan);
                     this.planes.push(nuevoPlan);
                     if (nuevoPlan.id) {
                         this.metasPorPlan.set(nuevoPlan.id, []);
@@ -393,7 +437,20 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
                 },
                 error: (error) => {
                     console.error('Error al crear plan:', error);
-                    this.alertService.error(error.error?.detail || 'Error al crear el plan');
+                    console.error('Detalles del error:', error.error);
+
+                    let mensajeError = 'Error al crear el plan';
+                    if (error.error?.detail) {
+                        if (Array.isArray(error.error.detail)) {
+                            const errores = error.error.detail.map((e: any) =>
+                                `${e.loc?.join('.')} - ${e.msg}`
+                            ).join(', ');
+                            mensajeError = `Validación: ${errores}`;
+                        } else if (typeof error.error.detail === 'string') {
+                            mensajeError = error.error.detail;
+                        }
+                    }
+                    this.alertService.error(mensajeError);
                 }
             });
         }
