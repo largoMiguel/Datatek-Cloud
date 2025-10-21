@@ -58,31 +58,54 @@ async def health_check():
 # Crear usuario administrador por defecto si no existe
 @app.on_event("startup")
 async def create_default_admin():
-    db = next(get_db())
-    try:
-        # Verificar si ya existe un admin
-        admin_exists = db.query(User).filter(User.role == UserRole.ADMIN).first()
-        
-        if not admin_exists:
-            # Crear usuario administrador por defecto
-            password = "admin123"
-            hashed_password = get_password_hash(password)
-            
-            admin_user = User(
-                username="admin",
-                email="admin@alcaldia.gov.co",
-                full_name="Administrador del Sistema",
-                hashed_password=hashed_password,
-                role=UserRole.ADMIN,
-                secretaria="Sistemas"
-            )
-            
-            db.add(admin_user)
-            db.commit()
-            print(f"Usuario administrador creado: admin / {password}")
-            print(f"Hash generado correctamente: {hashed_password[:20]}...")
-        
-    except Exception as e:
-        print(f"Error creando usuario administrador: {e}")
-    finally:
-        db.close()
+    import time
+    max_retries = 3
+    retry_delay = 2
+    
+    for attempt in range(max_retries):
+        try:
+            db = next(get_db())
+            try:
+                # Verificar si ya existe un admin
+                admin_exists = db.query(User).filter(User.role == UserRole.ADMIN).first()
+                
+                if not admin_exists:
+                    # Crear usuario administrador por defecto
+                    password = "admin123"
+                    hashed_password = get_password_hash(password)
+                    
+                    admin_user = User(
+                        username="admin",
+                        email="admin@alcaldia.gov.co",
+                        full_name="Administrador del Sistema",
+                        hashed_password=hashed_password,
+                        role=UserRole.ADMIN,
+                        secretaria="Sistemas"
+                    )
+                    
+                    db.add(admin_user)
+                    db.commit()
+                    print(f"Usuario administrador creado: admin / {password}")
+                    print(f"Hash generado correctamente: {hashed_password[:20]}...")
+                else:
+                    print("Usuario administrador ya existe")
+                
+                break  # Éxito, salir del loop de reintentos
+                
+            except Exception as e:
+                db.rollback()
+                if attempt < max_retries - 1:
+                    print(f"Intento {attempt + 1} fallido creando usuario administrador: {e}")
+                    print(f"Reintentando en {retry_delay} segundos...")
+                    time.sleep(retry_delay)
+                else:
+                    print(f"Error creando usuario administrador después de {max_retries} intentos: {e}")
+            finally:
+                db.close()
+                
+        except Exception as e:
+            if attempt < max_retries - 1:
+                print(f"Error de conexión en intento {attempt + 1}: {e}")
+                time.sleep(retry_delay)
+            else:
+                print(f"No se pudo conectar a la base de datos después de {max_retries} intentos: {e}")
