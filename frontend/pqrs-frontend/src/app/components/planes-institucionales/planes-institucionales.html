@@ -1,0 +1,859 @@
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0">
+                        <i class="fas fa-clipboard-list me-2"></i>
+                        <span *ngIf="vistaActual === 'planes'">Planes Institucionales</span>
+                        <span *ngIf="vistaActual === 'metas'">Metas - {{ planSeleccionado?.nombre }}</span>
+                        <span *ngIf="vistaActual === 'analytics'">Analisis - {{ planSeleccionado?.nombre }}</span>
+                    </h2>
+                    <p class="text-muted mb-0" *ngIf="vistaActual === 'planes'">
+                        Gestión y seguimiento de planes estratégicos
+                    </p>
+                    <p class="text-muted mb-0" *ngIf="vistaActual === 'analytics'">
+                        Dashboard analítico del plan institucional
+                    </p>
+                </div>
+                <button class="btn btn-outline-secondary" (click)="volver()">
+                    <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vista de Planes -->
+    <div *ngIf="vistaActual === 'planes'">
+        <!-- Filtros y Acciones -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            <i class="fas fa-filter me-1"></i>Estado
+                        </label>
+                        <select class="form-select" [(ngModel)]="filtroEstadoPlan">
+                            <option value="">Todos los estados</option>
+                            <option value="activo">Activo</option>
+                            <option value="finalizado">Finalizado</option>
+                            <option value="suspendido">Suspendido</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            <i class="fas fa-calendar me-1"></i>Año
+                        </label>
+                        <select class="form-select" [(ngModel)]="filtroAnio">
+                            <option [ngValue]="null">Todos los años</option>
+                            <option *ngFor="let anio of getAniosDisponibles()" [ngValue]="anio">
+                                {{ anio }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-outline-secondary w-100" (click)="limpiarFiltros()">
+                            <i class="fas fa-eraser me-2"></i>Limpiar Filtros
+                        </button>
+                    </div>
+                    <div class="col-md-3" *ngIf="canCreatePlanes()">
+                        <button class="btn btn-primary w-100" (click)="abrirModalNuevoPlan()">
+                            <i class="fas fa-plus me-2"></i>Nuevo Plan
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Mostrando {{ getPlanesVisibles().length }} planes
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Planes -->
+        <div class="row">
+            <div class="col-12" *ngIf="getPlanesVisibles().length === 0">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <span *ngIf="isAdmin()">No hay planes institucionales registrados.</span>
+                    <span *ngIf="isSecretario()">No hay planes disponibles o no tiene metas asignadas.</span>
+                    <button class="btn btn-sm btn-primary ms-3" (click)="abrirModalNuevoPlan()"
+                        *ngIf="canCreatePlanes()">
+                        Crear el primer plan
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4 mb-4" *ngFor="let plan of getPlanesVisibles()">
+                <div class="card h-100 shadow-sm plan-card" [style.cursor]="canViewAnalytics() ? 'pointer' : 'default'"
+                    (click)="canViewAnalytics() ? verAnalytics(plan) : verMetas(plan)">
+                    <div class="card-header bg-{{ getEstadoColor(plan.estado) }} text-white">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="mb-1">{{ plan.nombre }}</h5>
+                                <small>
+                                    <i class="fas fa-calendar me-1"></i>Año {{ plan.anio }}
+                                </small>
+                            </div>
+                            <span class="badge bg-white text-{{ getEstadoColor(plan.estado) }}">
+                                {{ getEstadoTexto(plan.estado) }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">{{ plan.descripcion }}</p>
+
+                        <div class="mb-3">
+                            <small class="text-muted d-block">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                Inicio: {{ plan.fecha_inicio | date:'dd/MM/yyyy' }}
+                            </small>
+                            <small class="text-muted d-block">
+                                <i class="fas fa-calendar-check me-1"></i>
+                                Fin: {{ plan.fecha_fin | date:'dd/MM/yyyy' }}
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <small class="text-muted">
+                                <i class="fas fa-bullseye me-1"></i>
+                                {{ getMetasDePlan(plan.id!).length }} metas registradas
+                            </small>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-light" (click)="$event.stopPropagation()">
+                        <div class="btn-group w-100 mb-2" role="group">
+                            <button class="btn btn-sm btn-outline-info" (click)="verAnalytics(plan)"
+                                *ngIf="canViewAnalytics()">
+                                <i class="fas fa-chart-bar me-1"></i>Analisis
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" (click)="verMetas(plan)">
+                                <i class="fas fa-eye me-1"></i>Ver Metas
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning" (click)="abrirModalEditarPlan(plan)"
+                                *ngIf="canEditPlan(plan)">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" (click)="eliminarPlan(plan)"
+                                *ngIf="canDeletePlan(plan)">
+                                <i class="fas fa-trash me-1"></i>Eliminar
+                            </button>
+                        </div>
+                        <button class="btn btn-sm btn-success w-100" (click)="mostrarFormularioInforme(plan)"
+                            [disabled]="generandoInforme" *ngIf="canGenerateReport()">
+                            <i class="fas fa-file-pdf me-1"></i>
+                            <span *ngIf="!generandoInforme">Generar Informe PDF</span>
+                            <span *ngIf="generandoInforme">
+                                <i class="fas fa-spinner fa-spin me-1"></i>Generando...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vista de Metas -->
+    <div *ngIf="vistaActual === 'metas' && planSeleccionado">
+        <!-- Filtros y Acciones -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row align-items-end mb-3">
+                    <div class="col-md-3">
+                        <button class="btn btn-outline-secondary w-100" (click)="volverVistaAnterior()">
+                            <i class="fas fa-arrow-left me-2"></i>Volver
+                        </button>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">
+                            <i class="fas fa-filter me-1"></i>Estado de Meta
+                        </label>
+                        <select class="form-select" [(ngModel)]="filtroEstadoMeta">
+                            <option value="">Todos los estados</option>
+                            <option value="no_iniciada">No Iniciada</option>
+                            <option value="en_progreso">En Progreso</option>
+                            <option value="completada">Completada</option>
+                            <option value="atrasada">Atrasada</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-outline-secondary w-100" (click)="limpiarFiltros()">
+                            <i class="fas fa-eraser me-2"></i>Limpiar Filtros
+                        </button>
+                    </div>
+                    <div class="col-md-3" *ngIf="canCreateMetas()">
+                        <button class="btn btn-success w-100" (click)="abrirModalNuevaMeta()">
+                            <i class="fas fa-plus me-2"></i>Nueva Meta
+                        </button>
+                    </div>
+                </div>
+                <div class="row" *ngIf="canGenerateReport()">
+                    <div class="col-md-12">
+                        <button class="btn btn-primary w-100" (click)="mostrarFormularioInforme(planSeleccionado!)"
+                            [disabled]="generandoInforme">
+                            <i class="fas fa-file-pdf me-2"></i>
+                            <span *ngIf="!generandoInforme">Generar Informe Completo del Plan</span>
+                            <span *ngIf="generandoInforme">
+                                <i class="fas fa-spinner fa-spin me-1"></i>Generando Informe...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Mostrando {{ getMetasVisibles().length }} metas
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Metas -->
+        <div class="row">
+            <div class="col-12" *ngIf="getMetasVisibles().length === 0">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <span *ngIf="isAdmin()">No hay metas registradas para este plan.</span>
+                    <span *ngIf="isSecretario()">No tiene metas asignadas en este plan.</span>
+                    <button class="btn btn-sm btn-success ms-3" (click)="abrirModalNuevaMeta()"
+                        *ngIf="canCreateMetas()">
+                        Crear la primera meta
+                    </button>
+                </div>
+            </div>
+
+            <div class="col-12 mb-3" *ngFor="let meta of getMetasVisibles()">
+                <div class="card shadow-sm meta-card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h5 class="mb-0">{{ meta.nombre }}</h5>
+                                    <span class="badge bg-{{ getEstadoColor(meta.estado) }}">
+                                        {{ getEstadoTexto(meta.estado) }}
+                                    </span>
+                                </div>
+                                <p class="text-muted mb-3">{{ meta.descripcion }}</p>
+
+                                <div class="row mb-2">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">
+                                            <i class="fas fa-bullseye me-1"></i>
+                                            <strong>Indicador:</strong> {{ meta.indicador }}
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted">
+                                            <i class="fas fa-user-tie me-1"></i>
+                                            <strong>Responsable:</strong> {{ meta.responsable }}
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar-alt me-1"></i>
+                                            Inicio: {{ meta.fecha_inicio | date:'dd/MM/yyyy' }}
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar-check me-1"></i>
+                                            Fin: {{ meta.fecha_fin | date:'dd/MM/yyyy' }}
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <!-- Indicador de días restantes -->
+                                <div class="row mt-2" *ngIf="meta.estado !== 'completada'">
+                                    <div class="col-12">
+                                        <small [ngClass]="{
+                                                'text-danger fw-bold': getDiasRestantesMeta(meta) <= 3 && getDiasRestantesMeta(meta) > 0,
+                                                'text-warning fw-bold': getDiasRestantesMeta(meta) > 3 && getDiasRestantesMeta(meta) <= 10,
+                                                'text-success': getDiasRestantesMeta(meta) > 10,
+                                                'text-danger': getDiasRestantesMeta(meta) === 0
+                                            }">
+                                            <i class="fas fa-clock me-1"></i>
+                                            <strong>
+                                                <span *ngIf="getDiasRestantesMeta(meta) > 0">
+                                                    {{ getDiasRestantesMeta(meta) }} día(s) restante(s)
+                                                </span>
+                                                <span *ngIf="getDiasRestantesMeta(meta) === 0">
+                                                    ¡Meta vencida!
+                                                </span>
+                                            </strong>
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="text-center mb-3">
+                                    <h6 class="text-muted mb-2">Avance</h6>
+                                    <div class="position-relative d-inline-block">
+                                        <svg width="120" height="120" viewBox="0 0 120 120">
+                                            <circle cx="60" cy="60" r="50" fill="none" stroke="#e0e0e0"
+                                                stroke-width="10"></circle>
+                                            <circle cx="60" cy="60" r="50" fill="none"
+                                                [attr.stroke]="getPorcentajeAvance(meta) >= 80 ? '#28a745' : (getPorcentajeAvance(meta) >= 50 ? '#ffc107' : '#dc3545')"
+                                                stroke-width="10" stroke-dasharray="314"
+                                                [attr.stroke-dashoffset]="314 - (314 * getPorcentajeAvance(meta) / 100)"
+                                                transform="rotate(-90 60 60)" stroke-linecap="round">
+                                            </circle>
+                                        </svg>
+                                        <div class="position-absolute top-50 start-50 translate-middle">
+                                            <h3 class="mb-0">{{ getPorcentajeAvance(meta) }}%</h3>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            {{ meta.avance_actual }} / {{ meta.meta_numerica }}
+                                        </small>
+                                    </div>
+                                </div>
+
+                                <div class="btn-group w-100" role="group">
+                                    <button class="btn btn-sm btn-outline-warning" (click)="abrirModalEditarMeta(meta)"
+                                        *ngIf="canEditMeta(meta)">
+                                        <i class="fas fa-edit me-1"></i>Editar
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" (click)="eliminarMeta(meta)"
+                                        *ngIf="canDeleteMeta(meta)">
+                                        <i class="fas fa-trash me-1"></i>Eliminar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vista de Analytics -->
+    <div *ngIf="vistaActual === 'analytics' && planSeleccionado">
+        <!-- Botones de navegación -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <button class="btn btn-outline-secondary w-100" (click)="volverVistaAnterior()">
+                            <i class="fas fa-arrow-left me-2"></i>Volver
+                        </button>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn btn-outline-primary w-100" (click)="verMetas(planSeleccionado!)">
+                            <i class="fas fa-list me-2"></i>Ver Metas
+                        </button>
+                    </div>
+                    <div class="col-md-4" *ngIf="canGenerateReport()">
+                        <button class="btn btn-primary w-100" (click)="mostrarFormularioInforme(planSeleccionado!)"
+                            [disabled]="generandoInforme">
+                            <i class="fas fa-file-pdf me-2"></i>
+                            <span *ngIf="!generandoInforme">Generar Informe</span>
+                            <span *ngIf="generandoInforme">
+                                <i class="fas fa-spinner fa-spin me-1"></i>Generando...
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sin datos -->
+        <div *ngIf="!analyticsData" class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            No hay metas registradas para generar estadísticas. Agregue metas para visualizar el dashboard analítico.
+        </div>
+
+        <!-- Dashboard Analytics -->
+        <div *ngIf="analyticsData">
+            <!-- Tarjetas de resumen -->
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="card stats-card bg-primary text-white h-100" style="cursor: pointer;"
+                        (click)="filtrarMetasPorEstado('')" title="Clic para ver todas las metas">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1 opacity-75">Total de Metas</h6>
+                                    <h2 class="mb-0">{{ analyticsData.totalMetas }}</h2>
+                                </div>
+                                <div class="stat-icon">
+                                    <i class="fas fa-bullseye fa-2x opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <div class="card stats-card bg-success text-white h-100" style="cursor: pointer;"
+                        (click)="filtrarMetasPorEstado('completada')" title="Clic para ver metas completadas">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1 opacity-75">Completadas</h6>
+                                    <h2 class="mb-0">{{ analyticsData.metasCompletadas }}</h2>
+                                    <small class="opacity-75">{{ analyticsData.porcentajeCompletadas }}%</small>
+                                </div>
+                                <div class="stat-icon">
+                                    <i class="fas fa-check-circle fa-2x opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <div class="card stats-card bg-warning text-white h-100" style="cursor: pointer;"
+                        (click)="filtrarMetasPorEstado('en_progreso')" title="Clic para ver metas en progreso">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1 opacity-75">En Progreso</h6>
+                                    <h2 class="mb-0">{{ analyticsData.metasEnProgreso }}</h2>
+                                    <small class="opacity-75">{{ analyticsData.porcentajeEnProgreso }}%</small>
+                                </div>
+                                <div class="stat-icon">
+                                    <i class="fas fa-spinner fa-2x opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-3 mb-3">
+                    <div class="card stats-card bg-danger text-white h-100" style="cursor: pointer;"
+                        (click)="filtrarMetasPorEstado('atrasada')" title="Clic para ver metas atrasadas">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1 opacity-75">Atrasadas</h6>
+                                    <h2 class="mb-0">{{ analyticsData.metasAtrasadas }}</h2>
+                                    <small class="opacity-75">{{ analyticsData.porcentajeAtrasadas }}%</small>
+                                </div>
+                                <div class="stat-icon">
+                                    <i class="fas fa-exclamation-triangle fa-2x opacity-50"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráficos y métricas -->
+            <div class="row mb-4">
+                <!-- Avance Global -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="fas fa-chart-pie me-2"></i>Avance Global del Plan
+                            </h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="position-relative d-inline-block mb-3">
+                                <svg width="200" height="200" viewBox="0 0 200 200">
+                                    <circle cx="100" cy="100" r="80" fill="none" stroke="#e0e0e0" stroke-width="20">
+                                    </circle>
+                                    <circle cx="100" cy="100" r="80" fill="none"
+                                        [attr.stroke]="analyticsData.avanceGlobal >= 80 ? '#28a745' : (analyticsData.avanceGlobal >= 60 ? '#ffc107' : '#dc3545')"
+                                        stroke-width="20" stroke-dasharray="502"
+                                        [attr.stroke-dashoffset]="502 - (502 * analyticsData.avanceGlobal / 100)"
+                                        transform="rotate(-90 100 100)" stroke-linecap="round">
+                                    </circle>
+                                </svg>
+                                <div class="position-absolute top-50 start-50 translate-middle">
+                                    <h1 class="mb-0 display-4">{{ analyticsData.avanceGlobal }}%</h1>
+                                </div>
+                            </div>
+                            <p class="text-muted mb-0">Promedio de cumplimiento de todas las metas</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Distribución por Estado -->
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="fas fa-chart-bar me-2"></i>Distribución por Estado
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span><i class="fas fa-check-circle text-success me-2"></i>Completadas</span>
+                                    <strong>{{ analyticsData.metasCompletadas }} ({{ analyticsData.porcentajeCompletadas
+                                        }}%)</strong>
+                                </div>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar bg-success" role="progressbar"
+                                        [style.width.%]="analyticsData.porcentajeCompletadas">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span><i class="fas fa-spinner text-warning me-2"></i>En Progreso</span>
+                                    <strong>{{ analyticsData.metasEnProgreso }} ({{ analyticsData.porcentajeEnProgreso
+                                        }}%)</strong>
+                                </div>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar bg-warning" role="progressbar"
+                                        [style.width.%]="analyticsData.porcentajeEnProgreso">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span><i class="fas fa-exclamation-triangle text-danger me-2"></i>Atrasadas</span>
+                                    <strong>{{ analyticsData.metasAtrasadas }} ({{ analyticsData.porcentajeAtrasadas
+                                        }}%)</strong>
+                                </div>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar bg-danger" role="progressbar"
+                                        [style.width.%]="analyticsData.porcentajeAtrasadas">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <span><i class="fas fa-circle text-secondary me-2"></i>No Iniciadas</span>
+                                    <strong>{{ analyticsData.metasNoIniciadas }} ({{ analyticsData.porcentajeNoIniciadas
+                                        }}%)</strong>
+                                </div>
+                                <div class="progress" style="height: 25px;">
+                                    <div class="progress-bar bg-secondary" role="progressbar"
+                                        [style.width.%]="analyticsData.porcentajeNoIniciadas">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Métricas adicionales -->
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-clock fa-3x text-info mb-3"></i>
+                            <h5>Tiempo Promedio Restante</h5>
+                            <h2 class="mb-0">
+                                <span [class.text-success]="analyticsData.tiempoPromedioRestante > 30"
+                                    [class.text-warning]="analyticsData.tiempoPromedioRestante > 0 && analyticsData.tiempoPromedioRestante <= 30"
+                                    [class.text-danger]="analyticsData.tiempoPromedioRestante <= 0">
+                                    {{ analyticsData.tiempoPromedioRestante }}
+                                </span>
+                                días
+                            </h2>
+                            <small class="text-muted">Para metas pendientes</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-clipboard-check fa-3x text-success mb-3"></i>
+                            <h5>Metas con Resultado</h5>
+                            <h2 class="mb-0">{{ analyticsData.metasConResultado }}</h2>
+                            <small class="text-muted">{{ analyticsData.porcentajeConResultado }}% del total</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                            <h5>Responsables Asignados</h5>
+                            <h2 class="mb-0">{{ Object.keys(analyticsData.metasPorResponsable).length }}</h2>
+                            <small class="text-muted">Áreas involucradas</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Metas por Responsable -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-tie me-2"></i>Distribución de Metas por Responsable
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Responsable</th>
+                                    <th class="text-center">Cantidad de Metas</th>
+                                    <th>Distribución</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let item of getMetasEntries(analyticsData.metasPorResponsable)">
+                                    <td>{{ item[0] }}</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary">{{ item[1] }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-primary" role="progressbar"
+                                                [style.width.%]="(item[1] / analyticsData.totalMetas) * 100">
+                                                {{ ((item[1] / analyticsData.totalMetas) * 100).toFixed(1) }}%
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Crear/Editar Plan -->
+<div class="modal fade" [class.show]="mostrarModalPlan" [style.display]="mostrarModalPlan ? 'block' : 'none'"
+    tabindex="-1" *ngIf="mostrarModalPlan">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-clipboard-list me-2"></i>
+                    {{ modoEdicion ? 'Editar Plan' : 'Nuevo Plan' }}
+                </h5>
+                <button type="button" class="btn-close" (click)="cerrarModalPlan()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Nombre del Plan *</label>
+                    <input type="text" class="form-control" [(ngModel)]="planForm.nombre"
+                        placeholder="Ej: Plan de Desarrollo Municipal 2024">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Descripción *</label>
+                    <textarea class="form-control" rows="3" [(ngModel)]="planForm.descripcion"
+                        placeholder="Descripción detallada del plan institucional"></textarea>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Año *</label>
+                        <input type="number" class="form-control" [(ngModel)]="planForm.anio" [min]="2020" [max]="2030">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Fecha Inicio *</label>
+                        <input type="date" class="form-control" [(ngModel)]="planForm.fecha_inicio">
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Fecha Fin *</label>
+                        <input type="date" class="form-control" [(ngModel)]="planForm.fecha_fin">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Estado *</label>
+                    <select class="form-select" [(ngModel)]="planForm.estado">
+                        <option value="activo">Activo</option>
+                        <option value="finalizado">Finalizado</option>
+                        <option value="suspendido">Suspendido</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="cerrarModalMeta()">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success" (click)="guardarMeta()">
+                    <i class="fas fa-save me-2"></i>{{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="mostrarModalMeta" *ngIf="mostrarModalMeta"></div>
+
+<!-- Modal Selección de Fechas para Informe -->
+<div class="modal fade" [class.show]="mostrarSelectorFechasInforme"
+    [style.display]="mostrarSelectorFechasInforme ? 'block' : 'none'" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-pdf me-2"></i>Generar Informe del Plan
+                </h5>
+                <button type="button" class="btn-close btn-close-white" (click)="cancelarInforme()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Seleccione el período del informe. Solo se incluirán las metas que se superpongan con este rango de
+                    fechas.
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-calendar-alt me-1"></i>Fecha de Inicio
+                        </label>
+                        <input type="date" class="form-control" [(ngModel)]="fechaInicioInforme" required>
+                        <small class="text-muted">Inicio del período a evaluar</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">
+                            <i class="fas fa-calendar-check me-1"></i>Fecha de Fin
+                        </label>
+                        <input type="date" class="form-control" [(ngModel)]="fechaFinInforme" required>
+                        <small class="text-muted">Fin del período a evaluar</small>
+                    </div>
+                </div>
+
+                <div class="card bg-light" *ngIf="planParaInforme">
+                    <div class="card-body">
+                        <h6 class="mb-2">
+                            <i class="fas fa-clipboard-list me-2"></i>Plan Seleccionado
+                        </h6>
+                        <p class="mb-1"><strong>{{ planParaInforme.nombre }}</strong></p>
+                        <p class="mb-1 text-muted">Año: {{ planParaInforme.anio }}</p>
+                        <p class="mb-0 text-muted">
+                            Metas del plan: {{ getMetasDePlan(planParaInforme.id!).length }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="cancelarInforme()">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" (click)="generarInformePlan()"
+                    [disabled]="generandoInforme || !fechaInicioInforme || !fechaFinInforme">
+                    <i class="fas fa-file-pdf me-2" *ngIf="!generandoInforme"></i>
+                    <i class="fas fa-spinner fa-spin me-2" *ngIf="generandoInforme"></i>
+                    {{ generandoInforme ? 'Generando...' : 'Generar Informe PDF' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="mostrarSelectorFechasInforme" *ngIf="mostrarSelectorFechasInforme"></div>
+
+<!-- Modal Crear/Editar Meta -->
+<div class="modal fade" [class.show]="mostrarModalMeta" [style.display]="mostrarModalMeta ? 'block' : 'none'"
+    tabindex="-1" *ngIf="mostrarModalMeta">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-bullseye me-2"></i>
+                    {{ modoEdicion ? 'Editar Meta' : 'Nueva Meta' }}
+                </h5>
+                <button type="button" class="btn-close" (click)="cerrarModalMeta()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Nombre de la Meta *</label>
+                    <input type="text" class="form-control" [(ngModel)]="metaForm.nombre"
+                        placeholder="Ej: Reducir tiempos de respuesta" minlength="3" required>
+                    <small class="text-muted">Mínimo 3 caracteres</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Descripción *</label>
+                    <textarea class="form-control" rows="3" [(ngModel)]="metaForm.descripcion"
+                        placeholder="Descripción detallada de la meta (mínimo 10 caracteres)" minlength="10"
+                        required></textarea>
+                    <small class="text-muted">Mínimo 10 caracteres - Actual: {{ metaForm.descripcion.length || 0
+                        }}</small>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Indicador *</label>
+                        <input type="text" class="form-control" [(ngModel)]="metaForm.indicador"
+                            placeholder="Ej: Tiempo promedio de respuesta" minlength="3" required>
+                        <small class="text-muted">Mínimo 3 caracteres</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Responsable *</label>
+                        <select class="form-select" [(ngModel)]="metaForm.responsable">
+                            <option value="">Seleccione una secretaría...</option>
+                            <option *ngFor="let secretaria of secretarias" [value]="secretaria">
+                                {{ secretaria }}
+                            </option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Meta Numérica *</label>
+                        <input type="number" class="form-control" [(ngModel)]="metaForm.meta_numerica" [min]="1"
+                            step="0.01" required placeholder="Ej: 100">
+                        <small class="text-muted">Debe ser mayor que 0</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Avance Actual *</label>
+                        <input type="number" class="form-control" [(ngModel)]="metaForm.avance_actual" [min]="0"
+                            [max]="metaForm.meta_numerica" step="0.01" placeholder="Ej: 50">
+                        <small class="text-muted">Entre 0 y {{ metaForm.meta_numerica }}</small>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Fecha Inicio *</label>
+                        <input type="date" class="form-control" [(ngModel)]="metaForm.fecha_inicio">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Fecha Fin *</label>
+                        <input type="date" class="form-control" [(ngModel)]="metaForm.fecha_fin">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Estado *</label>
+                    <select class="form-select" [(ngModel)]="metaForm.estado">
+                        <option value="no_iniciada">No Iniciada</option>
+                        <option value="en_progreso">En Progreso</option>
+                        <option value="completada">Completada</option>
+                        <option value="atrasada">Atrasada</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">
+                        Resultado / Observaciones
+                        <i class="fas fa-info-circle text-muted ms-1"
+                            title="Describa los logros alcanzados, dificultades encontradas o comentarios relevantes sobre la ejecución de esta meta"></i>
+                    </label>
+                    <textarea class="form-control" rows="4" [(ngModel)]="metaForm.resultado"
+                        placeholder="Ej: Se logró reducir el tiempo promedio de respuesta de 15 a 12 días mediante la implementación de un sistema de alertas automáticas y capacitación del personal..."></textarea>
+                    <small class="text-muted">Este campo aparecerá en el informe PDF del plan</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="cerrarModalMeta()">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-success" (click)="guardarMeta()">
+                    <i class="fas fa-save me-2"></i>{{ modoEdicion ? 'Actualizar' : 'Guardar' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal-backdrop fade" [class.show]="mostrarModalMeta" *ngIf="mostrarModalMeta"></div>
