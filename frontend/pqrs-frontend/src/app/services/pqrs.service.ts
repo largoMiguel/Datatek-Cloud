@@ -9,12 +9,13 @@ import {
     PQRSResponse,
     EstadoPQRS
 } from '../models/pqrs.model';
+import { environment } from '../../environments/environment.prod';
 
 @Injectable({
     providedIn: 'root'
 })
 export class PqrsService {
-    private baseUrl = 'http://localhost:8000/api/pqrs/';  // Agregar barra final
+    private baseUrl = `${environment.apiUrl}/pqrs/`;
 
     constructor(private http: HttpClient) { }
 

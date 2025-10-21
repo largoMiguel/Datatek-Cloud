@@ -46,11 +46,13 @@ export interface PlanAnalysisResponse {
     conclusiones: string;
 }
 
+import { environment } from '../../environments/environment.prod';
+
 @Injectable({
     providedIn: 'root'
 })
 export class AiService {
-    private apiUrl = 'http://localhost:8000/api/ai'; // Endpoint del backend
+    private apiUrl = `${environment.apiUrl}/ai`;
 
     constructor(private http: HttpClient) { }
 

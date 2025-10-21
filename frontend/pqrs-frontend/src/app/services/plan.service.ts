@@ -9,13 +9,14 @@ import {
     CreateMetaRequest,
     UpdateMetaRequest
 } from '../models/plan.model';
+import { environment } from '../../environments/environment.prod';
 
 @Injectable({
     providedIn: 'root'
 })
 export class PlanService {
     private http = inject(HttpClient);
-    private apiUrl = 'http://localhost:8000/api';
+    private apiUrl = environment.apiUrl;
 
     // ========== CRUD Planes Institucionales ==========
 
