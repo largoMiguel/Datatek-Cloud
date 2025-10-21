@@ -7,25 +7,21 @@ services:
     plan: free
     branch: master
     rootDir: backend
-    buildCommand: ./build.sh
+    buildCommand: pip install -r requirements.txt
     startCommand: gunicorn -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:$PORT app.main:app --timeout 120
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
       - key: DATABASE_URL
-        fromDatabase:
-          name: pqrs-database
-          property: connectionString
+        value: postgresql://datatek_cloud_user:kkzJrjjJ1AD3RgKK0CFHdVFIAVhSPQKE@dpg-d3rs4oripnbc73esb06g-a.oregon-postgres.render.com:5432/datatek_cloud
       - key: SECRET_KEY
-        generateValue: true
+        value: 1vEvfjQRvRDAe3pZEpYFElVLR3JE1B6b3k4xyrUHAz3f1-c4-7BSpNEdvnyXUUW_TNR-RqU5tOkSoPsJ0L6uhg
       - key: ALGORITHM
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: 30
       - key: HOST
         value: 0.0.0.0
-      - key: PORT
-        value: 8000
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
@@ -33,10 +29,3 @@ services:
       - key: ALLOWED_ORIGINS
         value: http://localhost:4200
     healthCheckPath: /health
-
-databases:
-  - name: pqrs-database
-    databaseName: datatek_cloud
-    user: datatek_cloud_user
-    region: oregon
-    plan: free
