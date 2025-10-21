@@ -45,20 +45,25 @@ def get_password_hash(password: str) -> str:
     """Generar hash de contraseña"""
     try:
         # Asegurar que la contraseña no exceda el límite de bcrypt (72 bytes)
-        password_bytes = password.encode('utf-8')
-        if len(password_bytes) > 72:
-            password = password_bytes[:72].decode('utf-8', errors='ignore')
+        if isinstance(password, str):
+            password_bytes = password.encode('utf-8')
+            if len(password_bytes) > 72:
+                # Truncar a 72 bytes de manera segura
+                password = password_bytes[:72].decode('utf-8', errors='ignore')
         
+        # Generar hash con bcrypt
         hash_result = pwd_context.hash(password)
-        print(f"Hash generado correctamente: {hash_result[:20]}...")
         return hash_result
     except Exception as e:
-        print(f"Error generando hash: {e}")
-        # Fallback más simple
+        print(f"Error generando hash con bcrypt: {e}")
+        # Fallback solo si bcrypt falla completamente
         import hashlib
         import secrets
+        # Usar solo los primeros 72 caracteres para el fallback también
+        password_safe = password[:72] if len(password) > 72 else password
         salt = secrets.token_hex(16)
-        return f"fallback:{hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000).hex()}:{salt}"
+        hash_value = hashlib.pbkdf2_hmac('sha256', password_safe.encode('utf-8'), salt.encode(), 100000).hex()
+        return f"fallback:{hash_value}:{salt}"
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Crear token JWT"""

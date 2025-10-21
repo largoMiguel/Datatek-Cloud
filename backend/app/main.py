@@ -59,6 +59,7 @@ async def health_check():
 @app.on_event("startup")
 async def create_default_admin():
     import time
+    from sqlalchemy.exc import IntegrityError
     max_retries = 3
     retry_delay = 2
     
@@ -69,43 +70,50 @@ async def create_default_admin():
                 # Verificar si ya existe un admin
                 admin_exists = db.query(User).filter(User.role == UserRole.ADMIN).first()
                 
-                if not admin_exists:
-                    # Crear usuario administrador por defecto
-                    password = "admin123"
-                    hashed_password = get_password_hash(password)
-                    
-                    admin_user = User(
-                        username="admin",
-                        email="admin@alcaldia.gov.co",
-                        full_name="Administrador del Sistema",
-                        hashed_password=hashed_password,
-                        role=UserRole.ADMIN,
-                        secretaria="Sistemas"
-                    )
-                    
-                    db.add(admin_user)
-                    db.commit()
-                    print(f"Usuario administrador creado: admin / {password}")
-                    print(f"Hash generado correctamente: {hashed_password[:20]}...")
-                else:
+                if admin_exists:
                     print("Usuario administrador ya existe")
+                    break
                 
-                break  # Éxito, salir del loop de reintentos
+                # Crear usuario administrador por defecto
+                password = "admin123"
+                hashed_password = get_password_hash(password)
                 
+                admin_user = User(
+                    username="admin",
+                    email="admin@alcaldia.gov.co",
+                    full_name="Administrador del Sistema",
+                    hashed_password=hashed_password,
+                    role=UserRole.ADMIN,
+                    secretaria="Sistemas"
+                )
+                
+                db.add(admin_user)
+                db.commit()
+                print(f"✓ Usuario administrador creado: admin / {password}")
+                break  # Éxito, salir del loop
+                
+            except IntegrityError as e:
+                db.rollback()
+                # Si es error de duplicado, el usuario ya existe (carreras de condición)
+                if "duplicate key" in str(e).lower() or "unique constraint" in str(e).lower():
+                    print("Usuario administrador ya existe (detectado en commit)")
+                    break
+                else:
+                    raise  # Re-lanzar si es otro tipo de IntegrityError
+                    
             except Exception as e:
                 db.rollback()
                 if attempt < max_retries - 1:
-                    print(f"Intento {attempt + 1} fallido creando usuario administrador: {e}")
-                    print(f"Reintentando en {retry_delay} segundos...")
+                    print(f"Intento {attempt + 1} fallido: {type(e).__name__}")
                     time.sleep(retry_delay)
                 else:
-                    print(f"Error creando usuario administrador después de {max_retries} intentos: {e}")
+                    print(f"Error después de {max_retries} intentos: {e}")
             finally:
                 db.close()
                 
         except Exception as e:
             if attempt < max_retries - 1:
-                print(f"Error de conexión en intento {attempt + 1}: {e}")
+                print(f"Error de conexión en intento {attempt + 1}: {type(e).__name__}")
                 time.sleep(retry_delay)
             else:
-                print(f"No se pudo conectar a la base de datos después de {max_retries} intentos: {e}")
+                print(f"No se pudo conectar después de {max_retries} intentos: {e}")
