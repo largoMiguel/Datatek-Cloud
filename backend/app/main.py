@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.config.database import engine, get_db, Base
+from app.config.settings import settings
 from app.routes import auth, pqrs, users, planes
 from app.models import user, pqrs as pqrs_model, plan
 from app.models.user import User, UserRole
@@ -31,10 +32,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configurar CORS
+# Configurar CORS dinámicamente según entorno
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200"],  # URL del frontend Angular
+    allow_origins=settings.cors_origins,  # URLs permitidas desde settings
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

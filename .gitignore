@@ -33,6 +33,8 @@ frontend/pqrs-frontend/.vscode/
 .env
 .env.local
 .env.*.local
+.env.production
+*.pem
 
 # Logs
 *.log
@@ -42,3 +44,13 @@ yarn-error.log*
 
 # OS
 Thumbs.db
+
+# AWS
+.aws-credentials
+*.pem
+aws-credentials.txt
+
+# Backup files
+*.backup
+*.bak
+*.sql
