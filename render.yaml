@@ -1,0 +1,42 @@
+services:
+  # Backend API
+  - type: web
+    name: pqrs-backend
+    runtime: python
+    region: oregon
+    plan: free
+    branch: master
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:$PORT app.main:app --timeout 120
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DATABASE_URL
+        fromDatabase:
+          name: pqrs-database
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 30
+      - key: HOST
+        value: 0.0.0.0
+      - key: PORT
+        value: 8000
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: False
+      - key: ALLOWED_ORIGINS
+        value: http://localhost:4200
+    healthCheckPath: /health
+
+databases:
+  - name: pqrs-database
+    databaseName: datatek_cloud
+    user: datatek_cloud_user
+    region: oregon
+    plan: free
