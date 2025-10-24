@@ -9,7 +9,7 @@ import {
     PQRSResponse,
     EstadoPQRS
 } from '../models/pqrs.model';
-import { environment } from '../../environments/environment.prod';
+import { environment } from '../../environments/environment';
 
 @Injectable({
     providedIn: 'root'

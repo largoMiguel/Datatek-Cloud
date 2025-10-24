@@ -7,6 +7,7 @@ import enum
 class UserRole(enum.Enum):
     ADMIN = "admin"
     SECRETARIO = "secretario"
+    CIUDADANO = "ciudadano"
 
 class User(Base):
     __tablename__ = "users"
@@ -18,6 +19,9 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     role = Column(Enum(UserRole), nullable=False, default=UserRole.SECRETARIO)
     secretaria = Column(String, nullable=True)  # Secretaría a la que pertenece
+    cedula = Column(String, nullable=True)  # Cédula para ciudadanos
+    telefono = Column(String, nullable=True)  # Teléfono para ciudadanos
+    direccion = Column(String, nullable=True)  # Dirección para ciudadanos
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     is_active = Column(Boolean, nullable=False, server_default="1", default=True)

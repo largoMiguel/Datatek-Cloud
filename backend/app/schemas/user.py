@@ -10,6 +10,9 @@ class UserBase(BaseModel):
     full_name: str
     role: UserRole
     secretaria: Optional[str] = None
+    cedula: Optional[str] = None
+    telefono: Optional[str] = None
+    direccion: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
@@ -20,6 +23,9 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     role: Optional[UserRole] = None
     secretaria: Optional[str] = None
+    cedula: Optional[str] = None
+    telefono: Optional[str] = None
+    direccion: Optional[str] = None
     password: Optional[str] = None
 
 class User(UserBase):

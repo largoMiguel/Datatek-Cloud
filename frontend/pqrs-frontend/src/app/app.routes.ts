@@ -1,13 +1,16 @@
 import { Routes } from '@angular/router';
+import { VentanillaComponent } from './components/ventanilla/ventanilla';
 import { LoginComponent } from './components/login/login';
 import { DashboardComponent } from './components/dashboard/dashboard';
 import { PlanesInstitucionalesComponent } from './components/planes-institucionales/planes-institucionales';
-import { authGuard, loginGuard } from './guards/auth.guard';
+import { PortalCiudadanoComponent } from './components/portal-ciudadano/portal-ciudadano';
+import { authGuard, loginGuard, adminPortalGuard, ciudadanoGuard } from './guards/auth.guard';
 
 export const routes: Routes = [
-    { path: '', component: LoginComponent, canActivate: [loginGuard] },
+    { path: '', component: VentanillaComponent },
     { path: 'login', component: LoginComponent, canActivate: [loginGuard] },
-    { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
-    { path: 'planes-institucionales', component: PlanesInstitucionalesComponent, canActivate: [authGuard] },
+    { path: 'portal-ciudadano', component: PortalCiudadanoComponent, canActivate: [ciudadanoGuard] },
+    { path: 'dashboard', component: DashboardComponent, canActivate: [adminPortalGuard] },
+    { path: 'planes-institucionales', component: PlanesInstitucionalesComponent, canActivate: [adminPortalGuard] },
     { path: '**', redirectTo: '' }
 ];

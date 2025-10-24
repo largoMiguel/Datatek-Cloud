@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable, BehaviorSubject, tap } from 'rxjs';
 import { User, LoginRequest, LoginResponse, CreateUserRequest } from '../models/user.model';
-import { environment } from '../../environments/environment.prod';
+import { environment } from '../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
@@ -31,8 +31,14 @@ export class AuthService {
                     this.currentUserSubject.next(response.user);
                 })
             );
-    } register(userData: CreateUserRequest): Observable<User> {
+    }
+
+    register(userData: CreateUserRequest): Observable<User> {
         return this.http.post<User>(`${this.baseUrl}register`, userData);
+    }
+
+    registerCiudadano(userData: CreateUserRequest): Observable<User> {
+        return this.http.post<User>(`${this.baseUrl}register-ciudadano`, userData);
     }
 
     logout(): void {
@@ -66,6 +72,10 @@ export class AuthService {
     isAdmin(): boolean {
         const user = this.currentUserSubject.value;
         return user ? user.role === 'admin' : false;
+    }
+
+    getCurrentUserValue(): User | null {
+        return this.currentUserSubject.value;
     }
 
     getAuthHeaders(): HttpHeaders {

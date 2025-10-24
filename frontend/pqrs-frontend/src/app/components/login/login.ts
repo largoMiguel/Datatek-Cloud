@@ -64,9 +64,33 @@ export class LoginComponent implements OnInit {
       this.authService.login(this.loginForm.value).subscribe({
         next: (response) => {
           console.log('Login exitoso, redirigiendo al dashboard');
-          this.isLoading = false;
-          // Usar replaceUrl para que no se pueda volver con el botón atrás
-          this.router.navigate(['/dashboard'], { replaceUrl: true });
+
+          // Verificar si el usuario es ciudadano
+          this.authService.getCurrentUser().subscribe({
+            next: (user) => {
+              if (user && user.role === 'ciudadano') {
+                // Ciudadano intentando acceder al portal administrativo
+                this.alertService.warning(
+                  'Este portal es solo para administrativos. Por favor usa el Portal Ciudadano.',
+                  'Acceso Restringido'
+                );
+                this.authService.logout();
+                this.isLoading = false;
+                // Redirigir al portal ciudadano
+                setTimeout(() => {
+                  this.router.navigate(['/portal-ciudadano']);
+                }, 2000);
+              } else {
+                // Usuario administrativo válido
+                this.isLoading = false;
+                this.router.navigate(['/dashboard'], { replaceUrl: true });
+              }
+            },
+            error: () => {
+              this.isLoading = false;
+              this.router.navigate(['/dashboard'], { replaceUrl: true });
+            }
+          });
         },
         error: (error) => {
           console.error('Error en login:', error);

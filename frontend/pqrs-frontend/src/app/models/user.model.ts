@@ -3,9 +3,12 @@ export interface User {
     username: string;
     email: string;
     full_name: string;
-    role: 'admin' | 'secretario';
+    role: 'admin' | 'secretario' | 'ciudadano';
     is_active?: boolean;
     secretaria?: string;
+    cedula?: string;
+    telefono?: string;
+    direccion?: string;
     created_at?: string;
     updated_at?: string;
 }
@@ -25,7 +28,10 @@ export interface CreateUserRequest {
     username: string;
     email: string;
     full_name: string;
-    role: 'admin' | 'secretario';
+    role: 'admin' | 'secretario' | 'ciudadano';
     secretaria?: string;
+    cedula?: string;
+    telefono?: string;
+    direccion?: string;
     password: string;
 }
