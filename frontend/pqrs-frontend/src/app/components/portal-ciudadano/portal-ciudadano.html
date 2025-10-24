@@ -166,6 +166,161 @@
                 <p class="text-muted">Gestiona tus solicitudes y consulta el estado de tus PQRS</p>
             </div>
 
+            <!-- Botón Nueva PQRS -->
+            <div class="text-end mb-4">
+                <button class="btn btn-secondary" *ngIf="!showNuevaPqrsForm" (click)="toggleNuevaPqrsForm()">
+                    <i class="fas fa-plus-circle me-2"></i>Nueva PQRS
+                </button>
+                <button class="btn btn-outline-secondary" *ngIf="showNuevaPqrsForm" (click)="toggleNuevaPqrsForm()">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+            </div>
+
+            <!-- Formulario Nueva PQRS -->
+            <div class="card mb-4" *ngIf="showNuevaPqrsForm">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Nueva PQRS</h5>
+                </div>
+                <div class="card-body">
+                    <form [formGroup]="nuevaPqrsForm" (ngSubmit)="onSubmitPqrs()">
+                        <!-- Tipo de Identificación -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-id-card me-2"></i>Tipo de Identificación *
+                            </label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check" *ngFor="let tipo of tiposIdentificacion">
+                                    <input class="form-check-input" type="radio" [id]="'tipo_' + tipo.value"
+                                        formControlName="tipo_identificacion" [value]="tipo.value">
+                                    <label class="form-check-label" [for]="'tipo_' + tipo.value">
+                                        {{ tipo.label }}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Campos Personales (Solo si tipo_identificacion es 'personal') -->
+                        <div *ngIf="tipo === 'personal'">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="nombre_ciudadano" class="form-label">
+                                        <i class="fas fa-user me-2"></i>Nombre Completo *
+                                    </label>
+                                    <input type="text" class="form-control" id="nombre_ciudadano"
+                                        formControlName="nombre_ciudadano" placeholder="Ingrese su nombre completo"
+                                        [required]="tipo === 'personal'">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="cedula_ciudadano" class="form-label">
+                                        <i class="fas fa-id-card me-2"></i>Cédula *
+                                    </label>
+                                    <input type="text" class="form-control" id="cedula_ciudadano"
+                                        formControlName="cedula_ciudadano" placeholder="Número de identificación"
+                                        [required]="tipo === 'personal'">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tipo de Solicitud -->
+                        <div class="mb-3">
+                            <label for="tipo_solicitud" class="form-label">
+                                <i class="fas fa-list me-2"></i>Tipo de Solicitud *
+                            </label>
+                            <select class="form-select" id="tipo_solicitud" formControlName="tipo_solicitud" required>
+                                <option value="">Seleccione...</option>
+                                <option value="peticion">Petición</option>
+                                <option value="queja">Queja</option>
+                                <option value="reclamo">Reclamo</option>
+                                <option value="sugerencia">Sugerencia</option>
+                            </select>
+                        </div>
+
+                        <!-- Asunto -->
+                        <div class="mb-3">
+                            <label for="asunto" class="form-label">
+                                <i class="fas fa-heading me-2"></i>Asunto *
+                            </label>
+                            <input type="text" class="form-control" id="asunto" formControlName="asunto"
+                                placeholder="Breve descripción del asunto" required>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="mb-3">
+                            <label for="descripcion" class="form-label">
+                                <i class="fas fa-align-left me-2"></i>Descripción *
+                            </label>
+                            <textarea class="form-control" id="descripcion" formControlName="descripcion" rows="4"
+                                placeholder="Describa detalladamente su solicitud" required></textarea>
+                        </div>
+
+                        <!-- Medio de Respuesta -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-reply me-2"></i>Medio de Respuesta *
+                            </label>
+                            <div class="row">
+                                <div class="col-md-6 col-lg-3 mb-2" *ngFor="let medio of mediosRespuesta">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" [id]="'medio_' + medio.value"
+                                            formControlName="medio_respuesta" [value]="medio.value">
+                                        <label class="form-check-label" [for]="'medio_' + medio.value">
+                                            <i [class]="medio.icon + ' me-1'"></i>{{ medio.label }}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Campo Email (Solo si medio_respuesta es 'email') -->
+                        <div class="mb-3" *ngIf="medio === 'email'">
+                            <label for="email_ciudadano" class="form-label">
+                                <i class="fas fa-envelope me-2"></i>Correo Electrónico *
+                            </label>
+                            <input type="email" class="form-control" id="email_ciudadano"
+                                formControlName="email_ciudadano" placeholder="correo@ejemplo.com"
+                                [required]="medio === 'email'">
+                            <div class="form-text">Ingrese el correo donde recibirá la respuesta</div>
+                        </div>
+
+                        <!-- Campo Dirección (Solo si medio_respuesta es 'fisica') -->
+                        <div class="mb-3" *ngIf="medio === 'fisica'">
+                            <label for="direccion_ciudadano" class="form-label">
+                                <i class="fas fa-home me-2"></i>Dirección *
+                            </label>
+                            <textarea class="form-control" id="direccion_ciudadano"
+                                formControlName="direccion_ciudadano" rows="2"
+                                placeholder="Dirección completa de correspondencia"
+                                [required]="medio === 'fisica'"></textarea>
+                            <div class="form-text">Ingrese la dirección donde recibirá la respuesta física</div>
+                        </div>
+
+                        <!-- Campo Teléfono (Solo si medio_respuesta es 'telefono') -->
+                        <div class="mb-3" *ngIf="medio === 'telefono'">
+                            <label for="telefono_ciudadano" class="form-label">
+                                <i class="fas fa-phone me-2"></i>Teléfono *
+                            </label>
+                            <input type="tel" class="form-control" id="telefono_ciudadano"
+                                formControlName="telefono_ciudadano" placeholder="Número de contacto"
+                                [required]="medio === 'telefono'">
+                            <div class="form-text">Ingrese el número donde recibirá la llamada de respuesta</div>
+                        </div>
+
+                        <!-- Botones -->
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-outline-secondary" (click)="toggleNuevaPqrsForm()">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </button>
+                            <button type="submit" class="btn btn-secondary"
+                                [disabled]="nuevaPqrsForm.invalid || isSubmittingPqrs">
+                                <span *ngIf="isSubmittingPqrs" class="spinner-border spinner-border-sm me-2"></span>
+                                <i *ngIf="!isSubmittingPqrs" class="fas fa-paper-plane me-2"></i>
+                                {{ isSubmittingPqrs ? 'Enviando...' : 'Enviar PQRS' }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <!-- Stats Cards -->
             <div class="row g-3 mb-4">
                 <div class="col-md-4">

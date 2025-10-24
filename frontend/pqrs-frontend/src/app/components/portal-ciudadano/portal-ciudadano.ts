@@ -6,7 +6,7 @@ import { AuthService } from '../../services/auth.service';
 import { PqrsService } from '../../services/pqrs.service';
 import { AlertService } from '../../services/alert.service';
 import { User } from '../../models/user.model';
-import { PQRSWithDetails } from '../../models/pqrs.model';
+import { PQRSWithDetails, TIPOS_IDENTIFICACION, MEDIOS_RESPUESTA } from '../../models/pqrs.model';
 
 @Component({
     selector: 'app-portal-ciudadano',
@@ -19,6 +19,7 @@ export class PortalCiudadanoComponent implements OnInit {
     // Estados de vista
     isLoggedIn = false;
     showRegisterForm = false;
+    showNuevaPqrsForm = false;
 
     // Usuario actual
     currentUser: User | null = null;
@@ -26,15 +27,25 @@ export class PortalCiudadanoComponent implements OnInit {
     // Formularios
     loginForm: FormGroup;
     registerForm: FormGroup;
+    nuevaPqrsForm: FormGroup;
 
     // Estados
     isLoading = false;
     isSubmitting = false;
+    isSubmittingPqrs = false;
 
     // PQRS del ciudadano
     misPqrs: PQRSWithDetails[] = [];
     selectedPqrs: PQRSWithDetails | null = null;
     showDetails = false;
+
+    // Constantes para el formulario
+    tiposIdentificacion = TIPOS_IDENTIFICACION;
+    mediosRespuesta = MEDIOS_RESPUESTA;
+
+    // Para tracking de tipo y medio seleccionados
+    tipo: string = 'personal';
+    medio: string = 'ticket';
 
     constructor(
         private authService: AuthService,
@@ -58,6 +69,20 @@ export class PortalCiudadanoComponent implements OnInit {
             telefono: [''],
             direccion: ['']
         }, { validators: this.passwordMatchValidator });
+
+        // Formulario de nueva PQRS
+        this.nuevaPqrsForm = this.fb.group({
+            tipo_identificacion: ['personal', Validators.required],
+            nombre_ciudadano: [''],
+            cedula_ciudadano: [''],
+            tipo_solicitud: ['', Validators.required],
+            asunto: ['', Validators.required],
+            descripcion: ['', Validators.required],
+            medio_respuesta: ['ticket', Validators.required],
+            email_ciudadano: [''],
+            direccion_ciudadano: [''],
+            telefono_ciudadano: ['']
+        });
     }
 
     ngOnInit() {
@@ -73,6 +98,50 @@ export class PortalCiudadanoComponent implements OnInit {
             error: () => {
                 this.isLoggedIn = false;
             }
+        });
+
+        // Listener para tipo_identificacion
+        this.nuevaPqrsForm.get('tipo_identificacion')?.valueChanges.subscribe(tipo => {
+            this.tipo = tipo;
+            const nombreControl = this.nuevaPqrsForm.get('nombre_ciudadano');
+            const cedulaControl = this.nuevaPqrsForm.get('cedula_ciudadano');
+
+            if (tipo === 'personal') {
+                nombreControl?.setValidators([Validators.required]);
+                cedulaControl?.setValidators([Validators.required]);
+            } else {
+                nombreControl?.clearValidators();
+                cedulaControl?.clearValidators();
+            }
+
+            nombreControl?.updateValueAndValidity();
+            cedulaControl?.updateValueAndValidity();
+        });
+
+        // Listener para medio_respuesta
+        this.nuevaPqrsForm.get('medio_respuesta')?.valueChanges.subscribe(medio => {
+            this.medio = medio;
+            const emailControl = this.nuevaPqrsForm.get('email_ciudadano');
+            const direccionControl = this.nuevaPqrsForm.get('direccion_ciudadano');
+            const telefonoControl = this.nuevaPqrsForm.get('telefono_ciudadano');
+
+            // Limpiar validadores
+            emailControl?.clearValidators();
+            direccionControl?.clearValidators();
+            telefonoControl?.clearValidators();
+
+            // Establecer validadores según medio
+            if (medio === 'email') {
+                emailControl?.setValidators([Validators.required, Validators.email]);
+            } else if (medio === 'fisica') {
+                direccionControl?.setValidators([Validators.required]);
+            } else if (medio === 'telefono') {
+                telefonoControl?.setValidators([Validators.required]);
+            }
+
+            emailControl?.updateValueAndValidity();
+            direccionControl?.updateValueAndValidity();
+            telefonoControl?.updateValueAndValidity();
         });
     }
 
@@ -182,6 +251,52 @@ export class PortalCiudadanoComponent implements OnInit {
 
     volverAInicio() {
         this.router.navigate(['/']);
+    }
+
+    toggleNuevaPqrsForm() {
+        this.showNuevaPqrsForm = !this.showNuevaPqrsForm;
+        if (!this.showNuevaPqrsForm) {
+            this.nuevaPqrsForm.reset({
+                tipo_identificacion: 'personal',
+                medio_respuesta: 'ticket'
+            });
+        }
+    }
+
+    onSubmitPqrs() {
+        if (this.nuevaPqrsForm.valid && !this.isSubmittingPqrs) {
+            this.isSubmittingPqrs = true;
+
+            const formData = { ...this.nuevaPqrsForm.value };
+
+            // Si es anónima, asignar valores por defecto
+            if (formData.tipo_identificacion === 'anonima') {
+                formData.nombre_ciudadano = 'Anónimo';
+                formData.cedula_ciudadano = 'N/A';
+            }
+
+            this.pqrsService.createPqrs(formData).subscribe({
+                next: (response) => {
+                    this.alertService.success(
+                        `PQRS creada exitosamente. Radicado: ${response.numero_radicado}`,
+                        'PQRS Creada'
+                    );
+                    this.nuevaPqrsForm.reset({
+                        tipo_identificacion: 'personal',
+                        medio_respuesta: 'ticket'
+                    });
+                    this.showNuevaPqrsForm = false;
+                    this.loadMisPqrs(); // Recargar lista
+                    this.isSubmittingPqrs = false;
+                },
+                error: (error) => {
+                    console.error('Error creando PQRS:', error);
+                    const errorMessage = error.error?.detail || 'No se pudo crear la PQRS. Intente nuevamente.';
+                    this.alertService.error(errorMessage, 'Error');
+                    this.isSubmittingPqrs = false;
+                }
+            });
+        }
     }
 
     getEstadoLabel(estado: string): string {

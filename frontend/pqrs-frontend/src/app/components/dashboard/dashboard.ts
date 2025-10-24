@@ -129,6 +129,31 @@ export class DashboardComponent implements OnInit, OnDestroy {
       asuntoControl?.updateValueAndValidity();
     });
 
+    // Escuchar cambios en medio_respuesta para ajustar validaciones
+    this.nuevaPqrsForm.get('medio_respuesta')?.valueChanges.subscribe(medio => {
+      const emailControl = this.nuevaPqrsForm.get('email_ciudadano');
+      const direccionControl = this.nuevaPqrsForm.get('direccion_ciudadano');
+      const telefonoControl = this.nuevaPqrsForm.get('telefono_ciudadano');
+
+      // Limpiar validaciones primero
+      emailControl?.clearValidators();
+      direccionControl?.clearValidators();
+      telefonoControl?.clearValidators();
+
+      // Agregar validación según el medio seleccionado
+      if (medio === 'email') {
+        emailControl?.setValidators([Validators.required, Validators.email]);
+      } else if (medio === 'fisica') {
+        direccionControl?.setValidators([Validators.required]);
+      } else if (medio === 'telefono') {
+        telefonoControl?.setValidators([Validators.required]);
+      }
+
+      emailControl?.updateValueAndValidity();
+      direccionControl?.updateValueAndValidity();
+      telefonoControl?.updateValueAndValidity();
+    });
+
     this.nuevoSecretarioForm = this.fb.group({
       full_name: ['', Validators.required],
       username: ['', Validators.required],
