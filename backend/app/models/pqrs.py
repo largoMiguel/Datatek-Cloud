@@ -1,8 +1,56 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Text
+from sqlalchemy.types import TypeDecorator
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.config.database import Base
 import enum
+
+
+class EnumType(TypeDecorator):
+    """Almacena enums como texto pero procesa resultados tolerando tanto
+    los nombres de miembro en mayúsculas como los valores en minúsculas.
+    Devuelve instancias del Enum Python correspondiente.
+    """
+    impl = String
+
+    def __init__(self, enum_cls, length: int = 50, **kwargs):
+        super().__init__(length=length, **kwargs)
+        self.enum_cls = enum_cls
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        # Si es instancia del enum, enviar su .value
+        if isinstance(value, enum.Enum):
+            return value.value
+        # Si vienen nombres de miembro (ej: 'PETICION'), convertir a su .value
+        if isinstance(value, str):
+            # intentar mapear por nombre
+            try:
+                return self.enum_cls[value].value
+            except Exception:
+                # si no existe como nombre, asumir que es el value correcto
+                return value
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        # Si DB devolvió string, mapear a instancia del enum
+        if isinstance(value, str):
+            # buscar por value exacto (ej: 'peticion')
+            for member in self.enum_cls:
+                if member.value == value:
+                    return member
+            # intentar por nombre (ej: 'PETICION')
+            try:
+                return self.enum_cls[value]
+            except Exception:
+                # intentar por lowercased
+                for member in self.enum_cls:
+                    if member.value == value.lower():
+                        return member
+        return value
 
 class TipoSolicitud(enum.Enum):
     PETICION = "peticion"
@@ -35,14 +83,14 @@ class PQRS(Base):
     # Tipo de identificación (personal o anónima)
     # Use enum values (e.g., 'personal') instead of member names to avoid lookup issues
     tipo_identificacion = Column(
-        Enum(TipoIdentificacion, values_callable=lambda enum_cls: [e.value for e in enum_cls]),
+        EnumType(TipoIdentificacion),
         nullable=False,
         default=TipoIdentificacion.PERSONAL
     )
     
     # Medio de respuesta preferido
     medio_respuesta = Column(
-        Enum(MedioRespuesta, values_callable=lambda enum_cls: [e.value for e in enum_cls]),
+        EnumType(MedioRespuesta),
         nullable=False,
         default=MedioRespuesta.EMAIL
     )
@@ -56,13 +104,13 @@ class PQRS(Base):
     
     # Información de la PQRS
     tipo_solicitud = Column(
-        Enum(TipoSolicitud, values_callable=lambda enum_cls: [e.value for e in enum_cls]),
+        EnumType(TipoSolicitud),
         nullable=False
     )
     asunto = Column(String, nullable=False)
     descripcion = Column(Text, nullable=False)
     estado = Column(
-        Enum(EstadoPQRS, values_callable=lambda enum_cls: [e.value for e in enum_cls]),
+        EnumType(EstadoPQRS),
         nullable=False,
         default=EstadoPQRS.PENDIENTE
     )
