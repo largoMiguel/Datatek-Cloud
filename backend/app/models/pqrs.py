@@ -33,10 +33,19 @@ class PQRS(Base):
     numero_radicado = Column(String, unique=True, index=True, nullable=False)
     
     # Tipo de identificación (personal o anónima)
-    tipo_identificacion = Column(Enum(TipoIdentificacion), nullable=False, default=TipoIdentificacion.PERSONAL)
+    # Use enum values (e.g., 'personal') instead of member names to avoid lookup issues
+    tipo_identificacion = Column(
+        Enum(TipoIdentificacion, values_callable=lambda enum_cls: [e.value for e in enum_cls]),
+        nullable=False,
+        default=TipoIdentificacion.PERSONAL
+    )
     
     # Medio de respuesta preferido
-    medio_respuesta = Column(Enum(MedioRespuesta), nullable=False, default=MedioRespuesta.EMAIL)
+    medio_respuesta = Column(
+        Enum(MedioRespuesta, values_callable=lambda enum_cls: [e.value for e in enum_cls]),
+        nullable=False,
+        default=MedioRespuesta.EMAIL
+    )
     
     # Información del ciudadano (opcionales si es anónima)
     nombre_ciudadano = Column(String, nullable=True)
@@ -46,10 +55,17 @@ class PQRS(Base):
     direccion_ciudadano = Column(String, nullable=True)
     
     # Información de la PQRS
-    tipo_solicitud = Column(Enum(TipoSolicitud), nullable=False)
+    tipo_solicitud = Column(
+        Enum(TipoSolicitud, values_callable=lambda enum_cls: [e.value for e in enum_cls]),
+        nullable=False
+    )
     asunto = Column(String, nullable=False)
     descripcion = Column(Text, nullable=False)
-    estado = Column(Enum(EstadoPQRS), nullable=False, default=EstadoPQRS.PENDIENTE)
+    estado = Column(
+        Enum(EstadoPQRS, values_callable=lambda enum_cls: [e.value for e in enum_cls]),
+        nullable=False,
+        default=EstadoPQRS.PENDIENTE
+    )
     
     # Fechas importantes
     fecha_solicitud = Column(DateTime(timezone=True), server_default=func.now())
