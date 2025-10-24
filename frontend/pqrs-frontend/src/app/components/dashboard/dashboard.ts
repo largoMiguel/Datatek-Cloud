@@ -894,13 +894,13 @@ export class DashboardComponent implements OnInit, OnDestroy {
         label: 'PQRS por Tipo',
         data: tiposData,
         backgroundColor: [
-          'rgba(0, 123, 255, 0.7)',
+          'rgba(33, 107, 168, 0.7)',
           'rgba(255, 193, 7, 0.7)',
           'rgba(220, 53, 69, 0.7)',
           'rgba(40, 167, 69, 0.7)'
         ],
         borderColor: [
-          'rgba(0, 123, 255, 1)',
+          'rgba(33, 107, 168, 1)',
           'rgba(255, 193, 7, 1)',
           'rgba(220, 53, 69, 1)',
           'rgba(40, 167, 69, 1)'
@@ -932,11 +932,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
       datasets: [{
         label: 'PQRS Recibidas',
         data: tendenciasData,
-        borderColor: '#007bff',
-        backgroundColor: 'rgba(0, 123, 255, 0.1)',
+        borderColor: '#216ba8',
+        backgroundColor: 'rgba(33, 107, 168, 0.1)',
         fill: true,
         tension: 0.4,
-        pointBackgroundColor: '#007bff',
+        pointBackgroundColor: '#216ba8',
         pointBorderColor: '#fff',
         pointBorderWidth: 2,
         pointRadius: 5,

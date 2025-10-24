@@ -10,7 +10,7 @@
 
 .meta-card {
     transition: all 0.3s ease;
-    border-left: 4px solid #007bff;
+    border-left: 4px solid #216ba8;
 
     &:hover {
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
@@ -61,7 +61,7 @@ svg {
 }
 
 .bg-en_progreso {
-    background-color: #007bff !important;
+    background-color: #216ba8 !important;
 }
 
 .bg-completada {
@@ -77,7 +77,7 @@ svg {
 }
 
 .text-en_progreso {
-    color: #007bff !important;
+    color: #216ba8 !important;
 }
 
 .text-completada {
@@ -135,8 +135,8 @@ svg {
     }
 
     &.bg-primary:hover {
-        background-color: #0056b3 !important;
-        box-shadow: 0 10px 25px rgba(0, 123, 255, 0.4) !important;
+        background-color: #195683 !important;
+        box-shadow: 0 10px 25px rgba(33, 107, 168, 0.4) !important;
     }
 
     &.bg-success:hover {

@@ -38,3 +38,44 @@ body {
 ::-webkit-scrollbar-thumb:hover {
     background: #555;
 }
+
+/* Override Bootstrap primary color to match design (#216ba8) */
+.bg-primary,
+.navbar.bg-primary,
+.card-header.bg-primary,
+.modal-header.bg-primary,
+.badge.bg-primary,
+.progress-bar.bg-primary,
+.stats-card.bg-primary {
+    background-color: #216ba8 !important;
+    border-color: #216ba8 !important;
+}
+
+.text-primary {
+    color: #216ba8 !important;
+}
+
+.btn-primary,
+.btn-primary:focus,
+.btn-primary:hover {
+    background-color: #216ba8 !important;
+    border-color: #195683 !important;
+}
+
+/* Ensure badges and progress bars use the correct color */
+.badge.bg-primary {
+    background-color: #216ba8 !important;
+    color: #fff !important;
+}
+
+.navbar-brand,
+.navbar .nav-link {
+    color: #fff !important;
+    /* keep nav text white when using bg-primary */
+}
+
+/* Fallback for any rgba-based shadows using bootstrap primary */
+.shadow-primary,
+.box-shadow-primary {
+    box-shadow: 0 4px 12px rgba(33, 107, 168, 0.15) !important;
+}

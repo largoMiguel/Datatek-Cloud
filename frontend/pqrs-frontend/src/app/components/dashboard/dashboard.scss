@@ -18,7 +18,7 @@
         font-weight: bold;
         font-weight: 600;
 
-        color: #007bff !important;
+        color: #216ba8 !important;
     }
 
 }
@@ -36,13 +36,13 @@
 
         margin-bottom: 1rem;
 
-        background-color: #007bff;
+        background-color: #216ba8;
 
         color: white !important;
 
         .card-body {
 
-            border-color: #007bff;
+            border-color: #216ba8;
             padding: 1.5rem;
 
         }
@@ -53,7 +53,7 @@
     &:hover:not(.active) {
         .list-group-item {
 
-            color: #007bff;
+            color: #216ba8;
             border: none;
 
             border-color: #dee2e6;
@@ -72,10 +72,10 @@
     .list-group-item.active {
 
         box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-        background-color: #007bff;
+        background-color: #216ba8;
 
         border-radius: 0.5rem;
-        border-color: #007bff;
+        border-color: #216ba8;
 
     }
 
@@ -131,7 +131,7 @@
         transition: all 0.2s ease;
 
         &:hover {
-            background-color: rgba(0, 123, 255, 0.05);
+            background-color: rgba(33, 107, 168, 0.05);
             transform: scale(1.01);
         }
     }
@@ -191,10 +191,10 @@
     .form-control:focus {
         opacity: 0.8;
 
-        border-color: #007bff;
+        border-color: #216ba8;
     }
 
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    box-shadow: 0 0 0 0.2rem rgba(33, 107, 168, 0.25);
 
 }
 
@@ -205,14 +205,14 @@
     .form-select:focus {
         color: #6c757d !important;
 
-        border-color: #007bff;
+        border-color: #216ba8;
     }
 
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    box-shadow: 0 0 0 0.2rem rgba(33, 107, 168, 0.25);
 }
 
 .spinner-border {
-    color: #007bff;
+    color: #216ba8;
 }
 
 .text-muted {
@@ -265,7 +265,7 @@
     padding: 1.5rem;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: all 0.3s ease;
-    border-left: 4px solid #007bff;
+    border-left: 4px solid #216ba8;
     display: flex;
     align-items: center;
     gap: 1.25rem;
@@ -277,16 +277,16 @@
     }
 
     &.stats-primary {
-        border-left-color: #007bff;
+        border-left-color: #216ba8;
 
         .stats-icon {
-            background: linear-gradient(135deg, #007bff, #0056b3);
+            background: linear-gradient(135deg, #216ba8, #1a5a8e);
             color: white;
         }
 
         &:hover {
-            border-left-color: #0056b3;
-            background: linear-gradient(to right, rgba(0, 123, 255, 0.02), white);
+            border-left-color: #1a5a8e;
+            background: linear-gradient(to right, rgba(33, 107, 168, 0.02), white);
         }
     }
 
@@ -430,7 +430,7 @@
             transition: background-color 0.2s ease;
 
             &:hover {
-                background-color: rgba(0, 123, 255, 0.04);
+                background-color: rgba(33, 107, 168, 0.04);
             }
 
             td {
@@ -504,7 +504,7 @@
         padding: 1.5rem;
         border-radius: 8px;
         margin-bottom: 1rem;
-        border-left: 4px solid #007bff;
+        border-left: 4px solid #216ba8;
 
         h6 {
             font-weight: 600;
@@ -652,4 +652,14 @@ form {
     button[type="submit"] {
         min-width: 150px;
     }
+}
+
+// Logo del navbar
+.navbar-logo {
+    height: 40px;
+    width: auto;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: white;
+    padding: 2px;
 }
