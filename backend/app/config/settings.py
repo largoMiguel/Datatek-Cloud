@@ -18,13 +18,24 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
     
-    # CORS
-    allowed_origins: str = "http://localhost:4200"
+    # CORS - Múltiples orígenes separados por coma
+    allowed_origins: str = "http://localhost:4200,https://pqrs-frontend.onrender.com"
     
     @property
     def cors_origins(self) -> List[str]:
         """Convierte la cadena de orígenes permitidos en una lista"""
-        return [origin.strip() for origin in self.allowed_origins.split(",")]
+        origins = [origin.strip() for origin in self.allowed_origins.split(",")]
+        # Agregar automáticamente variantes comunes si estamos en producción
+        production_origins = []
+        for origin in origins:
+            if "onrender.com" in origin:
+                production_origins.append(origin)
+                # Agregar versión sin www si no está
+                if origin.startswith("https://www."):
+                    production_origins.append(origin.replace("https://www.", "https://"))
+                elif origin.startswith("https://") and "www." not in origin:
+                    production_origins.append(origin.replace("https://", "https://www."))
+        return list(set(origins + production_origins))  # Eliminar duplicados
     
     class Config:
         env_file = ".env"
