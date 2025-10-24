@@ -17,7 +17,26 @@ async def create_pqrs(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_active_user)
 ):
-    """Crear nueva PQRS"""
+    """Crear nueva PQRS (personal o anónima)"""
+    
+    # Validar según tipo de identificación
+    from app.models.pqrs import TipoIdentificacion
+    
+    if pqrs_data.tipo_identificacion == TipoIdentificacion.PERSONAL:
+        # PQRS Personal: requiere nombre y cédula
+        if not pqrs_data.nombre_ciudadano or not pqrs_data.cedula_ciudadano:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Para PQRS personales se requiere nombre y cédula"
+            )
+    else:
+        # PQRS Anónima: solo requiere descripción
+        # Asignar valores por defecto
+        if not pqrs_data.nombre_ciudadano:
+            pqrs_data.nombre_ciudadano = "Anónimo"
+        if not pqrs_data.cedula_ciudadano:
+            pqrs_data.cedula_ciudadano = "N/A"
+    
     # Usar número de radicado proporcionado o generar uno nuevo
     if pqrs_data.numero_radicado:
         numero_radicado = pqrs_data.numero_radicado
@@ -37,13 +56,15 @@ async def create_pqrs(
     # Crear PQRS sin asignar (assigned_to_id será NULL hasta que admin/secretario la asigne)
     db_pqrs = PQRS(
         numero_radicado=numero_radicado,
+        tipo_identificacion=pqrs_data.tipo_identificacion,
+        medio_respuesta=pqrs_data.medio_respuesta,
         nombre_ciudadano=pqrs_data.nombre_ciudadano,
         cedula_ciudadano=pqrs_data.cedula_ciudadano,
         telefono_ciudadano=pqrs_data.telefono_ciudadano,
         email_ciudadano=pqrs_data.email_ciudadano,
         direccion_ciudadano=pqrs_data.direccion_ciudadano,
         tipo_solicitud=pqrs_data.tipo_solicitud,
-        asunto=pqrs_data.asunto,
+        asunto=pqrs_data.asunto or "Sin asunto",
         descripcion=pqrs_data.descripcion,
         created_by_id=current_user.id,
         assigned_to_id=None  # Sin asignar inicialmente

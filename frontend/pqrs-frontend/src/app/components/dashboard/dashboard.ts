@@ -92,13 +92,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private reportService: ReportService
   ) {
     this.nuevaPqrsForm = this.fb.group({
+      tipo_identificacion: ['personal', Validators.required],
+      medio_respuesta: ['email', Validators.required],
       tipo_solicitud: ['', Validators.required],
-      cedula_ciudadano: ['', Validators.required],
-      nombre_ciudadano: ['', Validators.required],
+      cedula_ciudadano: [''],
+      nombre_ciudadano: [''],
       telefono_ciudadano: [''],
       email_ciudadano: [''],
       direccion_ciudadano: [''],
-      asunto: ['', Validators.required],
+      asunto: [''],
       descripcion: ['', Validators.required]
     });
 
@@ -260,10 +262,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
       const busqueda = this.textoBusqueda.toLowerCase().trim();
       resultado = resultado.filter(pqrs =>
         pqrs.numero_radicado.toLowerCase().includes(busqueda) ||
-        pqrs.nombre_ciudadano.toLowerCase().includes(busqueda) ||
-        pqrs.asunto.toLowerCase().includes(busqueda) ||
+        (pqrs.nombre_ciudadano || '').toLowerCase().includes(busqueda) ||
+        (pqrs.asunto || '').toLowerCase().includes(busqueda) ||
         pqrs.descripcion.toLowerCase().includes(busqueda) ||
-        pqrs.cedula_ciudadano.includes(busqueda)
+        (pqrs.cedula_ciudadano || '').includes(busqueda)
       );
     }
 

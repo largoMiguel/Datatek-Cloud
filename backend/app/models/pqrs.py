@@ -16,15 +16,31 @@ class EstadoPQRS(enum.Enum):
     RESUELTO = "resuelto"
     CERRADO = "cerrado"
 
+class TipoIdentificacion(enum.Enum):
+    PERSONAL = "personal"
+    ANONIMA = "anonima"
+
+class MedioRespuesta(enum.Enum):
+    EMAIL = "email"
+    FISICA = "fisica"
+    TELEFONO = "telefono"
+    TICKET = "ticket"
+
 class PQRS(Base):
     __tablename__ = "pqrs"
     
     id = Column(Integer, primary_key=True, index=True)
     numero_radicado = Column(String, unique=True, index=True, nullable=False)
     
-    # Información del ciudadano
-    nombre_ciudadano = Column(String, nullable=False)
-    cedula_ciudadano = Column(String, nullable=False)
+    # Tipo de identificación (personal o anónima)
+    tipo_identificacion = Column(Enum(TipoIdentificacion), nullable=False, default=TipoIdentificacion.PERSONAL)
+    
+    # Medio de respuesta preferido
+    medio_respuesta = Column(Enum(MedioRespuesta), nullable=False, default=MedioRespuesta.EMAIL)
+    
+    # Información del ciudadano (opcionales si es anónima)
+    nombre_ciudadano = Column(String, nullable=True)
+    cedula_ciudadano = Column(String, nullable=True)
     telefono_ciudadano = Column(String, nullable=True)
     email_ciudadano = Column(String, nullable=True)
     direccion_ciudadano = Column(String, nullable=True)

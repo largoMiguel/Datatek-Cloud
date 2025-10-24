@@ -1,13 +1,15 @@
 export interface PQRS {
     id: number;
     numero_radicado: string;
-    nombre_ciudadano: string;
-    cedula_ciudadano: string;
+    tipo_identificacion: TipoIdentificacion;
+    medio_respuesta: MedioRespuesta;
+    nombre_ciudadano?: string;
+    cedula_ciudadano?: string;
     telefono_ciudadano?: string;
     email_ciudadano?: string;
     direccion_ciudadano?: string;
     tipo_solicitud: TipoSolicitud;
-    asunto: string;
+    asunto?: string;
     descripcion: string;
     estado: EstadoPQRS;
     fecha_solicitud: string;
@@ -36,17 +38,21 @@ export interface PQRSWithDetails extends PQRS {
 
 export interface CreatePQRSRequest {
     numero_radicado?: string;
-    nombre_ciudadano: string;
-    cedula_ciudadano: string;
+    tipo_identificacion: TipoIdentificacion;
+    medio_respuesta: MedioRespuesta;
+    nombre_ciudadano?: string;
+    cedula_ciudadano?: string;
     telefono_ciudadano?: string;
     email_ciudadano?: string;
     direccion_ciudadano?: string;
     tipo_solicitud: TipoSolicitud;
-    asunto: string;
+    asunto?: string;
     descripcion: string;
 }
 
 export interface UpdatePQRSRequest {
+    tipo_identificacion?: TipoIdentificacion;
+    medio_respuesta?: MedioRespuesta;
     nombre_ciudadano?: string;
     cedula_ciudadano?: string;
     telefono_ciudadano?: string;
@@ -67,6 +73,8 @@ export interface PQRSResponse {
 
 export type TipoSolicitud = 'peticion' | 'queja' | 'reclamo' | 'sugerencia';
 export type EstadoPQRS = 'pendiente' | 'en_proceso' | 'resuelto' | 'cerrado';
+export type TipoIdentificacion = 'personal' | 'anonima';
+export type MedioRespuesta = 'email' | 'fisica' | 'telefono' | 'ticket';
 
 export const TIPOS_SOLICITUD: { value: TipoSolicitud; label: string }[] = [
     { value: 'peticion', label: 'Petición' },
@@ -80,4 +88,16 @@ export const ESTADOS_PQRS: { value: EstadoPQRS; label: string; color: string }[]
     { value: 'en_proceso', label: 'En Proceso', color: 'info' },
     { value: 'resuelto', label: 'Resuelto', color: 'success' },
     { value: 'cerrado', label: 'Cerrado', color: 'secondary' }
+];
+
+export const TIPOS_IDENTIFICACION: { value: TipoIdentificacion; label: string }[] = [
+    { value: 'personal', label: 'A nombre personal (con identificación)' },
+    { value: 'anonima', label: 'Anónima (solo descripción)' }
+];
+
+export const MEDIOS_RESPUESTA: { value: MedioRespuesta; label: string }[] = [
+    { value: 'email', label: 'Por correo electrónico' },
+    { value: 'fisica', label: 'Por correspondencia física' },
+    { value: 'telefono', label: 'Por teléfono' },
+    { value: 'ticket', label: 'Seguimiento por ticket' }
 ];

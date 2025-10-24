@@ -26,9 +26,9 @@ if inspector.has_table("users"):
         except Exception as e:
             print(f"No se pudo agregar la columna is_active automáticamente: {e}")
 
-# Migración automática para PostgreSQL: agregar columnas de ciudadano
+# Migración automática para PostgreSQL: agregar columnas de ciudadano y PQRS
 def run_postgres_migration():
-    """Ejecuta la migración para agregar columnas cedula, telefono, direccion"""
+    """Ejecuta las migraciones para agregar columnas cedula, telefono, direccion y tipo_identificacion, medio_respuesta"""
     try:
         # Detectar si es PostgreSQL
         if 'postgresql' not in str(engine.url):
@@ -36,7 +36,7 @@ def run_postgres_migration():
         
         print("\n🔄 Ejecutando migración de PostgreSQL...")
         
-        # Paso 1: Agregar valor CIUDADANO al enum si no existe
+        # Paso 1: Agregar valor CIUDADANO al enum userrole si no existe
         try:
             with engine.connect() as conn:
                 check_enum = text("""
@@ -49,15 +49,14 @@ def run_postgres_migration():
                 result = conn.execute(check_enum).scalar()
                 
                 if not result:
-                    # Agregar valor al enum (requiere AUTOCOMMIT)
                     conn.execute(text("COMMIT"))
                     conn.execute(text("ALTER TYPE userrole ADD VALUE 'CIUDADANO'"))
-                    print("   ✅ Valor CIUDADANO agregado al enum")
+                    print("   ✅ Valor CIUDADANO agregado al enum userrole")
         except Exception as e:
-            print(f"   ⚠️  ENUM: {e}")
+            print(f"   ⚠️  ENUM userrole: {e}")
         
-        # Paso 2: Agregar columnas si no existen
-        migrations = [
+        # Paso 2: Agregar columnas a users si no existen
+        user_migrations = [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS cedula VARCHAR(20)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS telefono VARCHAR(20)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS direccion VARCHAR(255)",
@@ -65,12 +64,58 @@ def run_postgres_migration():
         ]
         
         with engine.connect() as conn:
-            for sql in migrations:
+            for sql in user_migrations:
                 try:
                     conn.execute(text(sql))
                     conn.commit()
                 except Exception as e:
                     print(f"   ⚠️  {sql[:30]}...: {e}")
+        
+        # Paso 3: Crear ENUMs para PQRS (tipoidentificacion, mediorespuesta)
+        try:
+            with engine.connect() as conn:
+                # Crear enum tipoidentificacion
+                check_tipo = text("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM pg_type WHERE typname = 'tipoidentificacion'
+                    ) as exists;
+                """)
+                if not conn.execute(check_tipo).scalar():
+                    conn.execute(text("CREATE TYPE tipoidentificacion AS ENUM ('personal', 'anonima')"))
+                    conn.commit()
+                    print("   ✅ ENUM tipoidentificacion creado")
+                
+                # Crear enum mediorespuesta
+                check_medio = text("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM pg_type WHERE typname = 'mediorespuesta'
+                    ) as exists;
+                """)
+                if not conn.execute(check_medio).scalar():
+                    conn.execute(text("CREATE TYPE mediorespuesta AS ENUM ('email', 'fisica', 'telefono', 'ticket')"))
+                    conn.commit()
+                    print("   ✅ ENUM mediorespuesta creado")
+        except Exception as e:
+            print(f"   ⚠️  ENUMs PQRS: {e}")
+        
+        # Paso 4: Agregar columnas a pqrs
+        pqrs_migrations = [
+            "ALTER TABLE pqrs ADD COLUMN IF NOT EXISTS tipo_identificacion tipoidentificacion DEFAULT 'personal'",
+            "ALTER TABLE pqrs ADD COLUMN IF NOT EXISTS medio_respuesta mediorespuesta DEFAULT 'email'",
+            "ALTER TABLE pqrs ALTER COLUMN nombre_ciudadano DROP NOT NULL",
+            "ALTER TABLE pqrs ALTER COLUMN cedula_ciudadano DROP NOT NULL",
+            "ALTER TABLE pqrs ALTER COLUMN asunto DROP NOT NULL"
+        ]
+        
+        with engine.connect() as conn:
+            for sql in pqrs_migrations:
+                try:
+                    conn.execute(text(sql))
+                    conn.commit()
+                except Exception as e:
+                    # Ignorar error si la columna ya permite NULL
+                    if "does not exist" not in str(e).lower():
+                        print(f"   ⚠️  {sql[:40]}...: {e}")
         
         print("   ✅ Migración PostgreSQL completada")
         

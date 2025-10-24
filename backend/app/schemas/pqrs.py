@@ -1,23 +1,35 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 from datetime import datetime
-from app.models.pqrs import TipoSolicitud, EstadoPQRS
+from app.models.pqrs import TipoSolicitud, EstadoPQRS, TipoIdentificacion, MedioRespuesta
 
 # Esquemas base
 class PQRSBase(BaseModel):
-    nombre_ciudadano: str
-    cedula_ciudadano: str
+    tipo_identificacion: TipoIdentificacion = TipoIdentificacion.PERSONAL
+    medio_respuesta: MedioRespuesta = MedioRespuesta.EMAIL
+    nombre_ciudadano: Optional[str] = None
+    cedula_ciudadano: Optional[str] = None
     telefono_ciudadano: Optional[str] = None
     email_ciudadano: Optional[EmailStr] = None
     direccion_ciudadano: Optional[str] = None
     tipo_solicitud: TipoSolicitud
-    asunto: str
+    asunto: Optional[str] = None  # Opcional para anónimas
     descripcion: str
+    
+    @field_validator('nombre_ciudadano', 'cedula_ciudadano')
+    @classmethod
+    def validate_personal_fields(cls, v, info):
+        # Si es PERSONAL, nombre y cédula son obligatorios
+        if info.data.get('tipo_identificacion') == TipoIdentificacion.PERSONAL and not v:
+            raise ValueError(f'{info.field_name} es obligatorio para PQRS personales')
+        return v
 
 class PQRSCreate(PQRSBase):
     numero_radicado: Optional[str] = None
 
 class PQRSUpdate(BaseModel):
+    tipo_identificacion: Optional[TipoIdentificacion] = None
+    medio_respuesta: Optional[MedioRespuesta] = None
     nombre_ciudadano: Optional[str] = None
     cedula_ciudadano: Optional[str] = None
     telefono_ciudadano: Optional[str] = None
@@ -37,6 +49,8 @@ class PQRSResponse(BaseModel):
 class PQRS(PQRSBase):
     id: int
     numero_radicado: str
+    tipo_identificacion: TipoIdentificacion
+    medio_respuesta: MedioRespuesta
     estado: EstadoPQRS
     fecha_solicitud: datetime
     fecha_cierre: Optional[datetime] = None
