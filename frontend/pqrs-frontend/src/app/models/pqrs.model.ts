@@ -95,9 +95,9 @@ export const TIPOS_IDENTIFICACION: { value: TipoIdentificacion; label: string }[
     { value: 'anonima', label: 'Anónima (solo descripción)' }
 ];
 
-export const MEDIOS_RESPUESTA: { value: MedioRespuesta; label: string }[] = [
-    { value: 'email', label: 'Por correo electrónico' },
-    { value: 'fisica', label: 'Por correspondencia física' },
-    { value: 'telefono', label: 'Por teléfono' },
-    { value: 'ticket', label: 'Seguimiento por ticket' }
+export const MEDIOS_RESPUESTA: { value: MedioRespuesta; label: string; icon?: string }[] = [
+    { value: 'email', label: 'Por correo electrónico', icon: 'fas fa-envelope' },
+    { value: 'fisica', label: 'Por correspondencia física', icon: 'fas fa-mail-bulk' },
+    { value: 'telefono', label: 'Por teléfono', icon: 'fas fa-phone' },
+    { value: 'ticket', label: 'Seguimiento por ticket', icon: 'fas fa-ticket-alt' }
 ];
