@@ -1,4 +1,7 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
+from fastapi import Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.config.database import engine, get_db, Base
@@ -185,6 +188,28 @@ app = FastAPI(
     description="API para gestión de Peticiones, Quejas, Reclamos y Sugerencias",
     version="1.0.0"
 )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Manejador temporal para loguear el body que causa errores 422 y devolver detalles.
+    Esto ayuda a depurar por qué algunas solicitudes (p. ej. creación anónima) fallan la validación.
+    """
+    try:
+        raw = await request.body()
+        body_text = raw.decode('utf-8') if raw else ''
+    except Exception:
+        body_text = '<no body available>'
+
+    # Loguear en stdout para que el desarrollador lo vea en la consola
+    print('\n==== RequestValidationError detected ====')
+    print('Path:', request.url.path)
+    print('Body:', body_text)
+    print('Errors:', exc.errors())
+    print('========================================\n')
+
+    # Devolver la respuesta 422 con los detalles y el body para debugging temporal
+    return JSONResponse(status_code=422, content={"detail": exc.errors(), "body": body_text})
 
 # Configurar CORS dinámicamente según entorno
 app.add_middleware(
