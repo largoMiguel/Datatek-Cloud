@@ -15,4 +15,9 @@ Base.metadata.create_all(bind=engine)
 print('✓ Tablas creadas exitosamente')
 "
 
+echo "→ Ejecutando migraciones de PostgreSQL..."
+cd migrations
+python migrate_postgres.py
+cd ..
+
 echo "→ Build completado exitosamente!"
