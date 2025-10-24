@@ -556,6 +556,27 @@
             <div class="card">
                 <div class="card-body">
                     <form [formGroup]="nuevaPqrsForm" (ngSubmit)="onSubmitNuevaPqrs()">
+                        <!-- Tipo de Identificación -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">¿Cómo desea presentar su PQRS? *</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="tipo_identificacion"
+                                        id="tipo_personal" value="personal" formControlName="tipo_identificacion">
+                                    <label class="form-check-label" for="tipo_personal">
+                                        <i class="fas fa-user me-1"></i> A nombre personal (con identificación)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="tipo_identificacion"
+                                        id="tipo_anonima" value="anonima" formControlName="tipo_identificacion">
+                                    <label class="form-check-label" for="tipo_anonima">
+                                        <i class="fas fa-user-secret me-1"></i> Anónima (solo descripción)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="mb-3">
                             <label for="tipo_solicitud" class="form-label">Tipo de Solicitud *</label>
                             <select id="tipo_solicitud" formControlName="tipo_solicitud" class="form-select" required>
@@ -567,47 +588,95 @@
                             </select>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="cedula_ciudadano" class="form-label">Cédula del Ciudadano *</label>
-                                <input id="cedula_ciudadano" type="text" class="form-control"
-                                    formControlName="cedula_ciudadano" required>
+                        <!-- Campos para PQRS Personal -->
+                        <div *ngIf="nuevaPqrsForm.get('tipo_identificacion')?.value === 'personal'">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="cedula_ciudadano" class="form-label">Cédula del Ciudadano *</label>
+                                    <input id="cedula_ciudadano" type="text" class="form-control"
+                                        formControlName="cedula_ciudadano">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="nombre_ciudadano" class="form-label">Nombre Completo *</label>
+                                    <input id="nombre_ciudadano" type="text" class="form-control"
+                                        formControlName="nombre_ciudadano">
+                                </div>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="nombre_ciudadano" class="form-label">Nombre Completo *</label>
-                                <input id="nombre_ciudadano" type="text" class="form-control"
-                                    formControlName="nombre_ciudadano" required>
+
+                            <div class="mb-3">
+                                <label for="telefono_ciudadano" class="form-label">Teléfono</label>
+                                <input id="telefono_ciudadano" type="tel" class="form-control"
+                                    formControlName="telefono_ciudadano">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="email_ciudadano" class="form-label">Email</label>
+                                <input id="email_ciudadano" type="email" class="form-control"
+                                    formControlName="email_ciudadano">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="direccion_ciudadano" class="form-label">Dirección</label>
+                                <input id="direccion_ciudadano" type="text" class="form-control"
+                                    formControlName="direccion_ciudadano">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="asunto" class="form-label">Asunto *</label>
+                                <input id="asunto" type="text" class="form-control" formControlName="asunto"
+                                    placeholder="Resumen breve del motivo de la PQRS...">
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="telefono_ciudadano" class="form-label">Teléfono</label>
-                            <input id="telefono_ciudadano" type="tel" class="form-control"
-                                formControlName="telefono_ciudadano">
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="email_ciudadano" class="form-label">Email</label>
-                            <input id="email_ciudadano" type="email" class="form-control"
-                                formControlName="email_ciudadano">
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="direccion_ciudadano" class="form-label">Dirección</label>
-                            <input id="direccion_ciudadano" type="text" class="form-control"
-                                formControlName="direccion_ciudadano">
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="asunto" class="form-label">Asunto *</label>
-                            <input id="asunto" type="text" class="form-control" formControlName="asunto" required
-                                placeholder="Resumen breve del motivo de la PQRS...">
-                        </div>
-
-                        <div class="mb-3">
+                        <!-- Campo Descripción (siempre visible) -->
+                        <div class="mb-4">
                             <label for="descripcion" class="form-label">Descripción *</label>
                             <textarea id="descripcion" class="form-control" rows="4" formControlName="descripcion"
                                 required placeholder="Describa detalladamente su solicitud..."></textarea>
+                        </div>
+
+                        <!-- Medio de Respuesta -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Selecciona el medio por el que te gustaría recibir la
+                                respuesta *</label>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="medio_respuesta"
+                                            id="medio_email" value="email" formControlName="medio_respuesta">
+                                        <label class="form-check-label" for="medio_email">
+                                            <i class="fas fa-envelope me-1"></i> Por correo electrónico
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="medio_respuesta"
+                                            id="medio_fisica" value="fisica" formControlName="medio_respuesta">
+                                        <label class="form-check-label" for="medio_fisica">
+                                            <i class="fas fa-mail-bulk me-1"></i> Por correspondencia física
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="medio_respuesta"
+                                            id="medio_telefono" value="telefono" formControlName="medio_respuesta">
+                                        <label class="form-check-label" for="medio_telefono">
+                                            <i class="fas fa-phone me-1"></i> Por teléfono
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="medio_respuesta"
+                                            id="medio_ticket" value="ticket" formControlName="medio_respuesta">
+                                        <label class="form-check-label" for="medio_ticket">
+                                            <i class="fas fa-ticket-alt me-1"></i> Seguimiento por ticket
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="d-flex justify-content-between">

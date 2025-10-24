@@ -9,7 +9,7 @@ import { AlertService } from '../../services/alert.service';
 import { AiService } from '../../services/ai.service';
 import { ReportService } from '../../services/report.service';
 import { User } from '../../models/user.model';
-import { PQRSWithDetails, ESTADOS_PQRS, EstadoPQRS, UpdatePQRSRequest, PQRSResponse } from '../../models/pqrs.model';
+import { PQRSWithDetails, ESTADOS_PQRS, EstadoPQRS, UpdatePQRSRequest, PQRSResponse, TIPOS_IDENTIFICACION, MEDIOS_RESPUESTA } from '../../models/pqrs.model';
 import { BaseChartDirective } from 'ng2-charts';
 import { Chart, ChartConfiguration, ChartData, ChartType, registerables } from 'chart.js';
 
@@ -34,6 +34,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isLoadingUsuarios = false;
   isSubmitting = false;
   estadosColor = ESTADOS_PQRS;
+  tiposIdentificacion = TIPOS_IDENTIFICACION;
+  mediosRespuesta = MEDIOS_RESPUESTA;
   activeView = 'dashboard';
   nuevaPqrsForm: FormGroup;
   nuevoSecretarioForm: FormGroup;
@@ -102,6 +104,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
       direccion_ciudadano: [''],
       asunto: [''],
       descripcion: ['', Validators.required]
+    });
+
+    // Escuchar cambios en tipo_identificacion para ajustar validaciones
+    this.nuevaPqrsForm.get('tipo_identificacion')?.valueChanges.subscribe(tipo => {
+      const cedulaControl = this.nuevaPqrsForm.get('cedula_ciudadano');
+      const nombreControl = this.nuevaPqrsForm.get('nombre_ciudadano');
+      const asuntoControl = this.nuevaPqrsForm.get('asunto');
+
+      if (tipo === 'personal') {
+        // PQRS Personal: cedula, nombre y asunto obligatorios
+        cedulaControl?.setValidators([Validators.required]);
+        nombreControl?.setValidators([Validators.required]);
+        asuntoControl?.setValidators([Validators.required]);
+      } else {
+        // PQRS Anónima: solo descripción obligatoria
+        cedulaControl?.clearValidators();
+        nombreControl?.clearValidators();
+        asuntoControl?.clearValidators();
+      }
+
+      cedulaControl?.updateValueAndValidity();
+      nombreControl?.updateValueAndValidity();
+      asuntoControl?.updateValueAndValidity();
     });
 
     this.nuevoSecretarioForm = this.fb.group({
