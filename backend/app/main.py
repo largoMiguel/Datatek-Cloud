@@ -26,6 +26,60 @@ if inspector.has_table("users"):
         except Exception as e:
             print(f"No se pudo agregar la columna is_active automáticamente: {e}")
 
+# Migración automática para PostgreSQL: agregar columnas de ciudadano
+def run_postgres_migration():
+    """Ejecuta la migración para agregar columnas cedula, telefono, direccion"""
+    try:
+        # Detectar si es PostgreSQL
+        if 'postgresql' not in str(engine.url):
+            return  # Solo ejecutar en PostgreSQL
+        
+        print("\n🔄 Ejecutando migración de PostgreSQL...")
+        
+        # Paso 1: Agregar valor CIUDADANO al enum si no existe
+        try:
+            with engine.connect() as conn:
+                check_enum = text("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM pg_enum
+                        WHERE enumlabel = 'CIUDADANO'
+                        AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'userrole')
+                    ) as exists;
+                """)
+                result = conn.execute(check_enum).scalar()
+                
+                if not result:
+                    # Agregar valor al enum (requiere AUTOCOMMIT)
+                    conn.execute(text("COMMIT"))
+                    conn.execute(text("ALTER TYPE userrole ADD VALUE 'CIUDADANO'"))
+                    print("   ✅ Valor CIUDADANO agregado al enum")
+        except Exception as e:
+            print(f"   ⚠️  ENUM: {e}")
+        
+        # Paso 2: Agregar columnas si no existen
+        migrations = [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS cedula VARCHAR(20)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS telefono VARCHAR(20)",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS direccion VARCHAR(255)",
+            "CREATE INDEX IF NOT EXISTS idx_users_cedula ON users(cedula)"
+        ]
+        
+        with engine.connect() as conn:
+            for sql in migrations:
+                try:
+                    conn.execute(text(sql))
+                    conn.commit()
+                except Exception as e:
+                    print(f"   ⚠️  {sql[:30]}...: {e}")
+        
+        print("   ✅ Migración PostgreSQL completada")
+        
+    except Exception as e:
+        print(f"   ⚠️  Error en migración: {e}")
+
+# Ejecutar migración al importar
+run_postgres_migration()
+
 app = FastAPI(
     title="Sistema PQRS Alcaldía",
     description="API para gestión de Peticiones, Quejas, Reclamos y Sugerencias",
