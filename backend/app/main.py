@@ -26,6 +26,61 @@ if inspector.has_table("users"):
         except Exception as e:
             print(f"No se pudo agregar la columna is_active automáticamente: {e}")
 
+# Compatibilidad SQLite: asegurarse de que la tabla pqrs tenga las columnas nuevas (tipo_identificacion, medio_respuesta, etc.)
+def run_sqlite_migration():
+    try:
+        # Ejecutar sólo si la URL del engine es SQLite
+        if 'sqlite' not in str(engine.url):
+            return
+
+        print("\n🔄 Ejecutando migración ligera para SQLite...")
+        inspector_local = inspect(engine)
+        if not inspector_local.has_table('pqrs'):
+            print("   ⚠️  Tabla 'pqrs' no existe todavía; saltando migración SQLite")
+            return
+
+        cols = [c.get('name') for c in inspector_local.get_columns('pqrs')]
+        with engine.connect() as conn:
+            # Agregar columna tipo_identificacion si no existe
+            if 'tipo_identificacion' not in cols:
+                try:
+                    conn.execute(text("ALTER TABLE pqrs ADD COLUMN tipo_identificacion TEXT DEFAULT 'personal'"))
+                    conn.commit()
+                    print("   ✅ Columna 'tipo_identificacion' agregada a pqrs (SQLite)")
+                except Exception as e:
+                    print(f"   ⚠️  No se pudo agregar tipo_identificacion: {e}")
+
+            # Agregar columna medio_respuesta si no existe
+            if 'medio_respuesta' not in cols:
+                try:
+                    conn.execute(text("ALTER TABLE pqrs ADD COLUMN medio_respuesta TEXT DEFAULT 'ticket'"))
+                    conn.commit()
+                    print("   ✅ Columna 'medio_respuesta' agregada a pqrs (SQLite)")
+                except Exception as e:
+                    print(f"   ⚠️  No se pudo agregar medio_respuesta: {e}")
+
+            # Asegurar columnas opcionales (nombre_ciudadano, cedula_ciudadano, asunto) existen
+            optional_cols = {
+                'nombre_ciudadano': "ALTER TABLE pqrs ADD COLUMN nombre_ciudadano TEXT",
+                'cedula_ciudadano': "ALTER TABLE pqrs ADD COLUMN cedula_ciudadano TEXT",
+                'asunto': "ALTER TABLE pqrs ADD COLUMN asunto TEXT"
+            }
+            for col, sql in optional_cols.items():
+                if col not in cols:
+                    try:
+                        conn.execute(text(sql))
+                        conn.commit()
+                        print(f"   ✅ Columna '{col}' agregada a pqrs (SQLite)")
+                    except Exception as e:
+                        print(f"   ⚠️  No se pudo agregar {col}: {e}")
+
+        print("   ✅ Migración SQLite completada")
+    except Exception as e:
+        print(f"   ⚠️  Error en migración SQLite: {e}")
+
+# Ejecutar migración SQLite (si aplica)
+run_sqlite_migration()
+
 # Migración automática para PostgreSQL: agregar columnas de ciudadano y PQRS
 def run_postgres_migration():
     """Ejecuta las migraciones para agregar columnas cedula, telefono, direccion y tipo_identificacion, medio_respuesta"""
