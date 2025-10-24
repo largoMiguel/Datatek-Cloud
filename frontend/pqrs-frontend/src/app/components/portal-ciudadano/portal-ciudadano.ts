@@ -76,7 +76,7 @@ export class PortalCiudadanoComponent implements OnInit {
             nombre_ciudadano: [''],
             cedula_ciudadano: [''],
             tipo_solicitud: ['', Validators.required],
-            asunto: ['', Validators.required],
+            asunto: [''],  // Opcional - el backend asigna "Sin asunto" si está vacío
             descripcion: ['', Validators.required],
             medio_respuesta: ['ticket', Validators.required],
             email_ciudadano: [''],
@@ -105,17 +105,22 @@ export class PortalCiudadanoComponent implements OnInit {
             this.tipo = tipo;
             const nombreControl = this.nuevaPqrsForm.get('nombre_ciudadano');
             const cedulaControl = this.nuevaPqrsForm.get('cedula_ciudadano');
+            const asuntoControl = this.nuevaPqrsForm.get('asunto');
 
             if (tipo === 'personal') {
                 nombreControl?.setValidators([Validators.required]);
                 cedulaControl?.setValidators([Validators.required]);
+                asuntoControl?.setValidators([Validators.required]);
             } else {
+                // PQRS Anónima: solo descripción obligatoria
                 nombreControl?.clearValidators();
                 cedulaControl?.clearValidators();
+                asuntoControl?.clearValidators();
             }
 
             nombreControl?.updateValueAndValidity();
             cedulaControl?.updateValueAndValidity();
+            asuntoControl?.updateValueAndValidity();
         });
 
         // Listener para medio_respuesta
