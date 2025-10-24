@@ -34,7 +34,7 @@ async def create_pqrs(
             detail=f"El número de radicado {numero_radicado} ya existe"
         )
     
-    # Crear PQRS y asignar automáticamente al usuario que la crea
+    # Crear PQRS sin asignar (assigned_to_id será NULL hasta que admin/secretario la asigne)
     db_pqrs = PQRS(
         numero_radicado=numero_radicado,
         nombre_ciudadano=pqrs_data.nombre_ciudadano,
@@ -46,7 +46,7 @@ async def create_pqrs(
         asunto=pqrs_data.asunto,
         descripcion=pqrs_data.descripcion,
         created_by_id=current_user.id,
-        assigned_to_id=current_user.id  # Auto-asignación
+        assigned_to_id=None  # Sin asignar inicialmente
     )
     
     db.add(db_pqrs)
@@ -70,11 +70,22 @@ async def get_pqrs(
         joinedload(PQRS.assigned_to)
     )
     
-    # Si no es admin, solo ver PQRS asignadas a él
-    if current_user.role != UserRole.ADMIN:
+    # Filtrar según rol
+    if current_user.role == UserRole.ADMIN:
+        # Admin ve todas, opcionalmente solo las asignadas a él
+        if assigned_to_me:
+            query = query.filter(PQRS.assigned_to_id == current_user.id)
+    elif current_user.role == UserRole.SECRETARIO:
+        # Secretarios solo ven PQRS asignadas a ellos
         query = query.filter(PQRS.assigned_to_id == current_user.id)
-    elif assigned_to_me:
-        query = query.filter(PQRS.assigned_to_id == current_user.id)
+    elif current_user.role == UserRole.CIUDADANO:
+        # Ciudadanos ven PQRS que ellos crearon (basándose en created_by_id)
+        # O que coincidan con su cédula/email
+        query = query.filter(
+            (PQRS.created_by_id == current_user.id) |
+            (PQRS.cedula_ciudadano == current_user.cedula) |
+            (PQRS.email_ciudadano == current_user.email)
+        )
     
     # Filtrar por estado si se especifica
     if estado:

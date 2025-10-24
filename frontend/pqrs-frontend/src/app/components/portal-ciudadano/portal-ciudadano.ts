@@ -146,11 +146,9 @@ export class PortalCiudadanoComponent implements OnInit {
         this.isLoading = true;
         this.pqrsService.getPqrs().subscribe({
             next: (pqrsList) => {
-                // Filtrar solo las PQRS del ciudadano actual por cédula o email
-                this.misPqrs = pqrsList.filter(pqrs =>
-                    pqrs.cedula_ciudadano === this.currentUser?.cedula ||
-                    pqrs.email_ciudadano === this.currentUser?.email
-                );
+                // El backend ya filtra las PQRS del ciudadano actual
+                // por created_by_id, cedula o email
+                this.misPqrs = pqrsList;
                 this.isLoading = false;
             },
             error: (error) => {
