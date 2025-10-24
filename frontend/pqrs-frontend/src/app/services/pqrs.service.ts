@@ -68,4 +68,10 @@ export class PqrsService {
     deletePqrs(id: number): Observable<any> {
         return this.http.delete(`${this.baseUrl}${id}`);
     }
+
+    // ENDPOINT PÚBLICO - No requiere autenticación
+    consultarPqrsByRadicado(numeroRadicado: string): Observable<PQRS> {
+        const url = `${environment.apiUrl}/pqrs/public/consultar/${numeroRadicado}`;
+        return this.http.get<PQRS>(url);
+    }
 }

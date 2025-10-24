@@ -306,3 +306,23 @@ async def delete_pqrs(
     db.commit()
     
     return {"message": "PQRS eliminada exitosamente"}
+
+# ENDPOINT PÚBLICO - No requiere autenticación
+@router.get("/public/consultar/{numero_radicado}", response_model=PQRSSchema)
+async def consultar_pqrs_public(
+    numero_radicado: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Consultar PQRS por número de radicado (endpoint público para ventanilla).
+    No requiere autenticación.
+    """
+    pqrs = db.query(PQRS).filter(PQRS.numero_radicado == numero_radicado.strip()).first()
+    
+    if not pqrs:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No se encontró ninguna PQRS con el número de radicado: {numero_radicado}"
+        )
+    
+    return pqrs

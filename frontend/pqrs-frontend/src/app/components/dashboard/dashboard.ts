@@ -477,6 +477,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
       const numeroRadicado = this.generarNumeroRadicado();
       formData.numero_radicado = numeroRadicado;
 
+      // Convertir cadenas vacías a null para campos opcionales (evita error de validación de email)
+      if (!formData.email_ciudadano || formData.email_ciudadano.trim() === '') {
+        formData.email_ciudadano = null;
+      }
+      if (!formData.telefono_ciudadano || formData.telefono_ciudadano.trim() === '') {
+        formData.telefono_ciudadano = null;
+      }
+      if (!formData.direccion_ciudadano || formData.direccion_ciudadano.trim() === '') {
+        formData.direccion_ciudadano = null;
+      }
+      if (!formData.asunto || formData.asunto.trim() === '') {
+        formData.asunto = null;
+      }
+      if (!formData.nombre_ciudadano || formData.nombre_ciudadano.trim() === '') {
+        formData.nombre_ciudadano = null;
+      }
+      if (!formData.cedula_ciudadano || formData.cedula_ciudadano.trim() === '') {
+        formData.cedula_ciudadano = null;
+      }
+
       this.pqrsService.createPqrs(formData).subscribe({
         next: (response) => {
           console.log('PQRS creada exitosamente:', response);

@@ -108,11 +108,36 @@ export class VentanillaComponent {
 
         this.isSubmitting = true;
 
-        const numeroRadicado = this.generarNumeroRadicado();
+        // Generar número de radicado con el formato correcto: YYYY-XXXXX
+        const year = new Date().getFullYear();
+        const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
+        const numeroRadicado = `${year}-${randomPart}`;
+
+        // Construir objeto PQRS con todos los campos requeridos
         const pqrsData: any = {
-            ...this.radicacionForm,
-            numero_radicado: numeroRadicado
+            numero_radicado: numeroRadicado,
+            tipo_identificacion: 'personal',  // Ventanilla siempre es personal (requiere cédula)
+            medio_respuesta: this.radicacionForm.email_ciudadano ? 'email' : 'ticket',  // Email si lo tiene, sino ticket
+            tipo_solicitud: this.radicacionForm.tipo_solicitud,
+            nombre_ciudadano: this.radicacionForm.nombre_ciudadano,
+            cedula_ciudadano: this.radicacionForm.cedula_ciudadano,
+            asunto: this.radicacionForm.asunto,
+            descripcion: this.radicacionForm.descripcion,
+            telefono_ciudadano: this.radicacionForm.telefono_ciudadano || null,
+            email_ciudadano: this.radicacionForm.email_ciudadano || null,
+            direccion_ciudadano: this.radicacionForm.direccion_ciudadano || null
         };
+
+        // Convertir strings vacíos a null para campos opcionales
+        if (!pqrsData.telefono_ciudadano || pqrsData.telefono_ciudadano.trim() === '') {
+            pqrsData.telefono_ciudadano = null;
+        }
+        if (!pqrsData.email_ciudadano || pqrsData.email_ciudadano.trim() === '') {
+            pqrsData.email_ciudadano = null;
+        }
+        if (!pqrsData.direccion_ciudadano || pqrsData.direccion_ciudadano.trim() === '') {
+            pqrsData.direccion_ciudadano = null;
+        }
 
         this.pqrsService.createPqrs(pqrsData).subscribe({
             next: (response) => {
@@ -142,28 +167,27 @@ export class VentanillaComponent {
 
         this.isConsulting = true;
 
-        this.pqrsService.getPqrs().subscribe({
-            next: (pqrsList) => {
-                const pqrs = pqrsList.find(p => p.numero_radicado === this.numeroRadicado.trim());
-
-                if (pqrs) {
-                    this.pqrsConsultada = pqrs;
-                    this.mostrarModalConsulta = false;
-                    this.mostrarResultadoConsulta = true;
-                } else {
-                    this.alertService.warning(
-                        `No se encontró ninguna PQRS con el número de radicado: ${this.numeroRadicado}.\n\nVerifica el número e intenta nuevamente.`,
-                        'PQRS No Encontrada'
-                    );
-                }
+        // Usar endpoint público que no requiere autenticación
+        this.pqrsService.consultarPqrsByRadicado(this.numeroRadicado.trim()).subscribe({
+            next: (pqrs) => {
+                this.pqrsConsultada = pqrs;
+                this.mostrarModalConsulta = false;
+                this.mostrarResultadoConsulta = true;
                 this.isConsulting = false;
             },
             error: (error) => {
                 console.error('Error consultando PQRS:', error);
-                this.alertService.error(
-                    'No se pudo consultar la PQRS. Por favor, intenta nuevamente más tarde.',
-                    'Error en Consulta'
-                );
+                if (error.status === 404) {
+                    this.alertService.warning(
+                        `No se encontró ninguna PQRS con el número de radicado: ${this.numeroRadicado}.\n\nVerifica el número e intenta nuevamente.`,
+                        'PQRS No Encontrada'
+                    );
+                } else {
+                    this.alertService.error(
+                        'No se pudo consultar la PQRS. Por favor, intenta nuevamente más tarde.',
+                        'Error en Consulta'
+                    );
+                }
                 this.isConsulting = false;
             }
         });
