@@ -130,26 +130,91 @@ def run_postgres_migration():
                     print(f"   ⚠️  {sql[:30]}...: {e}")
         
         # Paso 3: Crear ENUMs para PQRS (tipoidentificacion, mediorespuesta)
+        # IMPORTANTE: Si el enum ya existe con valores incorrectos, necesitamos recrearlo
         try:
             with engine.connect() as conn:
-                # Crear enum tipoidentificacion
+                # Verificar si tipoidentificacion existe
                 check_tipo = text("""
                     SELECT EXISTS (
                         SELECT 1 FROM pg_type WHERE typname = 'tipoidentificacion'
                     ) as exists;
                 """)
-                if not conn.execute(check_tipo).scalar():
+                tipo_exists = conn.execute(check_tipo).scalar()
+                
+                if tipo_exists:
+                    # Verificar si tiene los valores correctos
+                    check_values = text("""
+                        SELECT enumlabel FROM pg_enum 
+                        WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'tipoidentificacion')
+                        ORDER BY enumsortorder;
+                    """)
+                    existing_values = [row[0] for row in conn.execute(check_values).fetchall()]
+                    
+                    # Si los valores son incorrectos (mayúsculas), eliminar y recrear
+                    if existing_values and existing_values[0].isupper():
+                        print(f"   ⚠️  ENUM tipoidentificacion existe con valores incorrectos: {existing_values}")
+                        print("   🔄 Eliminando y recreando ENUM tipoidentificacion...")
+                        
+                        # Primero eliminar la columna que usa el enum
+                        try:
+                            conn.execute(text("ALTER TABLE pqrs DROP COLUMN IF EXISTS tipo_identificacion CASCADE"))
+                            conn.commit()
+                        except Exception as e:
+                            print(f"   ⚠️  Error al eliminar columna: {e}")
+                            conn.rollback()
+                        
+                        # Eliminar el enum antiguo
+                        try:
+                            conn.execute(text("DROP TYPE IF EXISTS tipoidentificacion CASCADE"))
+                            conn.commit()
+                        except Exception as e:
+                            print(f"   ⚠️  Error al eliminar enum: {e}")
+                            conn.rollback()
+                        
+                        tipo_exists = False  # Marcar para recrear
+                
+                if not tipo_exists:
                     conn.execute(text("CREATE TYPE tipoidentificacion AS ENUM ('personal', 'anonima')"))
                     conn.commit()
                     print("   ✅ ENUM tipoidentificacion creado")
                 
-                # Crear enum mediorespuesta
+                # Similar para mediorespuesta
                 check_medio = text("""
                     SELECT EXISTS (
                         SELECT 1 FROM pg_type WHERE typname = 'mediorespuesta'
                     ) as exists;
                 """)
-                if not conn.execute(check_medio).scalar():
+                medio_exists = conn.execute(check_medio).scalar()
+                
+                if medio_exists:
+                    check_values = text("""
+                        SELECT enumlabel FROM pg_enum 
+                        WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'mediorespuesta')
+                        ORDER BY enumsortorder;
+                    """)
+                    existing_values = [row[0] for row in conn.execute(check_values).fetchall()]
+                    
+                    if existing_values and existing_values[0].isupper():
+                        print(f"   ⚠️  ENUM mediorespuesta existe con valores incorrectos: {existing_values}")
+                        print("   🔄 Eliminando y recreando ENUM mediorespuesta...")
+                        
+                        try:
+                            conn.execute(text("ALTER TABLE pqrs DROP COLUMN IF EXISTS medio_respuesta CASCADE"))
+                            conn.commit()
+                        except Exception as e:
+                            print(f"   ⚠️  Error al eliminar columna: {e}")
+                            conn.rollback()
+                        
+                        try:
+                            conn.execute(text("DROP TYPE IF EXISTS mediorespuesta CASCADE"))
+                            conn.commit()
+                        except Exception as e:
+                            print(f"   ⚠️  Error al eliminar enum: {e}")
+                            conn.rollback()
+                        
+                        medio_exists = False
+                
+                if not medio_exists:
                     conn.execute(text("CREATE TYPE mediorespuesta AS ENUM ('email', 'fisica', 'telefono', 'ticket')"))
                     conn.commit()
                     print("   ✅ ENUM mediorespuesta creado")
