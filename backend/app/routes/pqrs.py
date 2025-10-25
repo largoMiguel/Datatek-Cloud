@@ -51,22 +51,13 @@ async def create_pqrs(
             detail=f"Error validando datos: {str(e)}"
         )
     
-    # Usar número de radicado proporcionado o generar uno nuevo
+    # Generar número de radicado único (ignorar el del frontend para evitar duplicados)
     try:
-        if pqrs_data.numero_radicado:
-            numero_radicado = pqrs_data.numero_radicado
-        else:
+        # Siempre generar un nuevo radicado único
+        numero_radicado = generate_radicado()
+        # Verificar unicidad y regenerar si es necesario
+        while db.query(PQRS).filter(PQRS.numero_radicado == numero_radicado).first():
             numero_radicado = generate_radicado()
-            while db.query(PQRS).filter(PQRS.numero_radicado == numero_radicado).first():
-                numero_radicado = generate_radicado()
-        
-        # Verificar que el número de radicado no exista
-        existing_pqrs = db.query(PQRS).filter(PQRS.numero_radicado == numero_radicado).first()
-        if existing_pqrs:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"El número de radicado {numero_radicado} ya existe"
-            )
         
         # Crear PQRS sin asignar (assigned_to_id será NULL hasta que admin/secretario la asigne)
         db_pqrs = PQRS(
