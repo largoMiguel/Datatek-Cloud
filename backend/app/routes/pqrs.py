@@ -19,62 +19,84 @@ async def create_pqrs(
 ):
     """Crear nueva PQRS (personal o anónima)"""
     
-    # Validar según tipo de identificación
-    from app.models.pqrs import TipoIdentificacion
-    
-    if pqrs_data.tipo_identificacion == TipoIdentificacion.PERSONAL:
-        # PQRS Personal: requiere nombre y cédula
-        if not pqrs_data.nombre_ciudadano or not pqrs_data.cedula_ciudadano:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Para PQRS personales se requiere nombre y cédula"
-            )
-    else:
-        # PQRS Anónima: solo requiere descripción
-        # Asignar valores por defecto
-        if not pqrs_data.nombre_ciudadano:
-            pqrs_data.nombre_ciudadano = "Anónimo"
-        if not pqrs_data.cedula_ciudadano:
-            pqrs_data.cedula_ciudadano = "N/A"
-    
-    # Usar número de radicado proporcionado o generar uno nuevo
-    if pqrs_data.numero_radicado:
-        numero_radicado = pqrs_data.numero_radicado
-    else:
-        numero_radicado = generate_radicado()
-        while db.query(PQRS).filter(PQRS.numero_radicado == numero_radicado).first():
-            numero_radicado = generate_radicado()
-    
-    # Verificar que el número de radicado no exista
-    existing_pqrs = db.query(PQRS).filter(PQRS.numero_radicado == numero_radicado).first()
-    if existing_pqrs:
+    try:
+        # Validar según tipo de identificación
+        from app.models.pqrs import TipoIdentificacion
+        
+        if pqrs_data.tipo_identificacion == TipoIdentificacion.PERSONAL:
+            # PQRS Personal: requiere nombre y cédula
+            if not pqrs_data.nombre_ciudadano or not pqrs_data.cedula_ciudadano:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Para PQRS personales se requiere nombre y cédula"
+                )
+        else:
+            # PQRS Anónima: solo requiere descripción
+            # Asignar valores por defecto
+            if not pqrs_data.nombre_ciudadano:
+                pqrs_data.nombre_ciudadano = "Anónimo"
+            if not pqrs_data.cedula_ciudadano:
+                pqrs_data.cedula_ciudadano = "N/A"
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error validando PQRS: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"El número de radicado {numero_radicado} ya existe"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error validando datos: {str(e)}"
         )
     
-    # Crear PQRS sin asignar (assigned_to_id será NULL hasta que admin/secretario la asigne)
-    db_pqrs = PQRS(
-        numero_radicado=numero_radicado,
-        tipo_identificacion=pqrs_data.tipo_identificacion,
-        medio_respuesta=pqrs_data.medio_respuesta,
-        nombre_ciudadano=pqrs_data.nombre_ciudadano,
-        cedula_ciudadano=pqrs_data.cedula_ciudadano,
-        telefono_ciudadano=pqrs_data.telefono_ciudadano,
-        email_ciudadano=pqrs_data.email_ciudadano,
-        direccion_ciudadano=pqrs_data.direccion_ciudadano,
-        tipo_solicitud=pqrs_data.tipo_solicitud,
-        asunto=pqrs_data.asunto or "Sin asunto",
-        descripcion=pqrs_data.descripcion,
-        created_by_id=current_user.id,
-        assigned_to_id=None  # Sin asignar inicialmente
-    )
+    # Usar número de radicado proporcionado o generar uno nuevo
+    try:
+        if pqrs_data.numero_radicado:
+            numero_radicado = pqrs_data.numero_radicado
+        else:
+            numero_radicado = generate_radicado()
+            while db.query(PQRS).filter(PQRS.numero_radicado == numero_radicado).first():
+                numero_radicado = generate_radicado()
+        
+        # Verificar que el número de radicado no exista
+        existing_pqrs = db.query(PQRS).filter(PQRS.numero_radicado == numero_radicado).first()
+        if existing_pqrs:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"El número de radicado {numero_radicado} ya existe"
+            )
+        
+        # Crear PQRS sin asignar (assigned_to_id será NULL hasta que admin/secretario la asigne)
+        db_pqrs = PQRS(
+            numero_radicado=numero_radicado,
+            tipo_identificacion=pqrs_data.tipo_identificacion,
+            medio_respuesta=pqrs_data.medio_respuesta,
+            nombre_ciudadano=pqrs_data.nombre_ciudadano,
+            cedula_ciudadano=pqrs_data.cedula_ciudadano,
+            telefono_ciudadano=pqrs_data.telefono_ciudadano,
+            email_ciudadano=pqrs_data.email_ciudadano,
+            direccion_ciudadano=pqrs_data.direccion_ciudadano,
+            tipo_solicitud=pqrs_data.tipo_solicitud,
+            asunto=pqrs_data.asunto or "Sin asunto",
+            descripcion=pqrs_data.descripcion,
+            created_by_id=current_user.id,
+            assigned_to_id=None  # Sin asignar inicialmente
+        )
+        
+        db.add(db_pqrs)
+        db.commit()
+        db.refresh(db_pqrs)
+        
+        return db_pqrs
     
-    db.add(db_pqrs)
-    db.commit()
-    db.refresh(db_pqrs)
-    
-    return db_pqrs
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"❌ Error creando PQRS: {e}")
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error creando PQRS: {str(e)}"
+        )
 
 @router.get("/", response_model=List[PQRSWithDetails])
 async def get_pqrs(

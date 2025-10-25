@@ -251,7 +251,47 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
+
+# Middleware para manejar excepciones y asegurar CORS headers
+from fastapi import Request, Response
+from fastapi.responses import JSONResponse
+import traceback
+
+@app.middleware("http")
+async def catch_exceptions_middleware(request: Request, call_next):
+    """Middleware para capturar todas las excepciones y enviar headers CORS"""
+    try:
+        response = await call_next(request)
+        return response
+    except Exception as e:
+        # Log detallado del error
+        print(f"\n❌ Error no manejado:")
+        print(f"   Path: {request.method} {request.url.path}")
+        print(f"   Error: {str(e)}")
+        print(f"   Traceback:\n{traceback.format_exc()}")
+        
+        # Crear respuesta con CORS headers
+        origin = request.headers.get("origin")
+        if origin in settings.cors_origins or "*" in settings.cors_origins:
+            return JSONResponse(
+                status_code=500,
+                content={
+                    "detail": "Error interno del servidor",
+                    "error": str(e) if settings.debug else "Internal server error"
+                },
+                headers={
+                    "Access-Control-Allow-Origin": origin or "*",
+                    "Access-Control-Allow-Credentials": "true",
+                    "Access-Control-Allow-Methods": "*",
+                    "Access-Control-Allow-Headers": "*",
+                }
+            )
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Error interno del servidor"}
+        )
 
 # Incluir routers
 app.include_router(auth.router, prefix="/api")
