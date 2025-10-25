@@ -472,10 +472,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.isSubmitting = true;
 
       const formData = this.nuevaPqrsForm.value;
-
-      // Generar número de radicado en formato YYYYMMDDNNN
-      const numeroRadicado = this.generarNumeroRadicado();
-      formData.numero_radicado = numeroRadicado;
+      // El número de radicado lo genera el backend; no enviarlo desde el frontend
 
       // Convertir cadenas vacías a null para campos opcionales (evita error de validación de email)
       if (!formData.email_ciudadano || formData.email_ciudadano.trim() === '') {
@@ -501,7 +498,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         next: (response) => {
           // console.log('PQRS creada exitosamente:', response);
           this.alertService.success(
-            `La PQRS ha sido creada exitosamente con el radicado N° ${numeroRadicado}.\n\nPuedes consultarla en cualquier momento usando este número.`,
+            `La PQRS ha sido creada exitosamente con el radicado N° ${response.numero_radicado}.\n\nPuedes consultarla en cualquier momento usando este número.`,
             'PQRS Creada'
           );
           this.nuevaPqrsForm.reset();
@@ -523,25 +520,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   // Generar número de radicado con formato YYYYMMDDNNN
   generarNumeroRadicado(): string {
-    const hoy = new Date();
-    const year = hoy.getFullYear();
-    const month = String(hoy.getMonth() + 1).padStart(2, '0');
-    const day = String(hoy.getDate()).padStart(2, '0');
-    const fechaBase = `${year}${month}${day}`;
-
-    // Contar cuántas PQRS existen hoy
-    const pqrsHoy = this.pqrsList.filter(pqrs => {
-      if (pqrs.numero_radicado && pqrs.numero_radicado.startsWith(fechaBase)) {
-        return true;
-      }
-      return false;
-    });
-
-    // El siguiente número será el total + 1
-    const siguienteNumero = pqrsHoy.length + 1;
-    const numeroSecuencial = String(siguienteNumero).padStart(3, '0');
-
-    return `${fechaBase}${numeroSecuencial}`;
+    // Ya no se usa; el backend genera el radicado secuencial (YYYYMMDDNNN)
+    return '';
   }
 
   // Mostrar formulario de edición
