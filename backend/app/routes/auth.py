@@ -159,23 +159,32 @@ async def initialize_admin(db: Session = Depends(get_db)):
     SOLO PARA DEBUGGING - Eliminar en producción después de configurar.
     """
     from sqlalchemy.exc import IntegrityError
+    import traceback
     
     try:
+        print("🔧 [init-admin] Iniciando creación/reset de admin...")
+        
         # Contraseña simple y segura
         plain_password = "admin123"
         
         # Buscar admin existente por username
+        print("🔧 [init-admin] Buscando admin existente...")
         admin = db.query(User).filter(User.username == "admin").first()
         
         if admin:
+            print(f"🔧 [init-admin] Admin encontrado: {admin.username} ({admin.email})")
             # Actualizar contraseña del admin existente
             try:
                 # Hashear directamente sin procesamiento adicional
+                print("🔧 [init-admin] Hasheando nueva contraseña...")
                 new_hash = get_password_hash(plain_password)
+                print(f"🔧 [init-admin] Hash generado: {new_hash[:20]}...")
                 admin.hashed_password = new_hash
                 admin.is_active = True
+                print("🔧 [init-admin] Guardando cambios en DB...")
                 db.commit()
                 db.refresh(admin)
+                print("✅ [init-admin] Admin actualizado exitosamente")
                 return {
                     "message": "Admin password has been reset",
                     "username": "admin",
@@ -184,15 +193,21 @@ async def initialize_admin(db: Session = Depends(get_db)):
                     "exists": True
                 }
             except Exception as hash_error:
+                print(f"❌ [init-admin] Error actualizando admin: {hash_error}")
+                print(f"❌ [init-admin] Traceback: {traceback.format_exc()}")
                 db.rollback()
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Error hashing password: {str(hash_error)}"
+                    detail=f"Error hashing password: {str(hash_error)} | Type: {type(hash_error).__name__}"
                 )
         else:
+            print("🔧 [init-admin] No existe admin, creando nuevo...")
             # Crear nuevo admin
             try:
+                print("🔧 [init-admin] Hasheando contraseña para nuevo admin...")
                 new_hash = get_password_hash(plain_password)
+                print(f"🔧 [init-admin] Hash generado: {new_hash[:20]}...")
+                print("🔧 [init-admin] Creando objeto User...")
                 new_admin = User(
                     username="admin",
                     email="admin@alcaldia.gov.co",
@@ -202,9 +217,12 @@ async def initialize_admin(db: Session = Depends(get_db)):
                     secretaria="Sistemas",
                     is_active=True
                 )
+                print("🔧 [init-admin] Agregando a DB...")
                 db.add(new_admin)
+                print("🔧 [init-admin] Haciendo commit...")
                 db.commit()
                 db.refresh(new_admin)
+                print("✅ [init-admin] Admin creado exitosamente")
                 return {
                     "message": "Admin user created successfully",
                     "username": "admin",
@@ -213,21 +231,31 @@ async def initialize_admin(db: Session = Depends(get_db)):
                     "exists": False
                 }
             except Exception as create_error:
+                print(f"❌ [init-admin] Error creando admin: {create_error}")
+                print(f"❌ [init-admin] Traceback: {traceback.format_exc()}")
                 db.rollback()
                 raise HTTPException(
                     status_code=500,
-                    detail=f"Error creating admin: {str(create_error)}"
+                    detail=f"Error creating admin: {str(create_error)} | Type: {type(create_error).__name__}"
                 )
                 
     except IntegrityError as e:
+        print(f"❌ [init-admin] IntegrityError: {e}")
+        print(f"❌ [init-admin] Traceback: {traceback.format_exc()}")
         db.rollback()
         raise HTTPException(
             status_code=400,
             detail=f"Database integrity error: {str(e)}"
         )
+    except HTTPException:
+        # Re-lanzar HTTPException sin envolver
+        raise
     except Exception as e:
+        print(f"❌ [init-admin] Unexpected error: {e}")
+        print(f"❌ [init-admin] Error type: {type(e).__name__}")
+        print(f"❌ [init-admin] Traceback: {traceback.format_exc()}")
         db.rollback()
         raise HTTPException(
             status_code=500,
-            detail=f"Unexpected error: {str(e)}"
+            detail=f"Unexpected error: {str(e)} | Type: {type(e).__name__}"
         )
