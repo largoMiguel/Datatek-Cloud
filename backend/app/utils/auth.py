@@ -28,11 +28,20 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def get_password_hash(password: str) -> str:
     """Genera un hash seguro de la contraseña"""
     try:
+        # Asegurar que la contraseña sea string y esté dentro del límite de bcrypt (72 bytes)
+        if not isinstance(password, str):
+            password = str(password)
+        
+        # Truncar a 72 bytes si es necesario (límite de bcrypt)
+        password_bytes = password.encode('utf-8')
+        if len(password_bytes) > 72:
+            password = password_bytes[:72].decode('utf-8', errors='ignore')
+        
         return pwd_context.hash(password)
-    except Exception:
-        # Fallback a un hash válido pero aleatorio en caso de error
-        import secrets
-        return pwd_context.hash(secrets.token_hex(16))
+    except Exception as e:
+        # Log del error para debugging
+        print(f"❌ Error hasheando contraseña: {e}")
+        raise ValueError(f"Error hashing password: {str(e)}")
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Crear token JWT"""

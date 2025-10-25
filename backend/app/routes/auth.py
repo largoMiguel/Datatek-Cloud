@@ -161,37 +161,64 @@ async def initialize_admin(db: Session = Depends(get_db)):
     from sqlalchemy.exc import IntegrityError
     
     try:
-        # Buscar admin existente
+        # Contraseña simple y segura
+        plain_password = "admin123"
+        
+        # Buscar admin existente por username
         admin = db.query(User).filter(User.username == "admin").first()
         
         if admin:
             # Actualizar contraseña del admin existente
-            admin.hashed_password = get_password_hash("admin123")
-            admin.is_active = True
-            db.commit()
-            return {
-                "message": "Admin password reset to 'admin123'",
-                "username": "admin",
-                "exists": True
-            }
+            try:
+                # Hashear directamente sin procesamiento adicional
+                new_hash = get_password_hash(plain_password)
+                admin.hashed_password = new_hash
+                admin.is_active = True
+                db.commit()
+                db.refresh(admin)
+                return {
+                    "message": "Admin password has been reset",
+                    "username": "admin",
+                    "email": admin.email,
+                    "password": plain_password,
+                    "exists": True
+                }
+            except Exception as hash_error:
+                db.rollback()
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Error hashing password: {str(hash_error)}"
+                )
         else:
             # Crear nuevo admin
-            new_admin = User(
-                username="admin",
-                email="admin@alcaldia.gov.co",
-                full_name="Administrador del Sistema",
-                hashed_password=get_password_hash("admin123"),
-                role=UserRole.ADMIN,
-                secretaria="Sistemas",
-                is_active=True
-            )
-            db.add(new_admin)
-            db.commit()
-            return {
-                "message": "Admin created with password 'admin123'",
-                "username": "admin",
-                "exists": False
-            }
+            try:
+                new_hash = get_password_hash(plain_password)
+                new_admin = User(
+                    username="admin",
+                    email="admin@alcaldia.gov.co",
+                    full_name="Administrador del Sistema",
+                    hashed_password=new_hash,
+                    role=UserRole.ADMIN,
+                    secretaria="Sistemas",
+                    is_active=True
+                )
+                db.add(new_admin)
+                db.commit()
+                db.refresh(new_admin)
+                return {
+                    "message": "Admin user created successfully",
+                    "username": "admin",
+                    "email": new_admin.email,
+                    "password": plain_password,
+                    "exists": False
+                }
+            except Exception as create_error:
+                db.rollback()
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Error creating admin: {str(create_error)}"
+                )
+                
     except IntegrityError as e:
         db.rollback()
         raise HTTPException(
@@ -202,5 +229,5 @@ async def initialize_admin(db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(
             status_code=500,
-            detail=f"Error initializing admin: {str(e)}"
+            detail=f"Unexpected error: {str(e)}"
         )
