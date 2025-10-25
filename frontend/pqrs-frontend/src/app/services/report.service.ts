@@ -222,7 +222,7 @@ export class ReportService {
                 doc.addImage(charts.estados, 'PNG', 20, yPosition, 80, 60);
                 yPosition += 65;
             } catch (error) {
-                console.error('Error al agregar gráfico de estados:', error);
+                // console.error('Error al agregar gráfico de estados:', error);
             }
         }
 
@@ -237,7 +237,7 @@ export class ReportService {
                 doc.addImage(charts.tipos, 'PNG', 20, yPosition, 170, 60);
                 yPosition += 65;
             } catch (error) {
-                console.error('Error al agregar gráfico de tipos:', error);
+                // console.error('Error al agregar gráfico de tipos:', error);
             }
         }
 
@@ -282,7 +282,7 @@ export class ReportService {
                 doc.addImage(charts.tendencias, 'PNG', 20, yPosition, 170, 60);
                 yPosition += 65;
             } catch (error) {
-                console.error('Error al agregar gráfico de tendencias:', error);
+                // console.error('Error al agregar gráfico de tendencias:', error);
             }
         }
 

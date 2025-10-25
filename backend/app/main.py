@@ -1,7 +1,4 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.exceptions import RequestValidationError
-from fastapi import Request
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.config.database import engine, get_db, Base
@@ -17,52 +14,42 @@ Base.metadata.create_all(bind=engine)
 # Compatibilidad: añadir columna `is_active` a la tabla users en SQLite si no existe
 from sqlalchemy import inspect, text
 inspector = inspect(engine)
-if inspector.has_table("users"):
-    cols = [c.get("name") for c in inspector.get_columns("users")]
-    if "is_active" not in cols:
-        # Solo para SQLite añadimos la columna con default 1
-        try:
-            with engine.connect() as conn:
-                conn.execute(text('ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1'))
-                conn.commit()
-                print("Columna 'is_active' agregada a la tabla users")
-        except Exception as e:
-            print(f"No se pudo agregar la columna is_active automáticamente: {e}")
-
-# Compatibilidad SQLite: asegurarse de que la tabla pqrs tenga las columnas nuevas (tipo_identificacion, medio_respuesta, etc.)
+    if inspector.has_table("users"):
+        cols = [c.get("name") for c in inspector.get_columns("users")]
+        if "is_active" not in cols:
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text('ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1'))
+                    conn.commit()
+            except Exception:
+                pass  # Columna ya existe o error ignorado# Compatibilidad SQLite: asegurarse de que la tabla pqrs tenga las columnas nuevas
 def run_sqlite_migration():
     try:
-        # Ejecutar sólo si la URL del engine es SQLite
         if 'sqlite' not in str(engine.url):
             return
 
-        print("\n🔄 Ejecutando migración ligera para SQLite...")
         inspector_local = inspect(engine)
         if not inspector_local.has_table('pqrs'):
-            print("   ⚠️  Tabla 'pqrs' no existe todavía; saltando migración SQLite")
             return
 
         cols = [c.get('name') for c in inspector_local.get_columns('pqrs')]
         with engine.connect() as conn:
-            # Agregar columna tipo_identificacion si no existe
+            # Agregar columnas nuevas si no existen
             if 'tipo_identificacion' not in cols:
                 try:
                     conn.execute(text("ALTER TABLE pqrs ADD COLUMN tipo_identificacion TEXT DEFAULT 'personal'"))
                     conn.commit()
-                    print("   ✅ Columna 'tipo_identificacion' agregada a pqrs (SQLite)")
-                except Exception as e:
-                    print(f"   ⚠️  No se pudo agregar tipo_identificacion: {e}")
+                except Exception:
+                    pass
 
-            # Agregar columna medio_respuesta si no existe
             if 'medio_respuesta' not in cols:
                 try:
                     conn.execute(text("ALTER TABLE pqrs ADD COLUMN medio_respuesta TEXT DEFAULT 'ticket'"))
                     conn.commit()
-                    print("   ✅ Columna 'medio_respuesta' agregada a pqrs (SQLite)")
-                except Exception as e:
-                    print(f"   ⚠️  No se pudo agregar medio_respuesta: {e}")
+                except Exception:
+                    pass
 
-            # Asegurar columnas opcionales (nombre_ciudadano, cedula_ciudadano, asunto) existen
+            # Asegurar columnas opcionales existen
             optional_cols = {
                 'nombre_ciudadano': "ALTER TABLE pqrs ADD COLUMN nombre_ciudadano TEXT",
                 'cedula_ciudadano': "ALTER TABLE pqrs ADD COLUMN cedula_ciudadano TEXT",
@@ -73,13 +60,10 @@ def run_sqlite_migration():
                     try:
                         conn.execute(text(sql))
                         conn.commit()
-                        print(f"   ✅ Columna '{col}' agregada a pqrs (SQLite)")
-                    except Exception as e:
-                        print(f"   ⚠️  No se pudo agregar {col}: {e}")
-
-        print("   ✅ Migración SQLite completada")
-    except Exception as e:
-        print(f"   ⚠️  Error en migración SQLite: {e}")
+                    except Exception:
+                        pass
+    except Exception:
+        pass
 
 # Ejecutar migración SQLite (si aplica)
 run_sqlite_migration()
@@ -254,27 +238,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    """Manejador temporal para loguear el body que causa errores 422 y devolver detalles.
-    Esto ayuda a depurar por qué algunas solicitudes (p. ej. creación anónima) fallan la validación.
-    """
-    try:
-        raw = await request.body()
-        body_text = raw.decode('utf-8') if raw else ''
-    except Exception:
-        body_text = '<no body available>'
-
-    # Loguear en stdout para que el desarrollador lo vea en la consola
-    print('\n==== RequestValidationError detected ====')
-    print('Path:', request.url.path)
-    print('Body:', body_text)
-    print('Errors:', exc.errors())
-    print('========================================\n')
-
-    # Devolver la respuesta 422 con los detalles y el body para debugging temporal
-    return JSONResponse(status_code=422, content={"detail": exc.errors(), "body": body_text})
 
 # Configurar CORS dinámicamente según entorno
 app.add_middleware(

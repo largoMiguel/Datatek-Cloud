@@ -24,7 +24,7 @@ export class AuthService {
         return this.http.post<LoginResponse>(`${this.baseUrl}login`, credentials)
             .pipe(
                 tap(response => {
-                    console.log('Login exitoso:', response);
+                    // console.log('Login exitoso:', response);
                     // Guardar token y usuario
                     localStorage.setItem('token', response.access_token);
                     localStorage.setItem('user', JSON.stringify(response.user));
@@ -42,7 +42,7 @@ export class AuthService {
     }
 
     logout(): void {
-        console.log('Cerrando sesión...');
+        // console.log('Cerrando sesión...');
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         this.currentUserSubject.next(null);
@@ -58,14 +58,14 @@ export class AuthService {
 
     getToken(): string | null {
         const token = localStorage.getItem('token');
-        console.log('Token obtenido:', token ? 'Presente' : 'No encontrado');
+        // console.log('Token obtenido:', token ? 'Presente' : 'No encontrado');
         return token;
     }
 
     isAuthenticated(): boolean {
         const token = this.getToken();
         const isAuth = !!token;
-        console.log('¿Está autenticado?', isAuth);
+        // console.log('¿Está autenticado?', isAuth);
         return isAuth;
     }
 

@@ -19,51 +19,20 @@ pwd_context = CryptContext(
 security = HTTPBearer()
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verificar contraseña"""
+    """Verifica si una contraseña coincide con su hash"""
     try:
-        # Verificar que el hash no esté vacío y tenga formato válido
-        if not hashed_password or len(hashed_password) < 10:
-            return False
-        
-        # Si es un hash fallback, usar verificación manual
-        if hashed_password.startswith("fallback:"):
-            import hashlib
-            parts = hashed_password.split(":")
-            if len(parts) != 3:
-                return False
-            stored_hash, salt = parts[1], parts[2]
-            computed_hash = hashlib.pbkdf2_hmac('sha256', plain_password.encode(), salt.encode(), 100000).hex()
-            return computed_hash == stored_hash
-        
-        # Usar bcrypt para hashes normales
         return pwd_context.verify(plain_password, hashed_password)
-    except Exception as e:
-        print(f"Error verificando contraseña: {e}")
+    except Exception:
         return False
 
 def get_password_hash(password: str) -> str:
-    """Generar hash de contraseña"""
+    """Genera un hash seguro de la contraseña"""
     try:
-        # Asegurar que la contraseña no exceda el límite de bcrypt (72 bytes)
-        if isinstance(password, str):
-            password_bytes = password.encode('utf-8')
-            if len(password_bytes) > 72:
-                # Truncar a 72 bytes de manera segura
-                password = password_bytes[:72].decode('utf-8', errors='ignore')
-        
-        # Generar hash con bcrypt
-        hash_result = pwd_context.hash(password)
-        return hash_result
-    except Exception as e:
-        print(f"Error generando hash con bcrypt: {e}")
-        # Fallback solo si bcrypt falla completamente
-        import hashlib
+        return pwd_context.hash(password)
+    except Exception:
+        # Fallback a un hash válido pero aleatorio en caso de error
         import secrets
-        # Usar solo los primeros 72 caracteres para el fallback también
-        password_safe = password[:72] if len(password) > 72 else password
-        salt = secrets.token_hex(16)
-        hash_value = hashlib.pbkdf2_hmac('sha256', password_safe.encode('utf-8'), salt.encode(), 100000).hex()
-        return f"fallback:{hash_value}:{salt}"
+        return pwd_context.hash(secrets.token_hex(16))
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Crear token JWT"""

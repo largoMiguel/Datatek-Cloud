@@ -149,7 +149,7 @@ export class VentanillaComponent {
                 this.isSubmitting = false;
             },
             error: (error) => {
-                console.error('Error radicando PQRS:', error);
+                // console.error('Error radicando PQRS:', error);
                 this.alertService.error(
                     'No se pudo radicar la PQRS. Por favor, intenta nuevamente o contacta con la administración.',
                     'Error al Radicar'
@@ -176,7 +176,7 @@ export class VentanillaComponent {
                 this.isConsulting = false;
             },
             error: (error) => {
-                console.error('Error consultando PQRS:', error);
+                // console.error('Error consultando PQRS:', error);
                 if (error.status === 404) {
                     this.alertService.warning(
                         `No se encontró ninguna PQRS con el número de radicado: ${this.numeroRadicado}.\n\nVerifica el número e intenta nuevamente.`,

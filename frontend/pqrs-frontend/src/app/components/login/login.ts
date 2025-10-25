@@ -34,7 +34,7 @@ export class LoginComponent implements OnInit {
     this.authService.getCurrentUser().subscribe({
       next: (user) => {
         if (user) {
-          console.log('Usuario ya autenticado, redirigiendo al dashboard');
+          // console.log('Usuario ya autenticado, redirigiendo al dashboard');
           this.router.navigate(['/dashboard'], { replaceUrl: true });
         }
       }
@@ -59,11 +59,11 @@ export class LoginComponent implements OnInit {
     if (this.loginForm.valid) {
       this.isLoading = true;
       this.errorMessage = '';
-      console.log('Enviando credenciales:', this.loginForm.value);
+      // console.log('Enviando credenciales:', this.loginForm.value);
 
       this.authService.login(this.loginForm.value).subscribe({
         next: (response) => {
-          console.log('Login exitoso, redirigiendo al dashboard');
+          // console.log('Login exitoso, redirigiendo al dashboard');
 
           // Verificar si el usuario es ciudadano
           this.authService.getCurrentUser().subscribe({
@@ -93,7 +93,7 @@ export class LoginComponent implements OnInit {
           });
         },
         error: (error) => {
-          console.error('Error en login:', error);
+          // console.error('Error en login:', error);
           this.isLoading = false;
 
           // Verificar si el error es por usuario inactivo
@@ -117,7 +117,7 @@ export class LoginComponent implements OnInit {
         }
       });
     } else {
-      console.log('Formulario inválido');
+      // console.log('Formulario inválido');
     }
   }
 }

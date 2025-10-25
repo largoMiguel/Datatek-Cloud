@@ -78,12 +78,12 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
         // Obtener usuario actual PRIMERO antes de cargar planes
         this.authService.currentUser$.subscribe(user => {
             this.currentUser = user;
-            console.log('=== NGONINIT - USUARIO CARGADO ===');
-            console.log('Usuario completo:', JSON.stringify(user, null, 2));
-            console.log('user.secretaria (valor exacto):', `[${user?.secretaria}]`);
-            console.log('user.secretaria (length):', user?.secretaria?.length);
-            console.log('user.role:', user?.role);
-            console.log('===================================');
+            // console.log('=== NGONINIT - USUARIO CARGADO ===');
+            // console.log('Usuario completo:', JSON.stringify(user, null, 2));
+            // console.log('user.secretaria (valor exacto):', `[${user?.secretaria}]`);
+            // console.log('user.secretaria (length):', user?.secretaria?.length);
+            // console.log('user.role:', user?.role);
+            // console.log('===================================');
 
             // Cargar planes DESPUÉS de tener el usuario
             this.cargarPlanes();
@@ -141,13 +141,13 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
     }
 
     cargarPlanes(): void {
-        console.log('=== CARGANDO PLANES DESDE BACKEND ===');
+        // console.log('=== CARGANDO PLANES DESDE BACKEND ===');
 
         this.planService.getPlanes(this.filtroAnio || undefined, this.filtroEstadoPlan || undefined)
             .subscribe({
                 next: (planes) => {
                     this.planes = planes;
-                    console.log('Planes cargados desde backend:', planes.length);
+                    // console.log('Planes cargados desde backend:', planes.length);
 
                     // Si no hay planes, no hay metas que verificar
                     if (planes.length === 0) {
@@ -172,15 +172,15 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
                     });
                 },
                 error: (error) => {
-                    console.error('Error al cargar planes:', error);
+                    // console.error('Error al cargar planes:', error);
                     this.alertService.error('Error al cargar los planes institucionales');
                     this.planes = [];
                 }
             });
 
-        console.log('Usuario actual:', this.currentUser);
-        console.log('Rol:', this.currentUser?.role);
-        console.log('Secretaría:', this.currentUser?.secretaria);
+        // console.log('Usuario actual:', this.currentUser);
+        // console.log('Rol:', this.currentUser?.role);
+        // console.log('Secretaría:', this.currentUser?.secretaria);
     }
 
     /**
@@ -191,14 +191,14 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
             .subscribe({
                 next: (metas) => {
                     this.metasPorPlan.set(planId, metas);
-                    console.log(`Metas del plan ${planId} cargadas:`, metas.length);
+                    // console.log(`Metas del plan ${planId} cargadas:`, metas.length);
                     // Llamar al callback si existe
                     if (onComplete) {
                         onComplete();
                     }
                 },
                 error: (error) => {
-                    console.error(`Error al cargar metas del plan ${planId}:`, error);
+                    // console.error(`Error al cargar metas del plan ${planId}:`, error);
                     this.metasPorPlan.set(planId, []);
                     // Llamar al callback incluso en error para no bloquear el contador
                     if (onComplete) {
@@ -208,11 +208,11 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
             });
     }    // Gestión de vistas
     verMetas(plan: PlanInstitucional): void {
-        console.log('=== VER METAS DEL PLAN ===');
-        console.log('Plan seleccionado:', plan.nombre);
-        console.log('Usuario actual:', this.currentUser?.username);
-        console.log('Secretaría:', `[${this.currentUser?.secretaria}]`);
-        console.log('Role:', this.currentUser?.role);
+        // console.log('=== VER METAS DEL PLAN ===');
+        // console.log('Plan seleccionado:', plan.nombre);
+        // console.log('Usuario actual:', this.currentUser?.username);
+        // console.log('Secretaría:', `[${this.currentUser?.secretaria}]`);
+        // console.log('Role:', this.currentUser?.role);
 
         this.vistaAnterior = this.vistaActual;
         this.planSeleccionado = plan;
@@ -357,9 +357,9 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
     }
 
     guardarPlan(): void {
-        console.log('=== GUARDANDO PLAN ===');
-        console.log('Plan Form:', this.planForm);
-        console.log('Modo Edición:', this.modoEdicion);
+        // console.log('=== GUARDANDO PLAN ===');
+        // console.log('Plan Form:', this.planForm);
+        // console.log('Modo Edición:', this.modoEdicion);
 
         if (!this.canCreatePlanes() && !this.modoEdicion) {
             this.alertService.error('No tiene permisos para crear planes');
@@ -407,7 +407,7 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
             // Actualizar plan existente
             if (!this.planForm.id) return;
 
-            console.log('Actualizando plan ID:', this.planForm.id);
+            // console.log('Actualizando plan ID:', this.planForm.id);
             this.planService.updatePlan(this.planForm.id, this.planForm).subscribe({
                 next: (planActualizado) => {
                     const index = this.planes.findIndex(p => p.id === planActualizado.id);
@@ -418,16 +418,16 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
                     this.cerrarModalPlan();
                 },
                 error: (error) => {
-                    console.error('Error al actualizar plan:', error);
+                    // console.error('Error al actualizar plan:', error);
                     this.alertService.error(error.error?.detail || 'Error al actualizar el plan');
                 }
             });
         } else {
             // Crear nuevo plan
-            console.log('Creando nuevo plan...');
+            // console.log('Creando nuevo plan...');
             this.planService.createPlan(this.planForm).subscribe({
                 next: (nuevoPlan) => {
-                    console.log('Plan creado exitosamente:', nuevoPlan);
+                    // console.log('Plan creado exitosamente:', nuevoPlan);
                     this.planes.push(nuevoPlan);
                     if (nuevoPlan.id) {
                         this.metasPorPlan.set(nuevoPlan.id, []);
@@ -436,8 +436,8 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
                     this.cerrarModalPlan();
                 },
                 error: (error) => {
-                    console.error('Error al crear plan:', error);
-                    console.error('Detalles del error:', error.error);
+                    // console.error('Error al crear plan:', error);
+                    // console.error('Detalles del error:', error.error);
 
                     let mensajeError = 'Error al crear el plan';
                     if (error.error?.detail) {
@@ -467,7 +467,7 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
                     this.alertService.success('Plan eliminado correctamente');
                 },
                 error: (error) => {
-                    console.error('Error al eliminar plan:', error);
+                    // console.error('Error al eliminar plan:', error);
                     this.alertService.error(error.error?.detail || 'Error al eliminar el plan');
                 }
             });
@@ -505,9 +505,9 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
     guardarMeta(): void {
         if (!this.planSeleccionado?.id) return;
 
-        console.log('=== GUARDANDO META EN BACKEND ===');
-        console.log('Meta Form:', this.metaForm);
-        console.log('Responsable:', this.metaForm.responsable);
+        // console.log('=== GUARDANDO META EN BACKEND ===');
+        // console.log('Meta Form:', this.metaForm);
+        // console.log('Responsable:', this.metaForm.responsable);
 
         if (this.modoEdicion) {
             // Actualizar meta existente
@@ -558,8 +558,8 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
                     this.cerrarModalMeta();
                 },
                 error: (error) => {
-                    console.error('Error al actualizar meta:', error);
-                    console.error('Detalles del error:', error.error);
+                    // console.error('Error al actualizar meta:', error);
+                    // console.error('Detalles del error:', error.error);
 
                     // Mostrar mensaje de error detallado
                     let mensajeError = 'Error al actualizar la meta';
@@ -645,7 +645,7 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
                 plan_id: this.planSeleccionado.id
             };
 
-            console.log('Datos a enviar:', JSON.stringify(metaData, null, 2));
+            // console.log('Datos a enviar:', JSON.stringify(metaData, null, 2));
 
             this.planService.createMeta(this.planSeleccionado.id, metaData).subscribe({
                 next: (nuevaMeta) => {
@@ -654,13 +654,13 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
                     metas.push(nuevaMeta);
                     this.metasPorPlan.set(this.planSeleccionado!.id!, metas);
 
-                    console.log('Meta creada:', nuevaMeta);
+                    // console.log('Meta creada:', nuevaMeta);
                     this.alertService.success('Meta creada correctamente');
                     this.cerrarModalMeta();
                 },
                 error: (error) => {
-                    console.error('Error al crear meta:', error);
-                    console.error('Detalles del error:', error.error);
+                    // console.error('Error al crear meta:', error);
+                    // console.error('Detalles del error:', error.error);
 
                     // Mostrar mensaje de error detallado
                     let mensajeError = 'Error al crear la meta';
@@ -703,7 +703,7 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
                     this.alertService.success('Meta eliminada correctamente');
                 },
                 error: (error) => {
-                    console.error('Error al eliminar meta:', error);
+                    // console.error('Error al eliminar meta:', error);
                     this.alertService.error(error.error?.detail || 'Error al eliminar la meta');
                 }
             });
@@ -719,41 +719,41 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
     getMetasDePlan(planId: number): Meta[] {
         const todasLasMetas = this.metasPorPlan.get(planId) || [];
 
-        console.log('=== GETMETASDEPLAN - DEBUG DETALLADO ===');
-        console.log('Total de metas en el plan:', todasLasMetas.length);
-        console.log('Usuario actual completo:', JSON.stringify(this.currentUser, null, 2));
-        console.log('currentUser.secretaria (valor exacto):', `[${this.currentUser?.secretaria}]`);
-        console.log('currentUser.secretaria (length):', this.currentUser?.secretaria?.length);
-        console.log('Es admin:', this.isAdmin());
-        console.log('Es secretario:', this.isSecretario());
+        // console.log('=== GETMETASDEPLAN - DEBUG DETALLADO ===');
+        // console.log('Total de metas en el plan:', todasLasMetas.length);
+        // console.log('Usuario actual completo:', JSON.stringify(this.currentUser, null, 2));
+        // console.log('currentUser.secretaria (valor exacto):', `[${this.currentUser?.secretaria}]`);
+        // console.log('currentUser.secretaria (length):', this.currentUser?.secretaria?.length);
+        // console.log('Es admin:', this.isAdmin());
+        // console.log('Es secretario:', this.isSecretario());
 
         // Si es admin, mostrar todas las metas
         if (this.isAdmin()) {
-            console.log('Admin - Mostrando todas las metas:', todasLasMetas.length);
+            // console.log('Admin - Mostrando todas las metas:', todasLasMetas.length);
             return todasLasMetas;
         }
 
         // Si es secretario, mostrar solo sus metas
         if (this.isSecretario() && this.currentUser?.secretaria) {
-            console.log('Filtrando metas para secretario...');
+            // console.log('Filtrando metas para secretario...');
             const metasFiltradas = todasLasMetas.filter(meta => {
                 const responsable = meta.responsable;
                 const secretaria = this.currentUser?.secretaria;
                 const sonIguales = responsable === secretaria;
 
-                console.log(`  Meta: "${meta.nombre}"`);
-                console.log(`    responsable: [${responsable}] (length: ${responsable?.length})`);
-                console.log(`    secretaria:  [${secretaria}] (length: ${secretaria?.length})`);
-                console.log(`    ¿Son iguales?: ${sonIguales}`);
+                // console.log(`  Meta: "${meta.nombre}"`);
+                // console.log(`    responsable: [${responsable}] (length: ${responsable?.length})`);
+                // console.log(`    secretaria:  [${secretaria}] (length: ${secretaria?.length})`);
+                // console.log(`    ¿Son iguales?: ${sonIguales}`);
 
                 return sonIguales;
             });
-            console.log('Secretario - Metas filtradas:', metasFiltradas.length);
-            console.log('Metas encontradas:', metasFiltradas.map(m => m.nombre));
+            // console.log('Secretario - Metas filtradas:', metasFiltradas.length);
+            // console.log('Metas encontradas:', metasFiltradas.map(m => m.nombre));
             return metasFiltradas;
         }
 
-        console.log('Sin permisos - Retornando array vacío');
+        // console.log('Sin permisos - Retornando array vacío');
         return [];
     }
 
@@ -1048,7 +1048,7 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
                     this.generandoInforme = false;
                 },
                 error: (error) => {
-                    console.error('Error al generar análisis:', error);
+                    // console.error('Error al generar análisis:', error);
                     this.alertService.error(
                         'No se pudo generar el análisis del plan. Intente nuevamente.',
                         'Error'
@@ -1058,7 +1058,7 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
             });
 
         } catch (error) {
-            console.error('Error al generar informe:', error);
+            // console.error('Error al generar informe:', error);
             this.alertService.error(
                 'Ocurrió un error al generar el informe. Verifique los datos e intente nuevamente.',
                 'Error'
@@ -1076,7 +1076,7 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
             const avanceGlobalElement = document.querySelector('.card-body svg') as SVGElement;
 
             if (!avanceGlobalElement) {
-                console.warn('No se encontraron gráficos para capturar');
+                // console.warn('No se encontraron gráficos para capturar');
                 return null;
             }
 
@@ -1092,7 +1092,7 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
                 distribucion: distribucionData
             };
         } catch (error) {
-            console.error('Error capturando gráficos:', error);
+            // console.error('Error capturando gráficos:', error);
             return null;
         }
     }

@@ -181,7 +181,7 @@ export class PortalCiudadanoComponent implements OnInit {
                     });
                 },
                 error: (error) => {
-                    console.error('Error en login:', error);
+                    // console.error('Error en login:', error);
                     this.alertService.error('Usuario o contraseña incorrectos', 'Error de Acceso');
                     this.isSubmitting = false;
                 }
@@ -207,7 +207,7 @@ export class PortalCiudadanoComponent implements OnInit {
                     this.isSubmitting = false;
                 },
                 error: (error) => {
-                    console.error('Error en registro:', error);
+                    // console.error('Error en registro:', error);
                     const errorMessage = error.error?.detail || 'No se pudo crear la cuenta. Verifica que el usuario y email no existan.';
                     this.alertService.error(errorMessage, 'Error en Registro');
                     this.isSubmitting = false;
@@ -226,7 +226,7 @@ export class PortalCiudadanoComponent implements OnInit {
                 this.isLoading = false;
             },
             error: (error) => {
-                console.error('Error cargando PQRS:', error);
+                // console.error('Error cargando PQRS:', error);
                 this.isLoading = false;
             }
         });
@@ -309,7 +309,7 @@ export class PortalCiudadanoComponent implements OnInit {
                     this.isSubmittingPqrs = false;
                 },
                 error: (error) => {
-                    console.error('Error creando PQRS:', error);
+                    // console.error('Error creando PQRS:', error);
                     const errorMessage = error.error?.detail || 'No se pudo crear la PQRS. Intente nuevamente.';
                     this.alertService.error(errorMessage, 'Error');
                     this.isSubmittingPqrs = false;

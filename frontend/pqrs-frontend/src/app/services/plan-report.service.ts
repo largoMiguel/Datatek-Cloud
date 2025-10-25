@@ -192,7 +192,7 @@ export class PlanReportService {
                 doc.addImage(graficos.avanceGlobal, 'PNG', 60, yPos, 80, 80);
                 yPos += 90;
             } catch (error) {
-                console.error('Error agregando imagen de avance global:', error);
+                // console.error('Error agregando imagen de avance global:', error);
             }
         }
 

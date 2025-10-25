@@ -228,7 +228,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.verificarPqrsProximasVencer();
       },
       error: (error) => {
-        console.error('Error cargando PQRS:', error);
+        // console.error('Error cargando PQRS:', error);
         this.isLoading = false;
         if (error.status === 401) {
           this.setActiveView('dashboard');
@@ -243,7 +243,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.secretariosList = data;
       },
       error: (error) => {
-        console.error('Error cargando secretarios:', error);
+        // console.error('Error cargando secretarios:', error);
       }
     });
   }
@@ -256,7 +256,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.isLoadingUsuarios = false;
       },
       error: (error) => {
-        console.error('Error cargando usuarios:', error);
+        // console.error('Error cargando usuarios:', error);
         this.isLoadingUsuarios = false;
       }
     });
@@ -375,7 +375,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
       this.pqrsService.updatePqrs(this.selectedPqrs.id, updateData).subscribe({
         next: (response) => {
-          console.log('PQRS asignada exitosamente:', response);
+          // console.log('PQRS asignada exitosamente:', response);
           this.alertService.success(
             `La PQRS N° ${this.selectedPqrs?.numero_radicado} ha sido asignada exitosamente a ${secretario?.full_name || 'el usuario seleccionado'}.`
           );
@@ -387,7 +387,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           }
         },
         error: (error) => {
-          console.error('Error asignando PQRS:', error);
+          // console.error('Error asignando PQRS:', error);
           this.alertService.error(
             error.error?.detail || 'No se pudo completar la asignación. Por favor, intenta nuevamente.',
             'Error al Asignar PQRS'
@@ -407,7 +407,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
       this.pqrsService.updatePqrs(this.selectedPqrs.id, updateData).subscribe({
         next: (response) => {
-          console.log('Estado actualizado exitosamente:', response);
+          // console.log('Estado actualizado exitosamente:', response);
           this.alertService.success(
             `El estado de la PQRS N° ${this.selectedPqrs?.numero_radicado} ha sido cambiado a "${estadoLabel}".`
           );
@@ -419,7 +419,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           }
         },
         error: (error) => {
-          console.error('Error actualizando estado:', error);
+          // console.error('Error actualizando estado:', error);
           this.alertService.error(
             error.error?.detail || 'No se pudo actualizar el estado. Por favor, intenta nuevamente.',
             'Error al Cambiar Estado'
@@ -442,7 +442,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (confirmacion) {
       this.pqrsService.deletePqrs(pqrs.id).subscribe({
         next: () => {
-          console.log('PQRS eliminada exitosamente');
+          // console.log('PQRS eliminada exitosamente');
           this.alertService.success(
             `La PQRS N° ${pqrs.numero_radicado} ha sido eliminada correctamente.`
           );
@@ -457,7 +457,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.loadPqrs();
         },
         error: (error) => {
-          console.error('Error eliminando PQRS:', error);
+          // console.error('Error eliminando PQRS:', error);
           this.alertService.error(
             error.error?.detail || 'No se pudo eliminar la PQRS. Por favor, intenta nuevamente.',
             'Error al Eliminar'
@@ -499,7 +499,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
       this.pqrsService.createPqrs(formData).subscribe({
         next: (response) => {
-          console.log('PQRS creada exitosamente:', response);
+          // console.log('PQRS creada exitosamente:', response);
           this.alertService.success(
             `La PQRS ha sido creada exitosamente con el radicado N° ${numeroRadicado}.\n\nPuedes consultarla en cualquier momento usando este número.`,
             'PQRS Creada'
@@ -510,7 +510,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.loadPqrs();
         },
         error: (error) => {
-          console.error('Error creando PQRS:', error);
+          // console.error('Error creando PQRS:', error);
           this.alertService.error(
             error.error?.message || 'No se pudo crear la PQRS. Por favor, verifica los datos e intenta nuevamente.',
             'Error al Crear PQRS'
@@ -594,7 +594,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.isSubmitting = false;
         },
         error: (error) => {
-          console.error('Error actualizando PQRS:', error);
+          // console.error('Error actualizando PQRS:', error);
           this.alertService.error(
             error.error?.message || 'No se pudo actualizar la PQRS. Por favor, intenta nuevamente.',
             'Error al Actualizar'
@@ -619,7 +619,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
       this.userService.createUser(createData).subscribe({
         next: (response) => {
-          console.log('Secretario creado exitosamente:', response);
+          // console.log('Secretario creado exitosamente:', response);
           this.alertService.success(
             `El secretario ${userData.full_name} ha sido creado exitosamente.\n\nUsuario: ${userData.username}\nEstá activo y listo para recibir asignaciones.`,
             'Secretario Creado'
@@ -630,7 +630,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.loadUsuarios();
         },
         error: (error) => {
-          console.error('Error creando secretario:', error);
+          // console.error('Error creando secretario:', error);
           this.alertService.error(
             error.error?.message || 'No se pudo crear el secretario. Verifica que el usuario y email no existan.',
             'Error al Crear Secretario'
@@ -650,7 +650,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
       this.pqrsService.updatePqrs(this.selectedPqrs.id, updateData).subscribe({
         next: (response) => {
-          console.log('Respuesta enviada exitosamente:', response);
+          // console.log('Respuesta enviada exitosamente:', response);
           // Actualizar el selectedPqrs con la respuesta
           if (this.selectedPqrs) {
             this.selectedPqrs.respuesta = this.respuestaTexto.trim();
@@ -664,7 +664,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.loadPqrs();
         },
         error: (error) => {
-          console.error('Error enviando respuesta:', error);
+          // console.error('Error enviando respuesta:', error);
           this.alertService.error(
             'No se pudo enviar la respuesta. Por favor, verifica tu conexión e intenta nuevamente.',
             'Error al Enviar Respuesta'
@@ -723,7 +723,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   toggleUsuarioEstado(usuario: User): void {
     // No permitir que el usuario se desactive a sí mismo
     if (usuario.id === this.currentUser?.id) {
-      console.warn('No se puede cambiar el estado del usuario actual.');
+      // console.warn('No se puede cambiar el estado del usuario actual.');
       return;
     }
 
@@ -745,10 +745,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
           }
         }
 
-        console.log('Estado de usuario actualizado:', updatedUser);
+        // console.log('Estado de usuario actualizado:', updatedUser);
       },
       error: (error) => {
-        console.error('Error alternando estado de usuario:', error);
+        // console.error('Error alternando estado de usuario:', error);
       }
     });
   }
@@ -775,7 +775,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (confirmacion) {
       this.userService.deleteUser(usuario.id).subscribe({
         next: () => {
-          console.log('Usuario eliminado exitosamente');
+          // console.log('Usuario eliminado exitosamente');
           this.alertService.success(
             `El usuario ${usuario.full_name} ha sido eliminado correctamente del sistema.`
           );
@@ -785,7 +785,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.loadSecretarios();
         },
         error: (error) => {
-          console.error('Error eliminando usuario:', error);
+          // console.error('Error eliminando usuario:', error);
           this.alertService.error(
             error.error?.detail || 'No se pudo eliminar el usuario. Por favor, intenta nuevamente.',
             'Error al Eliminar Usuario'
@@ -1095,11 +1095,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
         pqrsFiltered = pqrsFiltered.filter(pqrs => pqrs.tipo_solicitud === this.filtroTipo);
       }
 
-      console.log('Total PQRS:', this.pqrsList.length);
-      console.log('PQRS filtradas:', pqrsFiltered.length);
-      console.log('Rango:', this.fechaInicio, 'a', this.fechaFin);
+      // console.log('Total PQRS:', this.pqrsList.length);
+      // console.log('PQRS filtradas:', pqrsFiltered.length);
+      // console.log('Rango:', this.fechaInicio, 'a', this.fechaFin);
       if (this.pqrsList.length > 0) {
-        console.log('Primera PQRS fecha:', this.pqrsList[0].fecha_solicitud);
+        // console.log('Primera PQRS fecha:', this.pqrsList[0].fecha_solicitud);
       } if (pqrsFiltered.length === 0) {
         this.alertService.warning('No hay PQRS en el rango de fechas seleccionado.', 'Sin Datos');
         return;
@@ -1181,7 +1181,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.alertService.success('El informe PDF ha sido generado y descargado exitosamente.', 'Informe Generado');
 
     } catch (error) {
-      console.error('Error generando informe:', error);
+      // console.error('Error generando informe:', error);
       this.alertService.error(
         'Ocurrió un error al generar el informe. Por favor, intenta nuevamente.',
         'Error al Generar Informe'
