@@ -23,16 +23,21 @@ async def create_pqrs(
         # Validar según tipo de identificación
         from app.models.pqrs import TipoIdentificacion
         
+        # Normalizar campos vacíos/null
+        if not pqrs_data.nombre_ciudadano:
+            pqrs_data.nombre_ciudadano = None
+        if not pqrs_data.cedula_ciudadano:
+            pqrs_data.cedula_ciudadano = None
+        
         if pqrs_data.tipo_identificacion == TipoIdentificacion.PERSONAL:
             # PQRS Personal: requiere nombre y cédula
-            if not pqrs_data.nombre_ciudadano or not pqrs_data.cedula_ciudadano:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Para PQRS personales se requiere nombre y cédula"
-                )
+            # Si no se proporcionan, usar datos del usuario autenticado
+            if not pqrs_data.nombre_ciudadano:
+                pqrs_data.nombre_ciudadano = current_user.full_name or "Usuario Registrado"
+            if not pqrs_data.cedula_ciudadano:
+                pqrs_data.cedula_ciudadano = current_user.cedula or current_user.username
         else:
-            # PQRS Anónima: solo requiere descripción
-            # Asignar valores por defecto
+            # PQRS Anónima: asignar valores por defecto
             if not pqrs_data.nombre_ciudadano:
                 pqrs_data.nombre_ciudadano = "Anónimo"
             if not pqrs_data.cedula_ciudadano:
