@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, model_validator
 from typing import Optional
 from datetime import datetime
 from app.models.pqrs import TipoSolicitud, EstadoPQRS, TipoIdentificacion, MedioRespuesta
@@ -15,14 +15,6 @@ class PQRSBase(BaseModel):
     tipo_solicitud: TipoSolicitud
     asunto: Optional[str] = None  # Opcional para anónimas
     descripcion: str
-    
-    @field_validator('nombre_ciudadano', 'cedula_ciudadano')
-    @classmethod
-    def validate_personal_fields(cls, v, info):
-        # Si es PERSONAL, nombre y cédula son obligatorios
-        if info.data.get('tipo_identificacion') == TipoIdentificacion.PERSONAL and not v:
-            raise ValueError(f'{info.field_name} es obligatorio para PQRS personales')
-        return v
 
 class PQRSCreate(PQRSBase):
     numero_radicado: Optional[str] = None
