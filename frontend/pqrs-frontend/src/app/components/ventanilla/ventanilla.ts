@@ -88,13 +88,9 @@ export class VentanillaComponent {
     }
 
     generarNumeroRadicado(): string {
-        const hoy = new Date();
-        const year = hoy.getFullYear();
-        const month = String(hoy.getMonth() + 1).padStart(2, '0');
-        const day = String(hoy.getDate()).padStart(2, '0');
-        const fechaBase = `${year}${month}${day}`;
-        const numeroAleatorio = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-        return `${fechaBase}${numeroAleatorio}`;
+        // Ya no se genera en frontend. El backend asigna el número secuencial (YYYYMMDDNNN).
+        // Esta función se mantiene por compatibilidad pero no se usa.
+        return '';
     }
 
     submitRadicacion() {
@@ -108,14 +104,8 @@ export class VentanillaComponent {
 
         this.isSubmitting = true;
 
-        // Generar número de radicado con el formato correcto: YYYY-XXXXX
-        const year = new Date().getFullYear();
-        const randomPart = Math.random().toString(36).substring(2, 7).toUpperCase();
-        const numeroRadicado = `${year}-${randomPart}`;
-
         // Construir objeto PQRS con todos los campos requeridos
         const pqrsData: any = {
-            numero_radicado: numeroRadicado,
             tipo_identificacion: 'personal',  // Ventanilla siempre es personal (requiere cédula)
             medio_respuesta: this.radicacionForm.email_ciudadano ? 'email' : 'ticket',  // Email si lo tiene, sino ticket
             tipo_solicitud: this.radicacionForm.tipo_solicitud,
@@ -142,7 +132,7 @@ export class VentanillaComponent {
         this.pqrsService.createPqrs(pqrsData).subscribe({
             next: (response) => {
                 this.alertService.success(
-                    `Tu PQRS ha sido radicada exitosamente.\n\nNúmero de radicado: ${numeroRadicado}\n\nGuarda este número para consultar el estado de tu solicitud.`,
+                    `Tu PQRS ha sido radicada exitosamente.\n\nNúmero de radicado: ${response.numero_radicado}\n\nGuarda este número para consultar el estado de tu solicitud.`,
                     'PQRS Radicada'
                 );
                 this.cerrarModalRadicacion();

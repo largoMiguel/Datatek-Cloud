@@ -62,7 +62,16 @@ async def create_pqrs(
             numero_radicado = generate_radicado(db)
             intentos += 1
         
-        # Crear PQRS sin asignar (assigned_to_id será NULL hasta que admin/secretario la asigne)
+        # Determinar asignación automática:
+        # - Si el creador es SECRETARIO, asignar automáticamente a él y fijar fecha_delegacion.
+        # - Si es ADMIN o CIUDADANO, dejar sin asignar.
+        assigned_to_id = None
+        fecha_delegacion = None
+        if current_user.role == UserRole.SECRETARIO:
+            assigned_to_id = current_user.id
+            fecha_delegacion = datetime.utcnow()
+
+        # Crear PQRS con datos finales
         db_pqrs = PQRS(
             numero_radicado=numero_radicado,
             tipo_identificacion=pqrs_data.tipo_identificacion,
@@ -76,7 +85,8 @@ async def create_pqrs(
             asunto=pqrs_data.asunto or "Sin asunto",
             descripcion=pqrs_data.descripcion,
             created_by_id=current_user.id,
-            assigned_to_id=None  # Sin asignar inicialmente
+            assigned_to_id=assigned_to_id,
+            fecha_delegacion=fecha_delegacion
         )
         
         db.add(db_pqrs)
