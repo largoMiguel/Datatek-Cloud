@@ -32,16 +32,24 @@ def get_password_hash(password: str) -> str:
         if not isinstance(password, str):
             password = str(password)
         
-        # Truncar a 72 bytes si es necesario (límite de bcrypt)
+        # Convertir a bytes para medir correctamente
         password_bytes = password.encode('utf-8')
+        
+        # Truncar a 72 bytes si excede (límite de bcrypt)
         if len(password_bytes) > 72:
+            # Truncar y decodificar, ignorando errores de UTF-8
             password = password_bytes[:72].decode('utf-8', errors='ignore')
         
+        # Hashear la contraseña
         return pwd_context.hash(password)
+        
     except Exception as e:
         # Log del error para debugging
-        print(f"❌ Error hasheando contraseña: {e}")
-        raise ValueError(f"Error hashing password: {str(e)}")
+        error_msg = f"Error hashing password: {str(e)}"
+        print(f"❌ {error_msg}")
+        print(f"   Password length: {len(password) if password else 0}")
+        print(f"   Password bytes: {len(password.encode('utf-8')) if password else 0}")
+        raise ValueError(error_msg)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Crear token JWT"""
