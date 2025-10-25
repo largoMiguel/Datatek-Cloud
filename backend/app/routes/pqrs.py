@@ -53,11 +53,14 @@ async def create_pqrs(
     
     # Generar número de radicado único (ignorar el del frontend para evitar duplicados)
     try:
-        # Siempre generar un nuevo radicado único
-        numero_radicado = generate_radicado()
-        # Verificar unicidad y regenerar si es necesario
-        while db.query(PQRS).filter(PQRS.numero_radicado == numero_radicado).first():
-            numero_radicado = generate_radicado()
+        # Siempre generar un nuevo radicado único con formato YYYYMMDDNNN
+        numero_radicado = generate_radicado(db)
+        # Verificar unicidad por si acaso (aunque la función ya maneja esto)
+        max_intentos = 10
+        intentos = 0
+        while db.query(PQRS).filter(PQRS.numero_radicado == numero_radicado).first() and intentos < max_intentos:
+            numero_radicado = generate_radicado(db)
+            intentos += 1
         
         # Crear PQRS sin asignar (assigned_to_id será NULL hasta que admin/secretario la asigne)
         db_pqrs = PQRS(
