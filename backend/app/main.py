@@ -14,15 +14,17 @@ Base.metadata.create_all(bind=engine)
 # Compatibilidad: añadir columna `is_active` a la tabla users en SQLite si no existe
 from sqlalchemy import inspect, text
 inspector = inspect(engine)
-    if inspector.has_table("users"):
-        cols = [c.get("name") for c in inspector.get_columns("users")]
-        if "is_active" not in cols:
-            try:
-                with engine.connect() as conn:
-                    conn.execute(text('ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1'))
-                    conn.commit()
-            except Exception:
-                pass  # Columna ya existe o error ignorado# Compatibilidad SQLite: asegurarse de que la tabla pqrs tenga las columnas nuevas
+if inspector.has_table("users"):
+    cols = [c.get("name") for c in inspector.get_columns("users")]
+    if "is_active" not in cols:
+        try:
+            with engine.connect() as conn:
+                conn.execute(text('ALTER TABLE users ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT 1'))
+                conn.commit()
+        except Exception:
+            pass  # Columna ya existe o error ignorado
+
+# Compatibilidad SQLite: asegurarse de que la tabla pqrs tenga las columnas nuevas
 def run_sqlite_migration():
     try:
         if 'sqlite' not in str(engine.url):
