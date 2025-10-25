@@ -240,6 +240,9 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Debug: imprimir orígenes CORS permitidos
+print(f"\n🌐 CORS Origins configurados: {settings.cors_origins}")
+print(f"   Allowed Origins String: {settings.allowed_origins}")
 
 # Configurar CORS dinámicamente según entorno
 app.add_middleware(

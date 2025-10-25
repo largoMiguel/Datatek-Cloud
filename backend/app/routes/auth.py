@@ -151,3 +151,56 @@ async def get_users(db: Session = Depends(get_db), current_user: User = Depends(
     """Obtener lista de usuarios (solo admin)"""
     users = db.query(User).all()
     return users
+
+@router.post("/init-admin")
+async def initialize_admin(db: Session = Depends(get_db)):
+    """
+    Endpoint temporal para crear/resetear usuario admin.
+    SOLO PARA DEBUGGING - Eliminar en producción después de configurar.
+    """
+    from sqlalchemy.exc import IntegrityError
+    
+    try:
+        # Buscar admin existente
+        admin = db.query(User).filter(User.username == "admin").first()
+        
+        if admin:
+            # Actualizar contraseña del admin existente
+            admin.hashed_password = get_password_hash("admin123")
+            admin.is_active = True
+            db.commit()
+            return {
+                "message": "Admin password reset to 'admin123'",
+                "username": "admin",
+                "exists": True
+            }
+        else:
+            # Crear nuevo admin
+            new_admin = User(
+                username="admin",
+                email="admin@alcaldia.gov.co",
+                full_name="Administrador del Sistema",
+                hashed_password=get_password_hash("admin123"),
+                role=UserRole.ADMIN,
+                secretaria="Sistemas",
+                is_active=True
+            )
+            db.add(new_admin)
+            db.commit()
+            return {
+                "message": "Admin created with password 'admin123'",
+                "username": "admin",
+                "exists": False
+            }
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Database integrity error: {str(e)}"
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error initializing admin: {str(e)}"
+        )
