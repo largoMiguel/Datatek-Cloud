@@ -20,7 +20,7 @@ export class LoginComponent implements OnInit {
   isLoading = false;
   errorMessage = '';
   currentEntity$: Observable<Entity | null>;
-  
+
 
   constructor(
     private fb: FormBuilder,
