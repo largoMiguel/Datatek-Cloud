@@ -125,6 +125,9 @@ class PQRS(Base):
     created_by_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     assigned_to_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     
+    # Relación con entidad
+    entity_id = Column(Integer, ForeignKey("entities.id"), nullable=False)
+    
     # Respuesta
     respuesta = Column(Text, nullable=True)
     

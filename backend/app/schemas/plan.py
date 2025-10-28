@@ -20,7 +20,7 @@ class PlanInstitucionalBase(BaseModel):
 
 class PlanInstitucionalCreate(PlanInstitucionalBase):
     """Schema para crear un plan institucional"""
-    pass
+    entity_id: Optional[int] = None  # Opcional, se asigna automáticamente desde current_user
 
 
 class PlanInstitucionalUpdate(BaseModel):
@@ -36,6 +36,7 @@ class PlanInstitucionalUpdate(BaseModel):
 class PlanInstitucional(PlanInstitucionalBase):
     """Schema para respuesta de plan institucional"""
     id: int
+    entity_id: int
 
     class Config:
         from_attributes = True

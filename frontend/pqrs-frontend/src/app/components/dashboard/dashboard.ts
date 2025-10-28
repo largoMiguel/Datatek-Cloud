@@ -9,9 +9,11 @@ import { AlertService } from '../../services/alert.service';
 import { AiService } from '../../services/ai.service';
 import { ReportService } from '../../services/report.service';
 import { User } from '../../models/user.model';
+import { EntityContextService } from '../../services/entity-context.service';
 import { PQRSWithDetails, ESTADOS_PQRS, EstadoPQRS, UpdatePQRSRequest, PQRSResponse, TIPOS_IDENTIFICACION, MEDIOS_RESPUESTA } from '../../models/pqrs.model';
 import { BaseChartDirective } from 'ng2-charts';
 import { Chart, ChartConfiguration, ChartData, ChartType, registerables } from 'chart.js';
+import { Subscription, combineLatest, filter } from 'rxjs';
 
 // Registrar todos los componentes de Chart.js
 Chart.register(...registerables);
@@ -43,6 +45,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   respuestaTexto = '';
   selectedSecretarioId: number | null = null;
   selectedEstado: string = '';
+  private subscriptions = new Subscription();
 
   // Fechas para el informe
   fechaInicio: string = '';
@@ -91,7 +94,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private alertService: AlertService,
     private aiService: AiService,
-    private reportService: ReportService
+    private reportService: ReportService,
+    private entityContext: EntityContextService
   ) {
     this.nuevaPqrsForm = this.fb.group({
       tipo_identificacion: ['personal', Validators.required],
@@ -186,31 +190,47 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // Prevenir retroceso al login después de autenticarse
-    window.history.pushState(null, '', window.location.href);
-    window.onpopstate = () => {
-      window.history.pushState(null, '', window.location.href);
-    };
+    // Combinar usuario y entidad para cargar datos solo cuando ambos estén listos
+    // y recargar cuando cualquiera cambie
+    const combined = combineLatest([
+      this.authService.currentUser$,
+      this.entityContext.currentEntity$
+    ]).pipe(
+      filter(([user, entity]) => user !== null && entity !== null)
+    ).subscribe(([user, entity]) => {
+      this.currentUser = user;
+      // Limpiar y recargar datos con el nuevo contexto
+      this.limpiarDatos();
+      this.loadPqrs();
+      this.loadSecretarios();
+    });
+    this.subscriptions.add(combined);
 
-    this.authService.getCurrentUser().subscribe({
-      next: (user) => {
-        this.currentUser = user;
-        if (!this.currentUser) {
-          this.router.navigate(['/login'], { replaceUrl: true });
-          return;
-        }
-        this.loadPqrs();
-        this.loadSecretarios();
-      },
+    // Mantener el manejo de errores de autenticación para casos sin usuario
+    const authErrorCheck = this.authService.getCurrentUser().subscribe({
       error: () => {
-        this.router.navigate(['/login'], { replaceUrl: true });
+        const slug = this.router.url.replace(/^\//, '').split('/')[0];
+        this.router.navigate(slug ? ['/', slug, 'login'] : ['/'], { replaceUrl: true });
       }
     });
+    this.subscriptions.add(authErrorCheck);
   }
 
   ngOnDestroy() {
-    // Limpiar el listener de popstate para evitar memory leaks
-    window.onpopstate = null;
+    // Limpiar todas las suscripciones
+    this.subscriptions.unsubscribe();
+  }
+
+  /**
+   * Limpia los datos del componente
+   */
+  private limpiarDatos(): void {
+    this.pqrsList = [];
+    this.usuariosList = [];
+    this.secretariosList = [];
+    this.selectedPqrs = null;
+    this.pqrsEditando = null;
+    this.activeView = 'dashboard';
   }
 
   setActiveView(view: string) {
@@ -473,6 +493,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
       const formData = this.nuevaPqrsForm.value;
       // El número de radicado lo genera el backend; no enviarlo desde el frontend
+
+      // Agregar entity_id desde el contexto de entidad actual
+      const currentEntity = this.entityContext.currentEntity;
+      if (!currentEntity) {
+        this.alertService.error('No se pudo determinar la entidad actual', 'Error');
+        this.isSubmitting = false;
+        return;
+      }
+      formData.entity_id = currentEntity.id;
 
       // Convertir cadenas vacías a null para campos opcionales (evita error de validación de email)
       if (!formData.email_ciudadano || formData.email_ciudadano.trim() === '') {
@@ -1003,6 +1032,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   mostrarFormularioInforme(): void {
+    const enableReports = this.reportsPdfEnabled();
+    if (!enableReports) {
+      this.alertService.warning('El módulo de Reportes PDF está desactivado para esta entidad.', 'Módulo desactivado');
+      return;
+    }
+
     // Establecer fechas por defecto (último mes)
     const fechaFin = new Date();
     const fechaInicio = new Date();
@@ -1126,8 +1161,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
         fechaFin: this.fechaFin
       };
 
-      // Obtener análisis de IA
-      const aiAnalysis = await this.aiService.generateReportAnalysis(aiRequest).toPromise();
+      // Obtener análisis (respetando flag de IA)
+      const enableAI = this.entityContext.currentEntity?.enable_ai_reports ?? true;
+      const aiAnalysis = enableAI
+        ? await this.aiService.generateReportAnalysis(aiRequest).toPromise()
+        : {
+          introduccion: 'Informe generado sin análisis de IA.',
+          analisisGeneral: 'El análisis automatizado está desactivado para esta entidad.',
+          analisisTendencias: '',
+          recomendaciones: [],
+          conclusiones: ''
+        };
 
       // Preparar analytics
       const analytics = {
@@ -1194,6 +1238,24 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   logout() {
     this.authService.logout();
-    this.router.navigate(['/login']);
+    const slug = this.router.url.replace(/^\//, '').split('/')[0];
+    this.router.navigate(slug ? ['/', slug, 'login'] : ['/']);
+  }
+
+  // Feature flags por entidad (con fallback a true)
+  pqrsEnabled(): boolean {
+    return this.entityContext.currentEntity?.enable_pqrs ?? false;
+  }
+
+  usersAdminEnabled(): boolean {
+    return this.entityContext.currentEntity?.enable_users_admin ?? false;
+  }
+
+  planesEnabled(): boolean {
+    return this.entityContext.currentEntity?.enable_planes_institucionales ?? false;
+  }
+
+  reportsPdfEnabled(): boolean {
+    return this.entityContext.currentEntity?.enable_reports_pdf ?? false;
   }
 }

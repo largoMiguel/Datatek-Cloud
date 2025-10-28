@@ -9,7 +9,8 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: str
     role: UserRole
-    secretaria: Optional[str] = None
+    entity_id: Optional[int] = None  # ID de la entidad a la que pertenece
+    secretaria: Optional[str] = None  # Legacy, mantener por compatibilidad
     cedula: Optional[str] = None
     telefono: Optional[str] = None
     direccion: Optional[str] = None
@@ -22,6 +23,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
     role: Optional[UserRole] = None
+    entity_id: Optional[int] = None
     secretaria: Optional[str] = None
     cedula: Optional[str] = None
     telefono: Optional[str] = None

@@ -1,9 +1,12 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { EntityContextService } from '../../services/entity-context.service';
 import { FormsModule } from '@angular/forms';
 import { PqrsService } from '../../services/pqrs.service';
 import { AlertService } from '../../services/alert.service';
+import { Observable } from 'rxjs';
+import { Entity } from '../../models/entity.model';
 
 @Component({
     selector: 'app-ventanilla',
@@ -36,25 +39,41 @@ export class VentanillaComponent {
     isSubmitting = false;
     isConsulting = false;
 
+    // Entidad actual (si la ruta incluye slug)
+    currentEntity$: Observable<Entity | null>;
+
     constructor(
         private router: Router,
         private pqrsService: PqrsService,
-        private alertService: AlertService
-    ) { }
+        private alertService: AlertService,
+        private entityContext: EntityContextService
+    ) {
+        this.currentEntity$ = this.entityContext.currentEntity$;
+    }
 
     navigateToLogin() {
-        this.router.navigate(['/login']);
+        const slug = this.entityContext.currentEntity?.slug;
+        this.router.navigate(slug ? ['/', slug, 'login'] : ['/']);
     }
 
     navigateToPortalCiudadano() {
-        this.router.navigate(['/portal-ciudadano']);
+        const slug = this.entityContext.currentEntity?.slug;
+        this.router.navigate(slug ? ['/', slug, 'portal-ciudadano'] : ['/']);
     }
 
     navigateToConsulta() {
+        if (!this.pqrsEnabled()) {
+            this.alertService.warning('El módulo de PQRS está desactivado para esta entidad.', 'Módulo desactivado');
+            return;
+        }
         this.mostrarModalConsulta = true;
     }
 
     navigateToRadicacion() {
+        if (!this.pqrsEnabled()) {
+            this.alertService.warning('El módulo de PQRS está desactivado para esta entidad.', 'Módulo desactivado');
+            return;
+        }
         this.mostrarModalRadicacion = true;
     }
 
@@ -102,6 +121,13 @@ export class VentanillaComponent {
             return;
         }
 
+        // Validar que hay una entidad actual
+        const currentEntity = this.entityContext.currentEntity;
+        if (!currentEntity) {
+            this.alertService.error('No se pudo determinar la entidad actual', 'Error');
+            return;
+        }
+
         this.isSubmitting = true;
 
         // Construir objeto PQRS con todos los campos requeridos
@@ -115,7 +141,8 @@ export class VentanillaComponent {
             descripcion: this.radicacionForm.descripcion,
             telefono_ciudadano: this.radicacionForm.telefono_ciudadano || null,
             email_ciudadano: this.radicacionForm.email_ciudadano || null,
-            direccion_ciudadano: this.radicacionForm.direccion_ciudadano || null
+            direccion_ciudadano: this.radicacionForm.direccion_ciudadano || null,
+            entity_id: currentEntity.id  // Agregar entity_id desde el contexto
         };
 
         // Convertir strings vacíos a null para campos opcionales
@@ -203,5 +230,10 @@ export class VentanillaComponent {
             'cerrado': 'dark'
         };
         return colores[estado] || 'secondary';
+    }
+
+    // Feature flag: PQRS habilitado en la entidad
+    pqrsEnabled(): boolean {
+        return this.entityContext.currentEntity?.enable_pqrs ?? false;
     }
 }

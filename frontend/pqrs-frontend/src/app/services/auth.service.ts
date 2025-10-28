@@ -74,6 +74,16 @@ export class AuthService {
         return user ? user.role === 'admin' : false;
     }
 
+    isSuperAdmin(): boolean {
+        const user = this.currentUserSubject.value;
+        return user ? user.role === 'superadmin' : false;
+    }
+
+    isAdminOrSuperAdmin(): boolean {
+        const user = this.currentUserSubject.value;
+        return user ? (user.role === 'admin' || user.role === 'superadmin') : false;
+    }
+
     getCurrentUserValue(): User | null {
         return this.currentUserSubject.value;
     }

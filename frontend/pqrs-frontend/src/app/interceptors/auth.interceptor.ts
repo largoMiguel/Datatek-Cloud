@@ -3,12 +3,14 @@ import { HttpInterceptor, HttpRequest, HttpHandler, HttpEvent } from '@angular/c
 import { Observable, catchError, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { Router } from '@angular/router';
+import { EntityContextService } from '../services/entity-context.service';
 
 @Injectable()
 export class AuthInterceptor implements HttpInterceptor {
     constructor(
         private authService: AuthService,
-        private router: Router
+        private router: Router,
+        private entityContext: EntityContextService
     ) { }
 
     intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
@@ -26,7 +28,9 @@ export class AuthInterceptor implements HttpInterceptor {
                 catchError(error => {
                     if (error.status === 401) {
                         this.authService.logout();
-                        this.router.navigate(['/login']);
+                        const currentUrl = this.router.url;
+                        const slug = (currentUrl || '').replace(/^\//, '').split('/')[0] || this.entityContext.currentEntity?.slug || null;
+                        this.router.navigate(slug ? ['/', slug, 'login'] : ['/']);
                     }
                     return throwError(() => error);
                 })

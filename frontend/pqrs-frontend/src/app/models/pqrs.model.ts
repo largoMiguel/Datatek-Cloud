@@ -19,6 +19,7 @@ export interface PQRS {
     respuesta?: string;
     created_by_id: number;
     assigned_to_id?: number;
+    entity_id: number;
     created_at: string;
     updated_at?: string;
 }
@@ -48,6 +49,7 @@ export interface CreatePQRSRequest {
     tipo_solicitud: TipoSolicitud;
     asunto?: string;
     descripcion: string;
+    entity_id: number;
 }
 
 export interface UpdatePQRSRequest {

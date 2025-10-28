@@ -4,8 +4,8 @@
 set -o errexit  # Salir si hay error
 
 echo "→ Instalando dependencias..."
-pip install --upgrade pip
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 
 echo "→ Inicializando base de datos..."
 python -c "

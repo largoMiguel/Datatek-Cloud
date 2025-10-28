@@ -35,26 +35,28 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" [class.active]="activeView === 'mis-pqrs'" (click)="setActiveView('mis-pqrs')">
+                <a class="nav-link" *ngIf="pqrsEnabled()" [class.active]="activeView === 'mis-pqrs'"
+                    (click)="setActiveView('mis-pqrs')">
                     <i class="fas fa-list me-2"></i>Mis PQRS
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" [class.active]="activeView === 'nueva-pqrs'" (click)="setActiveView('nueva-pqrs')">
+                <a class="nav-link" *ngIf="pqrsEnabled()" [class.active]="activeView === 'nueva-pqrs'"
+                    (click)="setActiveView('nueva-pqrs')">
                     <i class="fas fa-plus me-2"></i>Nueva PQRS
                 </a>
             </li>
-            <li class="nav-item" *ngIf="isAdmin()">
+            <li class="nav-item" *ngIf="isAdmin() && usersAdminEnabled()">
                 <a class="nav-link" [class.active]="activeView === 'usuarios'" (click)="setActiveView('usuarios')">
                     <i class="fas fa-users me-2"></i>Usuarios
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" [routerLink]="['/planes-institucionales']">
+                <a class="nav-link" *ngIf="planesEnabled()" routerLink="../planes-institucionales">
                     <i class="fas fa-clipboard-list me-2"></i>Planes Institucionales
                 </a>
             </li>
-            <li class="nav-item ms-auto" *ngIf="isAdmin()">
+            <li class="nav-item ms-auto" *ngIf="isAdmin() && reportsPdfEnabled()">
                 <button class="btn btn-success btn-sm mt-1" (click)="mostrarFormularioInforme()">
                     <i class="fas fa-file-pdf me-2"></i>Generar Informe
                 </button>
@@ -154,7 +156,7 @@
         </div>
 
         <!-- Dashboard View -->
-        <div *ngIf="activeView === 'dashboard'">
+        <div *ngIf="activeView === 'dashboard' && pqrsEnabled()">
             <!-- Header -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3 class="mb-0 fw-bold"><i class="fas fa-chart-line me-2 text-primary"></i>Análisis del Panel</h3>
@@ -379,8 +381,16 @@
             </div>
         </div>
 
+        <!-- Estado cuando PQRS está desactivado -->
+        <div *ngIf="activeView === 'dashboard' && !pqrsEnabled()" class="card">
+            <div class="card-body text-center text-muted">
+                <i class="fas fa-ban fa-2x mb-2"></i>
+                <p>El módulo de PQRS está desactivado para esta entidad.</p>
+            </div>
+        </div>
+
         <!-- Mis PQRS View -->
-        <div *ngIf="activeView === 'mis-pqrs'">
+        <div *ngIf="activeView === 'mis-pqrs' && pqrsEnabled()">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0"><i class="fas fa-list me-2"></i>Mis PQRS</h5>
                 <button class="btn btn-primary btn-sm" (click)="setActiveView('nueva-pqrs')"><i
@@ -552,7 +562,7 @@
         </div>
 
         <!-- Nueva PQRS View -->
-        <div *ngIf="activeView === 'nueva-pqrs'">
+        <div *ngIf="activeView === 'nueva-pqrs' && pqrsEnabled()">
             <div class="card">
                 <div class="card-body">
                     <form [formGroup]="nuevaPqrsForm" (ngSubmit)="onSubmitNuevaPqrs()">
@@ -733,7 +743,7 @@
         </div>
 
         <!-- Usuarios View -->
-        <div *ngIf="activeView === 'usuarios'">
+        <div *ngIf="activeView === 'usuarios' && isAdmin() && usersAdminEnabled()">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="fas fa-users me-2"></i>Gestión de Usuarios</h5>
@@ -798,7 +808,7 @@
         </div>
 
         <!-- Crear Secretario View -->
-        <div *ngIf="activeView === 'crear-secretario'">
+        <div *ngIf="activeView === 'crear-secretario' && isAdmin() && usersAdminEnabled()">
             <div class="card">
                 <div class="card-header bg-success text-white">
                     <div class="d-flex justify-content-between align-items-center">

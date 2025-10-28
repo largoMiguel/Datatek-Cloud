@@ -1,12 +1,25 @@
-<div class="portal-ciudadano-container">
+<div class="portal-ciudadano-container" *ngIf="pqrsEnabled(); else pqrsOff">
     <!-- Header -->
     <nav class="navbar navbar-dark bg-secondary mb-0">
         <div class="container-fluid">
             <a class="navbar-brand d-flex align-items-center" href="javascript:void(0)" (click)="volverAInicio()">
-                <img src="assets/logos/lsoftone.png" alt="Logo" class="navbar-logo me-2">
-                <span><i class="fas fa-user-circle me-2"></i>Portal Ciudadano</span>
+                <ng-container *ngIf="(currentEntity$ | async) as entity; else defaultBrand">
+                    <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'" [alt]="entity.name"
+                        class="navbar-logo me-2">
+                    <span><i class="fas fa-user-circle me-2"></i>{{ entity.name }} - Portal Ciudadano</span>
+                </ng-container>
+                <ng-template #defaultBrand>
+                    <img src="assets/logos/lsoftone.png" alt="Logo" class="navbar-logo me-2">
+                    <span><i class="fas fa-user-circle me-2"></i>Portal Ciudadano</span>
+                </ng-template>
             </a>
             <div *ngIf="isLoggedIn" class="navbar-nav ms-auto">
+                <ng-container *ngIf="(currentEntity$ | async) as entity">
+                    <span class="entity-indicator me-3">
+                        <i class="fas fa-building me-1"></i>
+                        <small>Logueado en: <strong>{{ entity.name }}</strong></small>
+                    </span>
+                </ng-container>
                 <div class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
                         <i class="fas fa-user me-1"></i>{{ currentUser?.full_name }}
@@ -34,8 +47,15 @@
                             <!-- Panel Izquierdo - Información -->
                             <div class="col-md-5 auth-info-panel">
                                 <div class="info-content">
-                                    <img src="assets/logos/lsoftone.png" alt="Logo" class="info-logo mb-4">
-                                    <h3 class="text-white mb-3">Portal Ciudadano</h3>
+                                    <ng-container *ngIf="(currentEntity$ | async) as entity; else defaultInfo">
+                                        <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'" [alt]="entity.name"
+                                            class="info-logo mb-4">
+                                        <h3 class="text-white mb-3">{{ entity.name }}</h3>
+                                    </ng-container>
+                                    <ng-template #defaultInfo>
+                                        <img src="assets/logos/lsoftone.png" alt="Logo" class="info-logo mb-4">
+                                        <h3 class="text-white mb-3">Portal Ciudadano</h3>
+                                    </ng-template>
                                     <p class="text-white-50 mb-4">
                                         Accede a tu cuenta para gestionar tus PQRS, ver el historial y recibir
                                         actualizaciones en tiempo real.
@@ -480,3 +500,17 @@
         </div>
     </div>
 </div>
+
+<ng-template #pqrsOff>
+    <div class="container my-5">
+        <div class="alert alert-warning text-center">
+            <i class="fas fa-ban me-2"></i>
+            El módulo de PQRS está desactivado para esta entidad.
+        </div>
+        <div class="text-center">
+            <button class="btn btn-outline-secondary" (click)="volverAInicio()">
+                <i class="fas fa-arrow-left me-2"></i>Volver a la ventanilla
+            </button>
+        </div>
+    </div>
+</ng-template>

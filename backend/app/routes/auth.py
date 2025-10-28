@@ -259,3 +259,64 @@ async def initialize_admin(db: Session = Depends(get_db)):
             status_code=500,
             detail=f"Unexpected error: {str(e)} | Type: {type(e).__name__}"
         )
+
+
+@router.post("/init-superadmin")
+async def initialize_superadmin(db: Session = Depends(get_db)):
+    """
+    Endpoint para crear el primer super administrador.
+    Solo debe ejecutarse una vez durante la configuración inicial.
+    """
+    from sqlalchemy.exc import IntegrityError
+    
+    try:
+        # Verificar si ya existe un superadmin
+        superadmin_exists = db.query(User).filter(User.role == UserRole.SUPERADMIN).first()
+        
+        if superadmin_exists:
+            return {
+                "message": "Super administrador ya existe",
+                "username": superadmin_exists.username,
+                "exists": True
+            }
+        
+        # Contraseña por defecto (DEBE cambiarse después del primer login)
+        plain_password = "superadmin123"
+        hashed_password = get_password_hash(plain_password)
+        
+        # Crear superadmin
+        superadmin = User(
+            username="superadmin",
+            email="superadmin@sistema.gov.co",
+            full_name="Super Administrador del Sistema",
+            hashed_password=hashed_password,
+            role=UserRole.SUPERADMIN,
+            entity_id=None,  # Superadmin no pertenece a ninguna entidad
+            is_active=True
+        )
+        
+        db.add(superadmin)
+        db.commit()
+        db.refresh(superadmin)
+        
+        return {
+            "message": "Super administrador creado exitosamente",
+            "username": "superadmin",
+            "email": "superadmin@sistema.gov.co",
+            "password": plain_password,
+            "warning": "⚠️ IMPORTANTE: Cambia esta contraseña inmediatamente después del primer login",
+            "exists": False
+        }
+        
+    except IntegrityError as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error de integridad: {str(e)}"
+        )
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error creando superadmin: {str(e)}"
+        )

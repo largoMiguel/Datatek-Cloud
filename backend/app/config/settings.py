@@ -20,6 +20,16 @@ class Settings(BaseSettings):
     
     # CORS - Múltiples orígenes separados por coma
     allowed_origins: str = "http://localhost:4200,https://pqrs-frontend.onrender.com"
+
+    # Superadmin (para seed/control inicial)
+    superadmin_username: str = "superadmin"
+    superadmin_email: str = "superadmin@sistema.gov.co"
+    superadmin_password: str = "changeMe!SuperSecure"
+    
+    # Mantenimiento/control (confirmación para operaciones peligrosas)
+    maintenance_confirm_phrase: str = "CONFIRM_RESET"
+    # Token opcional para reforzar seguridad de endpoints de mantenimiento (dejar vacío si no se usa)
+    maintenance_token: str = ""
     
     @property
     def cors_origins(self) -> List[str]:

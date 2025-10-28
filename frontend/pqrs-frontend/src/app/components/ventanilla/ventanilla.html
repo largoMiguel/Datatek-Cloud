@@ -2,11 +2,21 @@
     <div class="hero-section">
         <div class="overlay"></div>
         <div class="content">
-            <div class="logo-container">
-                <img src="assets/logos/lsoftone.png" alt="Logo Alcaldía" class="hero-logo">
+            <div class="logo-container" *ngIf="(currentEntity$ | async) as entity; else defaultLogo">
+                <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'" [alt]="entity.name" class="hero-logo">
             </div>
+            <ng-template #defaultLogo>
+                <div class="logo-container">
+                    <img src="assets/logos/lsoftone.png" alt="Logo" class="hero-logo">
+                </div>
+            </ng-template>
             <h1 class="hero-title">Ventanilla Única de Servicios</h1>
-            <h2 class="hero-subtitle">Sistema de PQRS - Alcaldía</h2>
+            <h2 class="hero-subtitle">
+                <ng-container *ngIf="(currentEntity$ | async) as entity; else defaultSubtitle">
+                    Sistema de PQRS - {{ entity.name }}
+                </ng-container>
+                <ng-template #defaultSubtitle> Sistema de PQRS - Alcaldía </ng-template>
+            </h2>
             <p class="hero-description">
                 Bienvenido al sistema de Peticiones, Quejas, Reclamos y Sugerencias.
                 Aquí podrás gestionar tus solicitudes de manera rápida y eficiente.
@@ -38,7 +48,7 @@
                 </div>
 
                 <!-- Portal Ciudadano -->
-                <div class="col-md-3">
+                <div class="col-md-3" *ngIf="pqrsEnabled()">
                     <div class="service-card" (click)="navigateToPortalCiudadano()">
                         <div class="service-icon service-icon-secondary">
                             <i class="fas fa-user-circle"></i>
@@ -54,7 +64,7 @@
                 </div>
 
                 <!-- Radicar PQRS -->
-                <div class="col-md-3">
+                <div class="col-md-3" *ngIf="pqrsEnabled()">
                     <div class="service-card" (click)="navigateToRadicacion()">
                         <div class="service-icon service-icon-success">
                             <i class="fas fa-file-signature"></i>
@@ -70,7 +80,7 @@
                 </div>
 
                 <!-- Consultar Estado -->
-                <div class="col-md-3">
+                <div class="col-md-3" *ngIf="pqrsEnabled()">
                     <div class="service-card" (click)="navigateToConsulta()">
                         <div class="service-icon service-icon-info">
                             <i class="fas fa-search"></i>
@@ -86,6 +96,13 @@
                 </div>
             </div>
 
+            <!-- Mensaje cuando PQRS está desactivado -->
+            <div class="alert alert-warning mt-4" *ngIf="!pqrsEnabled()">
+                <i class="fas fa-ban me-2"></i>
+                El módulo de PQRS está desactivado para esta entidad. Por favor, contacte al administrador si requiere
+                habilitarlo.
+            </div>
+
             <!-- Información Adicional -->
             <div class="info-section mt-5">
                 <div class="row">
@@ -93,21 +110,32 @@
                         <div class="info-card">
                             <i class="fas fa-clock info-icon"></i>
                             <h5>Horario de Atención</h5>
-                            <p>Lunes a Viernes<br>8:00 AM - 5:00 PM</p>
+                            <ng-container *ngIf="(currentEntity$ | async) as entity">
+                                <p>{{ entity.horario_atencion || 'Lunes a Viernes\n8:00 AM - 5:00 PM' }}</p>
+                            </ng-container>
+                            <p *ngIf="!(currentEntity$ | async)">Lunes a Viernes<br>8:00 AM - 5:00 PM</p>
                         </div>
                     </div>
                     <div class="col-md-4 mb-4">
                         <div class="info-card">
                             <i class="fas fa-phone info-icon"></i>
                             <h5>Línea de Atención</h5>
-                            <p>Tel: (000) 000-0000<br>Ext: 123</p>
+                            <ng-container *ngIf="(currentEntity$ | async) as entity">
+                                <p>{{ entity.phone ? 'Tel: ' + entity.phone : 'Tel: (000) 000-0000' }}<br>{{
+                                    entity.address || 'Ext: 123' }}</p>
+                            </ng-container>
+                            <p *ngIf="!(currentEntity$ | async)">Tel: (000) 000-0000<br>Ext: 123</p>
                         </div>
                     </div>
                     <div class="col-md-4 mb-4">
                         <div class="info-card">
                             <i class="fas fa-envelope info-icon"></i>
                             <h5>Correo Electrónico</h5>
-                            <p>pqrs@alcaldia.gov.co<br>Respuesta en 24 horas</p>
+                            <ng-container *ngIf="(currentEntity$ | async) as entity">
+                                <p>{{ entity.email || 'pqrs@alcaldia.gov.co' }}<br>{{ entity.tiempo_respuesta ||
+                                    'Respuesta en 24 horas' }}</p>
+                            </ng-container>
+                            <p *ngIf="!(currentEntity$ | async)">pqrs@alcaldia.gov.co<br>Respuesta en 24 horas</p>
                         </div>
                     </div>
                 </div>

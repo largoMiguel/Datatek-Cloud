@@ -18,6 +18,7 @@ class PQRSBase(BaseModel):
 
 class PQRSCreate(PQRSBase):
     numero_radicado: Optional[str] = None
+    entity_id: int  # Obligatorio al crear
 
 class PQRSUpdate(BaseModel):
     tipo_identificacion: Optional[TipoIdentificacion] = None
@@ -51,6 +52,7 @@ class PQRS(PQRSBase):
     respuesta: Optional[str] = None
     created_by_id: int
     assigned_to_id: Optional[int] = None
+    entity_id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
     

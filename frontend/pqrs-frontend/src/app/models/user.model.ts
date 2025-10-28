@@ -3,8 +3,9 @@ export interface User {
     username: string;
     email: string;
     full_name: string;
-    role: 'admin' | 'secretario' | 'ciudadano';
+    role: 'superadmin' | 'admin' | 'secretario' | 'ciudadano';
     is_active?: boolean;
+    entity_id?: number;  // Nueva: ID de la entidad a la que pertenece
     secretaria?: string;
     cedula?: string;
     telefono?: string;
@@ -28,7 +29,8 @@ export interface CreateUserRequest {
     username: string;
     email: string;
     full_name: string;
-    role: 'admin' | 'secretario' | 'ciudadano';
+    role: 'superadmin' | 'admin' | 'secretario' | 'ciudadano';
+    entity_id?: number;
     secretaria?: string;
     cedula?: string;
     telefono?: string;

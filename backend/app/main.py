@@ -3,12 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.config.database import engine, get_db, Base
 from app.config.settings import settings
-from app.routes import auth, pqrs, users, planes
-from app.models import user, pqrs as pqrs_model, plan
+from app.routes import auth, pqrs, users, planes, entities, maintenance
+from app.models import user, pqrs as pqrs_model, plan, entity
 from app.models.user import User, UserRole
 from app.utils.auth import get_password_hash
 
-# Crear las tablas en la base de datos
+# Crear las tablas en la base de datos (solo si no existen)
 Base.metadata.create_all(bind=engine)
 
 # Compatibilidad: añadir columna `is_active` a la tabla users en SQLite si no existe
@@ -31,39 +31,57 @@ def run_sqlite_migration():
             return
 
         inspector_local = inspect(engine)
-        if not inspector_local.has_table('pqrs'):
-            return
-
-        cols = [c.get('name') for c in inspector_local.get_columns('pqrs')]
-        with engine.connect() as conn:
-            # Agregar columnas nuevas si no existen
-            if 'tipo_identificacion' not in cols:
-                try:
-                    conn.execute(text("ALTER TABLE pqrs ADD COLUMN tipo_identificacion TEXT DEFAULT 'personal'"))
-                    conn.commit()
-                except Exception:
-                    pass
-
-            if 'medio_respuesta' not in cols:
-                try:
-                    conn.execute(text("ALTER TABLE pqrs ADD COLUMN medio_respuesta TEXT DEFAULT 'ticket'"))
-                    conn.commit()
-                except Exception:
-                    pass
-
-            # Asegurar columnas opcionales existen
-            optional_cols = {
-                'nombre_ciudadano': "ALTER TABLE pqrs ADD COLUMN nombre_ciudadano TEXT",
-                'cedula_ciudadano': "ALTER TABLE pqrs ADD COLUMN cedula_ciudadano TEXT",
-                'asunto': "ALTER TABLE pqrs ADD COLUMN asunto TEXT"
-            }
-            for col, sql in optional_cols.items():
-                if col not in cols:
+        # Migraciones para tabla pqrs
+        if inspector_local.has_table('pqrs'):
+            cols = [c.get('name') for c in inspector_local.get_columns('pqrs')]
+            with engine.connect() as conn:
+                # Agregar columnas nuevas si no existen
+                if 'tipo_identificacion' not in cols:
                     try:
-                        conn.execute(text(sql))
+                        conn.execute(text("ALTER TABLE pqrs ADD COLUMN tipo_identificacion TEXT DEFAULT 'personal'"))
                         conn.commit()
                     except Exception:
                         pass
+
+                if 'medio_respuesta' not in cols:
+                    try:
+                        conn.execute(text("ALTER TABLE pqrs ADD COLUMN medio_respuesta TEXT DEFAULT 'ticket'"))
+                        conn.commit()
+                    except Exception:
+                        pass
+
+                # Asegurar columnas opcionales existen
+                optional_cols = {
+                    'nombre_ciudadano': "ALTER TABLE pqrs ADD COLUMN nombre_ciudadano TEXT",
+                    'cedula_ciudadano': "ALTER TABLE pqrs ADD COLUMN cedula_ciudadano TEXT",
+                    'asunto': "ALTER TABLE pqrs ADD COLUMN asunto TEXT"
+                }
+                for col, sql in optional_cols.items():
+                    if col not in cols:
+                        try:
+                            conn.execute(text(sql))
+                            conn.commit()
+                        except Exception:
+                            pass
+
+        # Migraciones para tabla entities (feature flags)
+        if inspector_local.has_table('entities'):
+            ecols = [c.get('name') for c in inspector_local.get_columns('entities')]
+            with engine.connect() as conn:
+                entity_flag_migrations_sqlite = {
+                    'enable_pqrs': "ALTER TABLE entities ADD COLUMN enable_pqrs INTEGER NOT NULL DEFAULT 1",
+                    'enable_users_admin': "ALTER TABLE entities ADD COLUMN enable_users_admin INTEGER NOT NULL DEFAULT 1",
+                    'enable_reports_pdf': "ALTER TABLE entities ADD COLUMN enable_reports_pdf INTEGER NOT NULL DEFAULT 1",
+                    'enable_ai_reports': "ALTER TABLE entities ADD COLUMN enable_ai_reports INTEGER NOT NULL DEFAULT 1",
+                    'enable_planes_institucionales': "ALTER TABLE entities ADD COLUMN enable_planes_institucionales INTEGER NOT NULL DEFAULT 1",
+                }
+                for col, sql in entity_flag_migrations_sqlite.items():
+                    if col not in ecols:
+                        try:
+                            conn.execute(text(sql))
+                            conn.commit()
+                        except Exception:
+                            pass
     except Exception:
         pass
 
@@ -312,6 +330,24 @@ def run_postgres_migration():
                     if "does not exist" not in str(e).lower():
                         print(f"   ⚠️  {sql[:40]}...: {e}")
         
+        # Paso 5: Agregar columnas de flags de características a entities (multi-modulo por entidad)
+        print("   🔧 Verificando columnas de feature flags en 'entities' ...")
+        entity_flag_migrations = [
+            "ALTER TABLE entities ADD COLUMN IF NOT EXISTS enable_pqrs BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE entities ADD COLUMN IF NOT EXISTS enable_users_admin BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE entities ADD COLUMN IF NOT EXISTS enable_reports_pdf BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE entities ADD COLUMN IF NOT EXISTS enable_ai_reports BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE entities ADD COLUMN IF NOT EXISTS enable_planes_institucionales BOOLEAN NOT NULL DEFAULT TRUE",
+        ]
+
+        with engine.connect() as conn:
+            for sql in entity_flag_migrations:
+                try:
+                    conn.execute(text(sql))
+                    conn.commit()
+                except Exception as e:
+                    print(f"   ⚠️  {sql[:50]}...: {e}")
+
         print("   ✅ Migración PostgreSQL completada")
         
     except Exception as e:
@@ -384,6 +420,8 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(pqrs.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
 app.include_router(planes.router, prefix="/api/planes", tags=["Planes Institucionales"])
+app.include_router(entities.router, prefix="/api", tags=["Entidades"])
+app.include_router(maintenance.router, prefix="/api/admin", tags=["Mantenimiento"]) 
 
 @app.get("/")
 async def root():
@@ -393,65 +431,42 @@ async def root():
 async def health_check():
     return {"status": "healthy"}
 
-# Crear usuario administrador por defecto si no existe
-@app.on_event("startup")
-async def create_default_admin():
-    import time
+def _seed_superadmin():
+    """Crea el superadmin si no existe, tomando credenciales desde settings."""
     from sqlalchemy.exc import IntegrityError
-    max_retries = 3
-    retry_delay = 2
-    
-    for attempt in range(max_retries):
-        try:
-            db = next(get_db())
-            try:
-                # Verificar si ya existe un admin
-                admin_exists = db.query(User).filter(User.role == UserRole.ADMIN).first()
-                
-                if admin_exists:
-                    print("Usuario administrador ya existe")
-                    break
-                
-                # Crear usuario administrador por defecto
-                password = "admin123"
-                hashed_password = get_password_hash(password)
-                
-                admin_user = User(
-                    username="admin",
-                    email="admin@alcaldia.gov.co",
-                    full_name="Administrador del Sistema",
-                    hashed_password=hashed_password,
-                    role=UserRole.ADMIN,
-                    secretaria="Sistemas"
-                )
-                
-                db.add(admin_user)
-                db.commit()
-                print(f"✓ Usuario administrador creado: admin / {password}")
-                break  # Éxito, salir del loop
-                
-            except IntegrityError as e:
-                db.rollback()
-                # Si es error de duplicado, el usuario ya existe (carreras de condición)
-                if "duplicate key" in str(e).lower() or "unique constraint" in str(e).lower():
-                    print("Usuario administrador ya existe (detectado en commit)")
-                    break
-                else:
-                    raise  # Re-lanzar si es otro tipo de IntegrityError
-                    
-            except Exception as e:
-                db.rollback()
-                if attempt < max_retries - 1:
-                    print(f"Intento {attempt + 1} fallido: {type(e).__name__}")
-                    time.sleep(retry_delay)
-                else:
-                    print(f"Error después de {max_retries} intentos: {e}")
-            finally:
-                db.close()
-                
-        except Exception as e:
-            if attempt < max_retries - 1:
-                print(f"Error de conexión en intento {attempt + 1}: {type(e).__name__}")
-                time.sleep(retry_delay)
-            else:
-                print(f"No se pudo conectar después de {max_retries} intentos: {e}")
+    db = next(get_db())
+    try:
+        sa_exists = db.query(User).filter(User.role == UserRole.SUPERADMIN).first()
+        if sa_exists:
+            if settings.debug:
+                print("Superadmin ya existe")
+            return
+        username = settings.superadmin_username
+        email = settings.superadmin_email
+        password = settings.superadmin_password
+        hashed = get_password_hash(password)
+        superadmin = User(
+            username=username,
+            email=email,
+            full_name="Super Administrador",
+            hashed_password=hashed,
+            role=UserRole.SUPERADMIN,
+            secretaria=None,
+            entity_id=None
+        )
+        db.add(superadmin)
+        db.commit()
+        if settings.debug:
+            print(f"✓ Superadmin creado: {username}")
+    except IntegrityError:
+        db.rollback()
+        if settings.debug:
+            print("Superadmin ya existe (constraint)")
+    finally:
+        db.close()
+
+
+@app.on_event("startup")
+async def on_startup_seed_superadmin():
+    # Sembrar superadmin únicamente
+    _seed_superadmin()

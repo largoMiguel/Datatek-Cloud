@@ -29,6 +29,9 @@ class PlanInstitucional(Base):
     fecha_fin = Column(Date, nullable=False)
     estado = Column(SQLEnum(EstadoPlan), default=EstadoPlan.ACTIVO, nullable=False)
     
+    # Relación con entidad
+    entity_id = Column(Integer, ForeignKey("entities.id"), nullable=False)
+    
     # Relación con metas
     metas = relationship("Meta", back_populates="plan", cascade="all, delete-orphan")
 

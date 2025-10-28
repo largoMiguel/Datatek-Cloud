@@ -2,11 +2,14 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { EntityContextService } from '../../services/entity-context.service';
 import { AuthService } from '../../services/auth.service';
 import { PqrsService } from '../../services/pqrs.service';
 import { AlertService } from '../../services/alert.service';
 import { User } from '../../models/user.model';
 import { PQRSWithDetails, TIPOS_IDENTIFICACION, MEDIOS_RESPUESTA } from '../../models/pqrs.model';
+import { Observable } from 'rxjs';
+import { Entity } from '../../models/entity.model';
 
 @Component({
     selector: 'app-portal-ciudadano',
@@ -47,12 +50,17 @@ export class PortalCiudadanoComponent implements OnInit {
     tipo: string = 'personal';
     medio: string = 'ticket';
 
+    // Entidad actual (para branding por slug)
+    currentEntity$!: Observable<Entity | null>;
+    currentEntity: Entity | null = null;
+
     constructor(
         private authService: AuthService,
         private pqrsService: PqrsService,
         private router: Router,
         private fb: FormBuilder,
-        private alertService: AlertService
+        private alertService: AlertService,
+        private entityContext: EntityContextService
     ) {
         this.loginForm = this.fb.group({
             username: ['', Validators.required],
@@ -83,9 +91,17 @@ export class PortalCiudadanoComponent implements OnInit {
             direccion_ciudadano: [''],
             telefono_ciudadano: ['']
         });
+
+        // Exponer entidad actual al template
+        this.currentEntity$ = this.entityContext.currentEntity$;
     }
 
     ngOnInit() {
+        // Suscribirse al contexto de entidad
+        this.currentEntity$.subscribe(entity => {
+            this.currentEntity = entity;
+        });
+
         // Verificar si ya está autenticado
         this.authService.getCurrentUser().subscribe({
             next: (user) => {
@@ -255,7 +271,12 @@ export class PortalCiudadanoComponent implements OnInit {
     }
 
     volverAInicio() {
-        this.router.navigate(['/']);
+        const slug = this.entityContext.currentEntity?.slug;
+        if (slug) {
+            this.router.navigate(['/', slug]);
+        } else {
+            this.router.navigate(['/']);
+        }
     }
 
     toggleNuevaPqrsForm() {
@@ -272,7 +293,17 @@ export class PortalCiudadanoComponent implements OnInit {
         if (this.nuevaPqrsForm.valid && !this.isSubmittingPqrs) {
             this.isSubmittingPqrs = true;
 
-            const formData = { ...this.nuevaPqrsForm.value };
+            // Obtener entity_id del contexto actual
+            if (!this.currentEntity) {
+                this.alertService.error('No se pudo determinar la entidad. Por favor, recargue la página.', 'Error');
+                this.isSubmittingPqrs = false;
+                return;
+            }
+
+            const formData = {
+                ...this.nuevaPqrsForm.value,
+                entity_id: this.currentEntity.id
+            };
 
             // Si es anónima, asignar valores por defecto
             if (formData.tipo_identificacion === 'anonima') {
@@ -351,5 +382,10 @@ export class PortalCiudadanoComponent implements OnInit {
 
     get pqrsResueltas(): number {
         return this.misPqrs.filter(p => p.estado === 'resuelto' || p.estado === 'cerrado').length;
+    }
+
+    // Feature flag: PQRS habilitado
+    pqrsEnabled(): boolean {
+        return this.entityContext.currentEntity?.enable_pqrs ?? false;
     }
 }

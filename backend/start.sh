@@ -8,10 +8,19 @@ if [ ! -f "requirements.txt" ]; then
     exit 1
 fi
 
+# Resolver intérprete de Python (preferir 3.11)
+if command -v python3.11 >/dev/null 2>&1; then
+    PY=python3.11
+elif [ -x "/Users/largo/.pyenv/versions/3.11.9/bin/python" ]; then
+    PY="/Users/largo/.pyenv/versions/3.11.9/bin/python"
+else
+    PY=python3
+fi
+
 # Crear entorno virtual si no existe
 if [ ! -d "venv" ]; then
-    echo "Creando entorno virtual..."
-    python3 -m venv venv
+        echo "Creando entorno virtual con $PY ..."
+        "$PY" -m venv venv
 fi
 
 # Activar entorno virtual
@@ -20,7 +29,8 @@ source venv/bin/activate
 
 # Instalar dependencias
 echo "Instalando dependencias..."
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 
 # Ejecutar la aplicación
 echo "Iniciando servidor FastAPI..."

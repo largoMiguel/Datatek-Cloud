@@ -5,7 +5,7 @@ from app.config.database import get_db
 from app.models.plan import PlanInstitucional, Meta, EstadoPlan, EstadoMeta
 from app.models.user import User, UserRole
 from app.schemas import plan as plan_schemas
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, require_feature_enabled
 
 router = APIRouter()
 
@@ -17,13 +17,18 @@ def listar_planes(
     anio: Optional[int] = Query(None, description="Filtrar por año"),
     estado: Optional[EstadoPlan] = Query(None, description="Filtrar por estado"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _feature: bool = Depends(require_feature_enabled('enable_planes_institucionales'))
 ):
     """
     Listar todos los planes institucionales.
     Admins ven todos, secretarios también pueden ver todos los planes.
     """
     query = db.query(PlanInstitucional)
+
+    # Superadmin ve todos; usuarios de entidad (ADMIN/SECRETARIO) ven solo su entidad
+    if current_user.role in [UserRole.ADMIN, UserRole.SECRETARIO]:
+        query = query.filter(PlanInstitucional.entity_id == current_user.entity_id)
     
     if anio:
         query = query.filter(PlanInstitucional.anio == anio)
@@ -38,7 +43,8 @@ def listar_planes(
 def obtener_plan(
     plan_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _feature: bool = Depends(require_feature_enabled('enable_planes_institucionales'))
 ):
     """
     Obtener un plan específico con todas sus metas.
@@ -49,6 +55,11 @@ def obtener_plan(
     if not plan:
         raise HTTPException(status_code=404, detail="Plan no encontrado")
     
+    # Restringir por entidad para usuarios no superadmin
+    if current_user.role != UserRole.SUPERADMIN:
+        if not plan or plan.entity_id != current_user.entity_id:
+            raise HTTPException(status_code=403, detail="No tienes acceso a este plan")
+
     # Si es secretario, filtrar solo sus metas
     if current_user.role == UserRole.SECRETARIO and current_user.secretaria:
         metas_filtradas = [meta for meta in plan.metas if meta.responsable == current_user.secretaria]
@@ -72,16 +83,25 @@ def obtener_plan(
 def crear_plan(
     plan_data: plan_schemas.PlanInstitucionalCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _feature: bool = Depends(require_feature_enabled('enable_planes_institucionales'))
 ):
     """
     Crear un nuevo plan institucional.
     Solo administradores pueden crear planes.
+    El entity_id se asigna automáticamente desde el usuario actual.
     """
     if current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Solo los administradores pueden crear planes"
+        )
+    
+    # Validar que el admin tenga entity_id
+    if not current_user.entity_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El usuario no tiene una entidad asignada"
         )
     
     # Validar que fecha_fin sea posterior a fecha_inicio
@@ -91,7 +111,11 @@ def crear_plan(
             detail="La fecha de fin debe ser posterior a la fecha de inicio"
         )
     
-    nuevo_plan = PlanInstitucional(**plan_data.model_dump())
+    # Crear el plan con entity_id del usuario actual
+    plan_dict = plan_data.model_dump(exclude={'entity_id'})
+    plan_dict['entity_id'] = current_user.entity_id
+    
+    nuevo_plan = PlanInstitucional(**plan_dict)
     db.add(nuevo_plan)
     db.commit()
     db.refresh(nuevo_plan)
@@ -104,7 +128,8 @@ def actualizar_plan(
     plan_id: int,
     plan_data: plan_schemas.PlanInstitucionalUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _feature: bool = Depends(require_feature_enabled('enable_planes_institucionales'))
 ):
     """
     Actualizar un plan institucional.
@@ -120,6 +145,9 @@ def actualizar_plan(
     
     if not plan:
         raise HTTPException(status_code=404, detail="Plan no encontrado")
+    # Restringir por entidad para usuarios no superadmin
+    if current_user.role != UserRole.SUPERADMIN and plan.entity_id != current_user.entity_id:
+        raise HTTPException(status_code=403, detail="No tienes acceso a este plan")
     
     # Actualizar solo los campos proporcionados
     update_data = plan_data.model_dump(exclude_unset=True)
@@ -147,7 +175,8 @@ def actualizar_plan(
 def eliminar_plan(
     plan_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _feature: bool = Depends(require_feature_enabled('enable_planes_institucionales'))
 ):
     """
     Eliminar un plan institucional y todas sus metas asociadas.
@@ -163,6 +192,9 @@ def eliminar_plan(
     
     if not plan:
         raise HTTPException(status_code=404, detail="Plan no encontrado")
+    # Restringir por entidad (no superadmin)
+    if current_user.role != UserRole.SUPERADMIN and plan.entity_id != current_user.entity_id:
+        raise HTTPException(status_code=403, detail="No tienes acceso a este plan")
     
     db.delete(plan)
     db.commit()
@@ -177,7 +209,8 @@ def listar_metas_del_plan(
     plan_id: int,
     estado: Optional[EstadoMeta] = Query(None, description="Filtrar por estado"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _feature: bool = Depends(require_feature_enabled('enable_planes_institucionales'))
 ):
     """
     Listar todas las metas de un plan específico.
@@ -205,7 +238,8 @@ def crear_meta(
     plan_id: int,
     meta_data: plan_schemas.MetaCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _feature: bool = Depends(require_feature_enabled('enable_planes_institucionales'))
 ):
     """
     Crear una nueva meta para un plan.
@@ -263,7 +297,8 @@ def crear_meta(
 def obtener_meta(
     meta_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _feature: bool = Depends(require_feature_enabled('enable_planes_institucionales'))
 ):
     """
     Obtener una meta específica.
@@ -290,7 +325,8 @@ def actualizar_meta(
     meta_id: int,
     meta_data: plan_schemas.MetaUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _feature: bool = Depends(require_feature_enabled('enable_planes_institucionales'))
 ):
     """
     Actualizar una meta existente.
@@ -357,7 +393,8 @@ def actualizar_meta(
 def eliminar_meta(
     meta_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _feature: bool = Depends(require_feature_enabled('enable_planes_institucionales'))
 ):
     """
     Eliminar una meta.

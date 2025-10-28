@@ -86,7 +86,8 @@ async def create_pqrs(
             descripcion=pqrs_data.descripcion,
             created_by_id=current_user.id,
             assigned_to_id=assigned_to_id,
-            fecha_delegacion=fecha_delegacion
+            fecha_delegacion=fecha_delegacion,
+            entity_id=pqrs_data.entity_id
         )
         
         db.add(db_pqrs)
@@ -124,7 +125,8 @@ async def get_pqrs(
     
     # Filtrar según rol
     if current_user.role == UserRole.ADMIN:
-        # Admin ve todas, opcionalmente solo las asignadas a él
+        # Admin ve solo las PQRS de su entidad
+        query = query.filter(PQRS.entity_id == current_user.entity_id)
         if assigned_to_me:
             query = query.filter(PQRS.assigned_to_id == current_user.id)
     elif current_user.role == UserRole.SECRETARIO:

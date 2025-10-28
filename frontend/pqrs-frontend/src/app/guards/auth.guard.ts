@@ -1,26 +1,36 @@
 import { CanActivateFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
+import { EntityContextService } from '../services/entity-context.service';
+
+function getSlugFromRoute(route: any, stateUrl: string, entityContext: EntityContextService): string | null {
+    const fromParams = route?.params?.['slug'] || route?.parent?.params?.['slug'] || null;
+    if (fromParams) return fromParams;
+    const fromUrl = (stateUrl || '').replace(/^\//, '').split('/')[0] || null;
+    if (fromUrl) return fromUrl;
+    return entityContext.currentEntity?.slug || null;
+}
 
 export const authGuard: CanActivateFn = (route, state) => {
     const authService = inject(AuthService);
     const router = inject(Router);
+    const entityContext = inject(EntityContextService);
 
     if (authService.isAuthenticated()) {
         return true;
     } else {
-        router.navigate(['/login']);
+        const slug = getSlugFromRoute(route, state.url, entityContext);
+        router.navigate(slug ? ['/', slug, 'login'] : ['/']);
         return false;
     }
 };
 
 export const loginGuard: CanActivateFn = (route, state) => {
     const authService = inject(AuthService);
-    const router = inject(Router);
-
+    // Permitir el acceso a /:slug/login aunque el usuario esté autenticado,
+    // forzando un logout suave para que pueda iniciar sesión nuevamente.
     if (authService.isAuthenticated()) {
-        router.navigate(['/dashboard'], { replaceUrl: true });
-        return false;
+        authService.logout();
     }
     return true;
 };
@@ -28,11 +38,13 @@ export const loginGuard: CanActivateFn = (route, state) => {
 export const adminGuard: CanActivateFn = (route, state) => {
     const authService = inject(AuthService);
     const router = inject(Router);
+    const entityContext = inject(EntityContextService);
 
     if (authService.isAuthenticated() && authService.isAdmin()) {
         return true;
     } else {
-        router.navigate(['/dashboard']);
+        const slug = getSlugFromRoute(route, state.url, entityContext);
+        router.navigate(slug ? ['/', slug, 'dashboard'] : ['/']);
         return false;
     }
 };
@@ -40,15 +52,18 @@ export const adminGuard: CanActivateFn = (route, state) => {
 export const adminPortalGuard: CanActivateFn = (route, state) => {
     const authService = inject(AuthService);
     const router = inject(Router);
+    const entityContext = inject(EntityContextService);
 
     if (!authService.isAuthenticated()) {
-        router.navigate(['/login']);
+        const slug = getSlugFromRoute(route, state.url, entityContext);
+        router.navigate(slug ? ['/', slug, 'login'] : ['/']);
         return false;
     }
 
     const currentUser = authService.getCurrentUserValue();
     if (currentUser && currentUser.role === 'ciudadano') {
-        router.navigate(['/portal-ciudadano']);
+        const slug = getSlugFromRoute(route, state.url, entityContext);
+        router.navigate(slug ? ['/', slug, 'portal-ciudadano'] : ['/']);
         return false;
     }
 
@@ -63,6 +78,7 @@ export const adminPortalGuard: CanActivateFn = (route, state) => {
 export const ciudadanoGuard: CanActivateFn = (route, state) => {
     const authService = inject(AuthService);
     const router = inject(Router);
+    const entityContext = inject(EntityContextService);
 
     if (!authService.isAuthenticated()) {
         return true;
@@ -73,6 +89,7 @@ export const ciudadanoGuard: CanActivateFn = (route, state) => {
         return true;
     }
 
-    router.navigate(['/dashboard']);
+    const slug = getSlugFromRoute(route, state.url, entityContext);
+    router.navigate(slug ? ['/', slug, 'dashboard'] : ['/']);
     return false;
 };

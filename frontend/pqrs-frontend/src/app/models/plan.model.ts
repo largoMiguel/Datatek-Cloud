@@ -25,6 +25,7 @@ export interface PlanInstitucional {
     fecha_inicio: string;
     fecha_fin: string;
     estado: 'activo' | 'finalizado' | 'suspendido';
+    entity_id?: number;
     metas?: Meta[];
     created_at?: string;
     updated_at?: string;
@@ -37,6 +38,7 @@ export interface CreatePlanRequest {
     fecha_inicio: string;
     fecha_fin: string;
     estado: 'activo' | 'finalizado' | 'suspendido';
+    entity_id?: number;  // Opcional, el backend lo toma del usuario admin
 }
 
 export interface UpdatePlanRequest {

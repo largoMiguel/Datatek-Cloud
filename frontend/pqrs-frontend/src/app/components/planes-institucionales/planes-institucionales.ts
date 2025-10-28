@@ -9,7 +9,9 @@ import { PlanReportService } from '../../services/plan-report.service';
 import { PlanService } from '../../services/plan.service';
 import { AlertService } from '../../services/alert.service';
 import { AuthService } from '../../services/auth.service';
+import { EntityContextService } from '../../services/entity-context.service';
 import { User } from '../../models/user.model';
+import { Subscription, combineLatest, filter } from 'rxjs';
 
 @Component({
     selector: 'app-planes-institucionales',
@@ -26,10 +28,12 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
     private planService = inject(PlanService);
     private alertService = inject(AlertService);
     private authService = inject(AuthService);
+    private entityContextService = inject(EntityContextService);
 
     planes: PlanInstitucional[] = [];
     metasPorPlan: Map<number, Meta[]> = new Map();
     currentUser: User | null = null;
+    private subscriptions = new Subscription();
 
     vistaActual: 'planes' | 'metas' | 'analytics' = 'planes';
     vistaAnterior: 'planes' | 'metas' | 'analytics' = 'planes';
@@ -75,25 +79,45 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
     analyticsData: any = null;
 
     ngOnInit(): void {
-        // Obtener usuario actual PRIMERO antes de cargar planes
-        this.authService.currentUser$.subscribe(user => {
-            this.currentUser = user;
-            // console.log('=== NGONINIT - USUARIO CARGADO ===');
-            // console.log('Usuario completo:', JSON.stringify(user, null, 2));
-            // console.log('user.secretaria (valor exacto):', `[${user?.secretaria}]`);
-            // console.log('user.secretaria (length):', user?.secretaria?.length);
-            // console.log('user.role:', user?.role);
-            // console.log('===================================');
+        // Combinar usuario y entidad para cargar planes solo cuando ambos estén listos
+        // y recargar cuando cualquiera cambie
+        const combined = combineLatest([
+            this.authService.currentUser$,
+            this.entityContextService.currentEntity$
+        ]).pipe(
+            filter(([user, entity]) => user !== null && entity !== null)
+        ).subscribe(([user, entity]) => {
+            // console.log('=== USER & ENTITY READY ===');
+            // console.log('Usuario:', user?.username, user?.role);
+            // console.log('Entidad:', entity?.name, entity?.slug);
 
-            // Cargar planes DESPUÉS de tener el usuario
+            this.currentUser = user;
+            // Limpiar datos y recargar con el nuevo contexto
+            this.limpiarDatos();
             this.cargarPlanes();
         });
+        this.subscriptions.add(combined);
+
         this.setupPopstateListener();
     }
 
     ngOnDestroy(): void {
         // Limpiar el listener del historial al salir del componente
         window.removeEventListener('popstate', this.handlePopstate);
+        // Limpiar todas las suscripciones
+        this.subscriptions.unsubscribe();
+    }
+
+    /**
+     * Limpia los datos del componente (planes, metas, vista)
+     */
+    private limpiarDatos(): void {
+        this.planes = [];
+        this.metasPorPlan.clear();
+        this.planSeleccionado = null;
+        this.vistaActual = 'planes';
+        this.vistaAnterior = 'planes';
+        this.analyticsData = null;
     }
 
     private handlePopstate = (event: PopStateEvent): void => {
@@ -757,9 +781,9 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
         return [];
     }
 
-    // Métodos de permisos
+    // Roles y permisos
     isAdmin(): boolean {
-        return this.currentUser?.role === 'admin';
+        return this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
     }
 
     isSecretario(): boolean {
@@ -876,7 +900,8 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
     }
 
     volver(): void {
-        this.router.navigate(['/dashboard']);
+        const slug = this.router.url.replace(/^\//, '').split('/')[0];
+        this.router.navigate(slug ? ['/', slug, 'dashboard'] : ['/']);
     }
 
     getAniosDisponibles(): number[] {
