@@ -5,8 +5,11 @@ const path = require('path');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Carpeta de build de Angular (Angular 16+ con builder application)
-const distPath = path.join(__dirname, 'dist', 'pqrs-frontend', 'browser');
+// Detectar carpeta de build de Angular
+const browserPath = path.join(__dirname, 'dist', 'pqrs-frontend', 'browser');
+const legacyPath = path.join(__dirname, 'dist', 'pqrs-frontend');
+const distPath = require('fs').existsSync(browserPath) ? browserPath : legacyPath;
+console.log('[server] Serving static from:', distPath);
 
 // Servir archivos estáticos
 app.use(express.static(distPath, {
