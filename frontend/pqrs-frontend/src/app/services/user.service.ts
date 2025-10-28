@@ -39,4 +39,8 @@ export class UserService {
     getSecretarios(): Observable<User[]> {
         return this.http.get<User[]>(`${this.baseUrl}?role=secretario`);
     }
+
+    changeUserPassword(id: number, newPassword: string): Observable<{ message: string }> {
+        return this.http.post<{ message: string }>(`${this.baseUrl}${id}/change-password/`, { new_password: newPassword });
+    }
 }

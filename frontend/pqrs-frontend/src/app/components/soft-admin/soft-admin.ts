@@ -64,6 +64,7 @@ export class SoftAdminComponent implements OnInit {
     };
 
     confirmPassword: string = '';
+    confirmEditPassword: string = '';
     loading = false;
 
     constructor(
@@ -194,6 +195,7 @@ export class SoftAdminComponent implements OnInit {
             entity_id: user.entity_id,
             password: ''
         };
+        this.confirmEditPassword = '';
         this.currentView = 'edit-user';
     }
 
@@ -210,11 +212,19 @@ export class SoftAdminComponent implements OnInit {
             role: this.editUserForm.role,
             entity_id: this.editUserForm.entity_id
         };
-        if (this.editUserForm.password && this.editUserForm.password.length >= 6) {
-            payload.password = this.editUserForm.password;
+        const hasNewPassword = !!(this.editUserForm.password && this.editUserForm.password.length >= 6);
+
+        // Si hay contraseña nueva, validar confirmación y cambiarla primero
+        if (hasNewPassword) {
+            if (this.editUserForm.password !== this.confirmEditPassword) {
+                this.alertService.warning('Las contraseñas no coinciden');
+                return;
+            }
         }
+
         this.loading = true;
-        this.userService.updateUser(this.editingUser.id, payload).subscribe({
+
+        const doProfileUpdate = () => this.userService.updateUser(this.editingUser.id, payload).subscribe({
             next: () => {
                 this.alertService.success('Usuario actualizado exitosamente');
                 if (this.selectedEntity) {
@@ -231,6 +241,20 @@ export class SoftAdminComponent implements OnInit {
                 this.loading = false;
             }
         });
+
+        if (hasNewPassword) {
+            // Cambiar contraseña primero y luego actualizar otros campos
+            this.userService.changeUserPassword(this.editingUser.id, this.editUserForm.password).subscribe({
+                next: () => doProfileUpdate(),
+                error: (error) => {
+                    this.alertService.error('No se pudo cambiar la contraseña: ' + (error.error?.detail || ''));
+                    this.loading = false;
+                }
+            });
+        } else {
+            // Solo actualizar otros campos
+            doProfileUpdate();
+        }
     }
 
     cancelEditUser(): void {

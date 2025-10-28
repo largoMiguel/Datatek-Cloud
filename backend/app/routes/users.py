@@ -4,7 +4,7 @@ from typing import List, Optional
 from app.config.database import get_db
 from app.models.user import User, UserRole
 from app.models.entity import Entity
-from app.schemas.user import UserCreate, UserUpdate, UserResponse
+from app.schemas.user import UserCreate, UserUpdate, UserResponse, ChangePasswordRequest
 from app.utils.auth import (
     get_password_hash, 
     get_current_user, 
@@ -235,6 +235,47 @@ async def update_user(
     db.refresh(user)
     
     return user
+
+@router.post("/users/{user_id}/change-password/", response_model=dict)
+async def change_user_password(
+    user_id: int,
+    payload: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Cambiar la contraseña de un usuario de forma explícita.
+    Permisos:
+    - SUPERADMIN: puede cambiar la contraseña de cualquier usuario.
+    - ADMIN: solo de usuarios de su entidad.
+    - El propio usuario puede cambiar su contraseña.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    # Permisos
+    if current_user.role == UserRole.SUPERADMIN:
+        pass
+    elif current_user.role == UserRole.ADMIN:
+        if user.entity_id != current_user.entity_id:
+            raise HTTPException(status_code=403, detail="No puedes cambiar la contraseña de usuarios de otra entidad")
+    elif current_user.id == user_id:
+        pass
+    else:
+        raise HTTPException(status_code=403, detail="No tienes permisos para esta acción")
+
+    # Validaciones
+    new_password = (payload.new_password or '').strip()
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="La contraseña debe tener al menos 6 caracteres")
+
+    # Actualizar hash
+    user.hashed_password = get_password_hash(new_password)
+    db.commit()
+    db.refresh(user)
+
+    return {"message": "Contraseña actualizada exitosamente"}
 
 @router.delete("/users/{user_id}/")
 async def delete_user(
