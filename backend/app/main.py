@@ -117,21 +117,35 @@ def run_postgres_migration():
         except Exception as e:
             print(f"   ⚠️  ENUM userrole: {e}")
         
-        # Paso 2: Agregar columnas a users si no existen
-        user_migrations = [
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS cedula VARCHAR(20)",
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS telefono VARCHAR(20)",
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS direccion VARCHAR(255)",
-            "CREATE INDEX IF NOT EXISTS idx_users_cedula ON users(cedula)"
-        ]
-        
+        # Paso 2: Agregar columnas a users si no existen (incluye entity_id)
         with engine.connect() as conn:
+            user_migrations = [
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS cedula VARCHAR(20)",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS telefono VARCHAR(20)",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS direccion VARCHAR(255)",
+                "ALTER TABLE users ADD COLUMN IF NOT EXISTS entity_id INTEGER",
+                "CREATE INDEX IF NOT EXISTS idx_users_cedula ON users(cedula)",
+            ]
             for sql in user_migrations:
                 try:
                     conn.execute(text(sql))
                     conn.commit()
                 except Exception as e:
-                    print(f"   ⚠️  {sql[:30]}...: {e}")
+                    print(f"   ⚠️  {sql[:50]}...: {e}")
+
+            # Agregar FK users.entity_id -> entities.id si no existe
+            try:
+                fk_exists = conn.execute(text("""
+                    SELECT 1 FROM information_schema.table_constraints 
+                    WHERE table_name = 'users' AND constraint_name = 'fk_users_entity'
+                """)).scalar()
+                if not fk_exists:
+                    conn.execute(text(
+                        "ALTER TABLE users ADD CONSTRAINT fk_users_entity FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE"
+                    ))
+                    conn.commit()
+            except Exception as e:
+                print(f"   ⚠️  FK users.entity_id -> entities.id: {e}")
         
         # Paso 3: Crear ENUMs para PQRS (tipoidentificacion, mediorespuesta)
         # IMPORTANTE: Si el enum ya existe con valores incorrectos, necesitamos recrearlo
@@ -315,6 +329,7 @@ def run_postgres_migration():
             "ALTER TABLE pqrs ADD COLUMN IF NOT EXISTS medio_respuesta mediorespuesta DEFAULT 'email'",
             "ALTER TABLE pqrs ADD COLUMN IF NOT EXISTS tipo_solicitud tiposolicitud NOT NULL DEFAULT 'peticion'",
             "ALTER TABLE pqrs ADD COLUMN IF NOT EXISTS estado estadopqrs NOT NULL DEFAULT 'pendiente'",
+            "ALTER TABLE pqrs ADD COLUMN IF NOT EXISTS entity_id INTEGER",
             "ALTER TABLE pqrs ALTER COLUMN nombre_ciudadano DROP NOT NULL",
             "ALTER TABLE pqrs ALTER COLUMN cedula_ciudadano DROP NOT NULL",
             "ALTER TABLE pqrs ALTER COLUMN asunto DROP NOT NULL"
@@ -329,8 +344,43 @@ def run_postgres_migration():
                     # Ignorar error si la columna ya permite NULL
                     if "does not exist" not in str(e).lower():
                         print(f"   ⚠️  {sql[:40]}...: {e}")
+
+            # FK pqrs.entity_id -> entities.id
+            try:
+                fk_exists = conn.execute(text("""
+                    SELECT 1 FROM information_schema.table_constraints 
+                    WHERE table_name = 'pqrs' AND constraint_name = 'fk_pqrs_entity'
+                """
+                )).scalar()
+                if not fk_exists:
+                    conn.execute(text(
+                        "ALTER TABLE pqrs ADD CONSTRAINT fk_pqrs_entity FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE"
+                    ))
+                    conn.commit()
+            except Exception as e:
+                print(f"   ⚠️  FK pqrs.entity_id -> entities.id: {e}")
+
+        # Paso 5: Asegurar columna entity_id en planes_institucionales
+        with engine.connect() as conn:
+            try:
+                conn.execute(text("ALTER TABLE planes_institucionales ADD COLUMN IF NOT EXISTS entity_id INTEGER"))
+                conn.commit()
+            except Exception as e:
+                print(f"   ⚠️  planes_institucionales.entity_id: {e}")
+            try:
+                fk_exists = conn.execute(text("""
+                    SELECT 1 FROM information_schema.table_constraints 
+                    WHERE table_name = 'planes_institucionales' AND constraint_name = 'fk_planes_entity'
+                """ )).scalar()
+                if not fk_exists:
+                    conn.execute(text(
+                        "ALTER TABLE planes_institucionales ADD CONSTRAINT fk_planes_entity FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE"
+                    ))
+                    conn.commit()
+            except Exception as e:
+                print(f"   ⚠️  FK planes_institucionales.entity_id -> entities.id: {e}")
         
-        # Paso 5: Agregar columnas de flags de características a entities (multi-modulo por entidad)
+    # Paso 6: Agregar columnas de flags de características a entities (multi-modulo por entidad)
         print("   🔧 Verificando columnas de feature flags en 'entities' ...")
         entity_flag_migrations = [
             "ALTER TABLE entities ADD COLUMN IF NOT EXISTS enable_pqrs BOOLEAN NOT NULL DEFAULT TRUE",
