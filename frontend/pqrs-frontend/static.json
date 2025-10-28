@@ -1,0 +1,39 @@
+{
+    "redirects": [
+        {
+            "source": "/favicon.ico",
+            "destination": "/favicon.ico",
+            "statusCode": 200
+        },
+        {
+            "source": "/assets/*",
+            "destination": "/assets/:splat",
+            "statusCode": 200
+        },
+        {
+            "source": "/scripts.js",
+            "destination": "/scripts.js",
+            "statusCode": 200
+        },
+        {
+            "source": "/styles.css",
+            "destination": "/styles.css",
+            "statusCode": 200
+        },
+        {
+            "source": "/polyfills.js",
+            "destination": "/polyfills.js",
+            "statusCode": 200
+        },
+        {
+            "source": "/main.js",
+            "destination": "/main.js",
+            "statusCode": 200
+        },
+        {
+            "source": "/*",
+            "destination": "/index.html",
+            "statusCode": 200
+        }
+    ]
+}
