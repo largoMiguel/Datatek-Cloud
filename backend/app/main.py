@@ -8,6 +8,52 @@ from app.models import user, pqrs as pqrs_model, plan, entity
 from app.models.user import User, UserRole
 from app.utils.auth import get_password_hash
 
+# Asegurar que el ENUM userrole existe en Postgres con todos los valores antes de crear tablas
+def ensure_postgres_enums():
+    """Crea o actualiza el ENUM userrole en Postgres si es necesario."""
+    try:
+        if 'postgresql' not in str(engine.url):
+            return  # Solo para PostgreSQL
+        
+        with engine.connect() as conn:
+            # Verificar si el tipo userrole existe
+            check_type = text("""
+                SELECT EXISTS (
+                    SELECT 1 FROM pg_type WHERE typname = 'userrole'
+                ) as exists;
+            """)
+            type_exists = conn.execute(check_type).scalar()
+            
+            if not type_exists:
+                # Crear el ENUM con todos los valores
+                conn.execute(text(
+                    "CREATE TYPE userrole AS ENUM ('superadmin', 'admin', 'secretario', 'ciudadano')"
+                ))
+                conn.commit()
+            else:
+                # Verificar que tenga todos los valores necesarios
+                check_values = text("""
+                    SELECT enumlabel FROM pg_enum 
+                    WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'userrole')
+                    ORDER BY enumsortorder;
+                """)
+                existing_values = [row[0] for row in conn.execute(check_values).fetchall()]
+                
+                # Agregar valores faltantes
+                required_values = ['superadmin', 'admin', 'secretario', 'ciudadano']
+                for value in required_values:
+                    if value not in existing_values:
+                        try:
+                            conn.execute(text("COMMIT"))
+                            conn.execute(text(f"ALTER TYPE userrole ADD VALUE '{value}'"))
+                        except Exception:
+                            pass  # El valor ya existe o hay error
+    except Exception as e:
+        print(f"⚠️  Error asegurando ENUMs: {e}")
+
+# Ejecutar antes de crear tablas
+ensure_postgres_enums()
+
 # Crear las tablas en la base de datos (solo si no existen)
 Base.metadata.create_all(bind=engine)
 
