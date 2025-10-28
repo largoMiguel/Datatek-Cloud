@@ -378,32 +378,34 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="edit-username">Nombre de Usuario *</label>
-                    <input type="text" id="edit-username" [(ngModel)]="editUserForm.username" name="edit_username" required
-                        class="form-control">
+                    <input type="text" id="edit-username" [(ngModel)]="editUserForm.username" name="edit_username"
+                        required class="form-control">
                 </div>
 
                 <div class="form-group">
                     <label for="edit-full_name">Nombre Completo *</label>
-                    <input type="text" id="edit-full_name" [(ngModel)]="editUserForm.full_name" name="edit_full_name" required
-                        class="form-control">
+                    <input type="text" id="edit-full_name" [(ngModel)]="editUserForm.full_name" name="edit_full_name"
+                        required class="form-control">
                 </div>
             </div>
 
             <div class="form-group">
                 <label for="edit-email">Email *</label>
-                <input type="email" id="edit-email" [(ngModel)]="editUserForm.email" name="edit_email" required class="form-control">
+                <input type="email" id="edit-email" [(ngModel)]="editUserForm.email" name="edit_email" required
+                    class="form-control">
             </div>
 
             <div class="form-row">
                 <div class="form-group">
                     <label for="edit-password">Nueva Contraseña (opcional)</label>
-                    <input type="password" id="edit-password" [(ngModel)]="editUserForm.password" name="edit_password" class="form-control"
-                        placeholder="Dejar vacío para no cambiar">
+                    <input type="password" id="edit-password" [(ngModel)]="editUserForm.password" name="edit_password"
+                        class="form-control" placeholder="Dejar vacío para no cambiar">
                 </div>
 
                 <div class="form-group" *ngIf="entities?.length">
                     <label for="edit-entity">Entidad</label>
-                    <select id="edit-entity" [(ngModel)]="editUserForm.entity_id" name="edit_entity" class="form-control">
+                    <select id="edit-entity" [(ngModel)]="editUserForm.entity_id" name="edit_entity"
+                        class="form-control">
                         <option [ngValue]="undefined">(Sin entidad)</option>
                         <option *ngFor="let e of entities" [ngValue]="e.id">{{ e.name }}</option>
                     </select>
