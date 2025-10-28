@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import inspect, text
 from app.config.database import engine, get_db, Base
 from app.config.settings import settings
 from app.routes import auth, pqrs, users, planes, entities
@@ -58,7 +59,6 @@ ensure_postgres_enums()
 Base.metadata.create_all(bind=engine)
 
 # Compatibilidad: añadir columna `is_active` a la tabla users en SQLite si no existe
-from sqlalchemy import inspect, text
 inspector = inspect(engine)
 if inspector.has_table("users"):
     cols = [c.get("name") for c in inspector.get_columns("users")]
