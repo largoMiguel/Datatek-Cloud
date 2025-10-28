@@ -20,8 +20,7 @@ export class LoginComponent implements OnInit {
   isLoading = false;
   errorMessage = '';
   currentEntity$: Observable<Entity | null>;
-  isInitializingSuperadmin = false;
-  showSuperadminInit = true; // Mostrar por defecto para permitir inicialización
+  
 
   constructor(
     private fb: FormBuilder,
@@ -39,37 +38,6 @@ export class LoginComponent implements OnInit {
 
   ngOnInit() {
     // Permitir llegar al login incluso si había sesión previa (el guard hará logout suave).
-    // Mantener visible la opción de superadmin independientemente de entidad
-  }
-
-  initializeSuperadmin() {
-    this.isInitializingSuperadmin = true;
-    this.errorMessage = '';
-
-    this.authService.initializeSuperadmin().subscribe({
-      next: (response: any) => {
-        this.isInitializingSuperadmin = false;
-        this.alertService.success(
-          `Superadmin creado exitosamente. Usuario: ${response.username}, Contraseña: ${response.password}`,
-          'Superadmin Inicializado'
-        );
-
-        // Prellenar el formulario con las credenciales
-        this.loginForm.patchValue({
-          username: response.username,
-          password: response.password
-        });
-
-        // Ocultar el botón de inicialización
-        this.showSuperadminInit = false;
-      },
-      error: (error: any) => {
-        this.isInitializingSuperadmin = false;
-        const errorDetail = error.error?.detail || 'Error al inicializar superadmin';
-        this.alertService.error(errorDetail, 'Error de Inicialización');
-        this.errorMessage = errorDetail;
-      }
-    });
   }
 
   onSubmit() {
