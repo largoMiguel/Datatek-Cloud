@@ -18,7 +18,17 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, nullable=False)
     hashed_password = Column(String, nullable=False)
-    role = Column(Enum(UserRole), nullable=False, default=UserRole.SECRETARIO)
+    # Usar los NOMBRES del Enum (SUPERADMIN, ADMIN, SECRETARIO, CIUDADANO) para coincidir con el tipo ENUM de Postgres
+    role = Column(
+        Enum(
+            UserRole,
+            name="userrole",
+            native_enum=True,
+            values_callable=lambda enum_cls: [e.name for e in enum_cls]
+        ),
+        nullable=False,
+        default=UserRole.SECRETARIO
+    )
     
     # Relación con entidad (solo para ADMIN y SECRETARIO)
     entity_id = Column(Integer, ForeignKey("entities.id", ondelete="CASCADE"), nullable=True)
