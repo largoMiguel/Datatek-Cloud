@@ -41,6 +41,10 @@ export class AuthService {
         return this.http.post<User>(`${this.baseUrl}register-ciudadano`, userData);
     }
 
+    initializeSuperadmin(): Observable<{ username: string; password: string; email: string }> {
+        return this.http.post<{ username: string; password: string; email: string }>(`${this.baseUrl}init-superadmin`, {});
+    }
+
     logout(): void {
         // console.log('Cerrando sesión...');
         localStorage.removeItem('token');

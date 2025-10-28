@@ -37,9 +37,20 @@
                         {{ errorMessage }}
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-100" [disabled]="loginForm.invalid || isLoading">
+                    <div class="alert alert-info" *ngIf="showSuperadminInit">
+                        <i class="bi bi-info-circle me-2"></i>
+                        No hay entidades configuradas. Inicializa el superadmin para comenzar.
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 mb-2" [disabled]="loginForm.invalid || isLoading">
                         <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
                         {{ isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión' }}
+                    </button>
+
+                    <button *ngIf="showSuperadminInit" type="button" class="btn btn-outline-success w-100" 
+                            [disabled]="isInitializingSuperadmin" (click)="initializeSuperadmin()">
+                        <span *ngIf="isInitializingSuperadmin" class="spinner-border spinner-border-sm me-2"></span>
+                        {{ isInitializingSuperadmin ? 'Inicializando...' : 'Inicializar Superadmin' }}
                     </button>
                 </form>
             </div>
