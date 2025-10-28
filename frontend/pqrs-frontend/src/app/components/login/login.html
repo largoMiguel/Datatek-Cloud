@@ -42,13 +42,14 @@
                         No hay entidades configuradas. Inicializa el superadmin para comenzar.
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-100 mb-2" [disabled]="loginForm.invalid || isLoading">
+                    <button type="submit" class="btn btn-primary w-100 mb-2"
+                        [disabled]="loginForm.invalid || isLoading">
                         <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
                         {{ isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión' }}
                     </button>
 
-                    <button *ngIf="showSuperadminInit" type="button" class="btn btn-outline-success w-100" 
-                            [disabled]="isInitializingSuperadmin" (click)="initializeSuperadmin()">
+                    <button *ngIf="showSuperadminInit" type="button" class="btn btn-outline-success w-100"
+                        [disabled]="isInitializingSuperadmin" (click)="initializeSuperadmin()">
                         <span *ngIf="isInitializingSuperadmin" class="spinner-border spinner-border-sm me-2"></span>
                         {{ isInitializingSuperadmin ? 'Inicializando...' : 'Inicializar Superadmin' }}
                     </button>
