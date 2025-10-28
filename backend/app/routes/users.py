@@ -172,14 +172,25 @@ async def update_user(
     """
     Actualizar un usuario existente.
     """
-    # Verificar que el usuario actual sea administrador o esté actualizando su propio perfil
-    if current_user.role != UserRole.ADMIN and current_user.id != user_id:
-        raise HTTPException(status_code=403, detail="No tienes permisos para actualizar este usuario")
+    # Permisos: SUPERADMIN puede actualizar a cualquiera.
+    # ADMIN puede actualizar usuarios de su misma entidad (no puede promover a SUPERADMIN ni cambiar a otra entidad).
+    # Cada usuario puede actualizar su propio perfil (limitado por el frontend generalmente).
     
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     
+    if current_user.role == UserRole.SUPERADMIN:
+        pass  # acceso total
+    elif current_user.role == UserRole.ADMIN:
+        # Debe pertenecer a su misma entidad
+        if user.entity_id != current_user.entity_id:
+            raise HTTPException(status_code=403, detail="No puedes actualizar usuarios de otra entidad")
+    elif current_user.id == user_id:
+        pass  # puede actualizar su propio perfil
+    else:
+        raise HTTPException(status_code=403, detail="No tienes permisos para actualizar este usuario")
+
     # Actualizar campos si se proporcionan
     update_data = user_data.dict(exclude_unset=True)
     
@@ -199,6 +210,23 @@ async def update_user(
         if existing_email:
             raise HTTPException(status_code=400, detail="El email ya está en uso")
     
+    # Normalizar rol si viene como string y validar restricciones
+    if "role" in update_data:
+        role_val = update_data["role"]
+        if isinstance(role_val, str):
+            try:
+                update_data["role"] = UserRole[role_val.upper()]
+            except KeyError:
+                raise HTTPException(status_code=400, detail="Rol inválido")
+        # Restringir a ADMIN para no promover a SUPERADMIN
+        if current_user.role == UserRole.ADMIN and update_data["role"] == UserRole.SUPERADMIN:
+            raise HTTPException(status_code=403, detail="No puedes asignar rol SUPERADMIN")
+
+    # Restringir cambio de entidad para ADMIN
+    if current_user.role == UserRole.ADMIN and "entity_id" in update_data:
+        if update_data["entity_id"] != current_user.entity_id:
+            raise HTTPException(status_code=403, detail="No puedes mover usuarios a otra entidad")
+
     # Aplicar las actualizaciones
     for field, value in update_data.items():
         setattr(user, field, value)

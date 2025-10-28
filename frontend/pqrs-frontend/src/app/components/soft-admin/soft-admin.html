@@ -335,6 +335,9 @@
                         </td>
                         <td>{{ user.created_at | date:'short' }}</td>
                         <td>
+                            <button class="btn btn-sm btn-primary" (click)="showEditUser(user)">
+                                ✏️ Editar
+                            </button>
                             <button class="btn btn-sm" [class.btn-warning]="user.is_active"
                                 [class.btn-secondary]="!user.is_active" (click)="toggleUserStatus(user)">
                                 {{ user.is_active ? 'Desactivar' : 'Activar' }}
@@ -351,6 +354,72 @@
                 Crear Primer Usuario
             </button>
         </div>
+    </div>
+
+    <!-- Vista: Editar Usuario -->
+    <div *ngIf="currentView === 'edit-user'" class="create-admin-view">
+        <div class="view-header">
+            <h2>Editar Usuario</h2>
+            <button class="btn btn-secondary" (click)="cancelEditUser()">
+                ← Volver
+            </button>
+        </div>
+
+        <form class="form-container" (ngSubmit)="updateUser()">
+            <div class="form-group">
+                <label for="edit-role">Rol</label>
+                <select id="edit-role" [(ngModel)]="editUserForm.role" name="edit_role" class="form-control">
+                    <option value="admin">Administrador</option>
+                    <option value="secretario">Secretario</option>
+                    <option value="ciudadano">Ciudadano</option>
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit-username">Nombre de Usuario *</label>
+                    <input type="text" id="edit-username" [(ngModel)]="editUserForm.username" name="edit_username" required
+                        class="form-control">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-full_name">Nombre Completo *</label>
+                    <input type="text" id="edit-full_name" [(ngModel)]="editUserForm.full_name" name="edit_full_name" required
+                        class="form-control">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="edit-email">Email *</label>
+                <input type="email" id="edit-email" [(ngModel)]="editUserForm.email" name="edit_email" required class="form-control">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="edit-password">Nueva Contraseña (opcional)</label>
+                    <input type="password" id="edit-password" [(ngModel)]="editUserForm.password" name="edit_password" class="form-control"
+                        placeholder="Dejar vacío para no cambiar">
+                </div>
+
+                <div class="form-group" *ngIf="entities?.length">
+                    <label for="edit-entity">Entidad</label>
+                    <select id="edit-entity" [(ngModel)]="editUserForm.entity_id" name="edit_entity" class="form-control">
+                        <option [ngValue]="undefined">(Sin entidad)</option>
+                        <option *ngFor="let e of entities" [ngValue]="e.id">{{ e.name }}</option>
+                    </select>
+                    <small class="form-hint">Solo Superadmin puede cambiar de entidad</small>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" (click)="cancelEditUser()">
+                    Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary" [disabled]="loading">
+                    {{ loading ? 'Guardando...' : 'Guardar Cambios' }}
+                </button>
+            </div>
+        </form>
     </div>
 
     <!-- Vista: Crear Admin -->

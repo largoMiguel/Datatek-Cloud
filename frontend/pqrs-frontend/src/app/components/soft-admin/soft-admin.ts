@@ -22,7 +22,16 @@ export class SoftAdminComponent implements OnInit {
     entityUsers: any[] = [];
 
     // Vista actual
-    currentView: 'entities' | 'create-entity' | 'edit-entity' | 'entity-users' | 'create-admin' = 'entities';
+    currentView: 'entities' | 'create-entity' | 'edit-entity' | 'entity-users' | 'create-admin' | 'edit-user' = 'entities';
+    editingUser: any = null;
+    editUserForm: any = {
+        username: '',
+        full_name: '',
+        email: '',
+        role: 'admin',
+        entity_id: undefined,
+        password: ''
+    };
 
     // Formularios
     newEntity: CreateEntityRequest = {
@@ -173,6 +182,64 @@ export class SoftAdminComponent implements OnInit {
                 this.loading = false;
             }
         });
+    }
+
+    showEditUser(user: any): void {
+        this.editingUser = { ...user };
+        this.editUserForm = {
+            username: user.username,
+            full_name: user.full_name,
+            email: user.email,
+            role: user.role,
+            entity_id: user.entity_id,
+            password: ''
+        };
+        this.currentView = 'edit-user';
+    }
+
+    updateUser(): void {
+        if (!this.editingUser) return;
+        if (!this.editUserForm.username || !this.editUserForm.full_name || !this.editUserForm.email) {
+            this.alertService.warning('Usuario, nombre completo y email son obligatorios');
+            return;
+        }
+        const payload: any = {
+            username: this.editUserForm.username,
+            full_name: this.editUserForm.full_name,
+            email: this.editUserForm.email,
+            role: this.editUserForm.role,
+            entity_id: this.editUserForm.entity_id
+        };
+        if (this.editUserForm.password && this.editUserForm.password.length >= 6) {
+            payload.password = this.editUserForm.password;
+        }
+        this.loading = true;
+        this.userService.updateUser(this.editingUser.id, payload).subscribe({
+            next: () => {
+                this.alertService.success('Usuario actualizado exitosamente');
+                if (this.selectedEntity) {
+                    this.viewEntityUsers(this.selectedEntity);
+                } else {
+                    this.currentView = 'entities';
+                    this.loadEntities();
+                }
+                this.editingUser = null;
+                this.loading = false;
+            },
+            error: (error) => {
+                this.alertService.error('Error al actualizar usuario: ' + (error.error?.detail || ''));
+                this.loading = false;
+            }
+        });
+    }
+
+    cancelEditUser(): void {
+        if (this.selectedEntity) {
+            this.viewEntityUsers(this.selectedEntity);
+        } else {
+            this.showEntities();
+        }
+        this.editingUser = null;
     }
 
     showCreateAdmin(entity: EntityWithStats): void {
