@@ -67,8 +67,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db), current
         email=user_data.email,
         full_name=user_data.full_name,
         hashed_password=hashed_password,
-        # Guardar el valor subyacente del enum para compatibilidad con Postgres
-        role=(user_data.role.value if isinstance(user_data.role, UserRole) else user_data.role),
+        role=user_data.role,
         secretaria=user_data.secretaria,
         cedula=user_data.cedula,
         telefono=user_data.telefono,
@@ -129,11 +128,10 @@ async def register_ciudadano(user_data: UserCreate, db: Session = Depends(get_db
         email=user_data.email,
         full_name=user_data.full_name,
         hashed_password=hashed_password,
-        role=UserRole.CIUDADANO.value,
+        role=UserRole.CIUDADANO,
         cedula=user_data.cedula,
         telefono=user_data.telefono,
-        direccion=user_data.direccion,
-        secretaria=None  # Ciudadanos no tienen secretaría
+        direccion=user_data.direccion
     )
     
     db.add(db_user)
@@ -214,7 +212,7 @@ async def initialize_admin(db: Session = Depends(get_db)):
                     email="admin@alcaldia.gov.co",
                     full_name="Administrador del Sistema",
                     hashed_password=new_hash,
-                    role=UserRole.ADMIN.value,
+                    role=UserRole.ADMIN,
                     secretaria="Sistemas",
                     is_active=True
                 )
@@ -272,7 +270,7 @@ async def initialize_superadmin(db: Session = Depends(get_db)):
 
     try:
         # Verificar si ya existe un superadmin
-        superadmin_exists = db.query(User).filter(User.role == UserRole.SUPERADMIN.value).first()
+        superadmin_exists = db.query(User).filter(User.role == UserRole.SUPERADMIN).first()
         
         if superadmin_exists:
             return {
@@ -291,7 +289,7 @@ async def initialize_superadmin(db: Session = Depends(get_db)):
             email="superadmin@sistema.gov.co",
             full_name="Super Administrador del Sistema",
             hashed_password=hashed_password,
-            role=UserRole.SUPERADMIN.value,
+            role=UserRole.SUPERADMIN,
             entity_id=None,  # Superadmin no pertenece a ninguna entidad
             is_active=True
         )
