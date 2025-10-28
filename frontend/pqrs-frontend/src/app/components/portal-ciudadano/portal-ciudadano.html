@@ -3,13 +3,13 @@
     <nav class="navbar navbar-dark bg-secondary mb-0 portal-navbar">
         <div class="container-fluid">
             <!-- Logo y Nombre de la Entidad -->
-            <div class="navbar-brand-section d-flex align-items-center" (click)="volverAInicio()" style="cursor: pointer;">
+            <div class="navbar-brand-section d-flex align-items-center" (click)="volverAInicio()"
+                style="cursor: pointer;">
                 <ng-container *ngIf="(currentEntity$ | async) as entity; else defaultBrand">
                     <!-- Logo de la Entidad -->
                     <div class="entity-logo-wrapper">
-                        <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'" 
-                             [alt]="entity.name" 
-                             class="entity-logo me-3">
+                        <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'" [alt]="entity.name"
+                            class="entity-logo me-3">
                     </div>
                     <!-- Separador Vertical -->
                     <div class="navbar-divider"></div>
@@ -41,7 +41,8 @@
             <!-- Usuario Logueado -->
             <div *ngIf="isLoggedIn" class="navbar-nav ms-auto">
                 <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle text-white user-dropdown" href="#" role="button" data-bs-toggle="dropdown">
+                    <a class="nav-link dropdown-toggle text-white user-dropdown" href="#" role="button"
+                        data-bs-toggle="dropdown">
                         <div class="user-avatar">
                             <i class="fas fa-user-circle"></i>
                         </div>
@@ -55,7 +56,8 @@
                         <li>
                             <hr class="dropdown-divider">
                         </li>
-                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="logout()"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
+                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="logout()"><i
+                                    class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
                     </ul>
                 </div>
             </div>
@@ -75,8 +77,8 @@
                                     <ng-container *ngIf="(currentEntity$ | async) as entity; else defaultInfo">
                                         <!-- Logo de la Entidad con efecto -->
                                         <div class="entity-logo-circle">
-                                            <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'" [alt]="entity.name"
-                                                class="info-logo mb-4">
+                                            <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'"
+                                                [alt]="entity.name" class="info-logo mb-4">
                                         </div>
                                         <h3 class="text-white mb-3 entity-title">{{ entity.name }}</h3>
                                         <div class="entity-divider"></div>
