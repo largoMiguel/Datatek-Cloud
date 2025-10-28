@@ -263,53 +263,69 @@ async def initialize_admin(db: Session = Depends(get_db)):
 @router.post("/init-superadmin")
 async def initialize_superadmin(db: Session = Depends(get_db)):
     """
-    Endpoint para crear o resetear el super administrador.
-    Si ya existe, resetea la contraseña.
+    Crear o resetear el superadministrador SIN usar el mapeo de Enum del ORM
+    para evitar conflictos de mayúsculas/minúsculas con el tipo ENUM en Postgres.
     """
+    from sqlalchemy import text
     from sqlalchemy.exc import IntegrityError
 
     try:
-        # Contraseña por defecto (DEBE cambiarse después del primer login)
         plain_password = "superadmin123"
         hashed_password = get_password_hash(plain_password)
-        
-        # Buscar superadmin existente por username
-        superadmin = db.query(User).filter(User.username == "superadmin").first()
-        
-        if superadmin:
-            # Actualizar contraseña y asegurar que esté activo
-            superadmin.hashed_password = hashed_password
-            superadmin.is_active = True
-            # Forzar valor compatible con ENUM de Postgres (mayúsculas)
-            superadmin.role = UserRole.SUPERADMIN.name
+
+        # Verificar existencia por SQL crudo (evita problemas de mapeo Enum)
+        row = db.execute(
+            text("SELECT id, email FROM users WHERE username = :u LIMIT 1"),
+            {"u": "superadmin"}
+        ).fetchone()
+
+        if row:
+            # Resetear password y forzar rol en MAYÚSCULAS
+            db.execute(
+                text(
+                    """
+                    UPDATE users
+                    SET hashed_password = :hp,
+                        is_active = TRUE,
+                        role = 'SUPERADMIN'
+                    WHERE id = :id
+                    """
+                ),
+                {"hp": hashed_password, "id": row.id}
+            )
             db.commit()
-            db.refresh(superadmin)
-            
             return {
                 "message": "Contraseña de superadmin restablecida",
                 "username": "superadmin",
-                "email": superadmin.email,
+                "email": row.email,
                 "password": plain_password,
                 "warning": "⚠️ IMPORTANTE: Cambia esta contraseña inmediatamente después del primer login",
                 "exists": True
             }
-        
-        # Crear nuevo superadmin
-        superadmin = User(
-            username="superadmin",
-            email="superadmin@sistema.gov.co",
-            full_name="Super Administrador del Sistema",
-            hashed_password=hashed_password,
-            # Forzar valor compatible con ENUM de Postgres (mayúsculas)
-            role=UserRole.SUPERADMIN.name,
-            entity_id=None,  # Superadmin no pertenece a ninguna entidad
-            is_active=True
+
+        # Crear superadmin por SQL crudo (evita validaciones del ORM)
+        db.execute(
+            text(
+                """
+                INSERT INTO users (
+                    username, email, full_name, hashed_password, role,
+                    entity_id, secretaria, cedula, telefono, direccion,
+                    is_active
+                ) VALUES (
+                    :u, :e, :fn, :hp, 'SUPERADMIN',
+                    NULL, NULL, NULL, NULL, NULL,
+                    TRUE
+                )
+                """
+            ),
+            {
+                "u": "superadmin",
+                "e": "superadmin@sistema.gov.co",
+                "fn": "Super Administrador del Sistema",
+                "hp": hashed_password,
+            }
         )
-        
-        db.add(superadmin)
         db.commit()
-        db.refresh(superadmin)
-        
         return {
             "message": "Super administrador creado exitosamente",
             "username": "superadmin",
@@ -318,16 +334,10 @@ async def initialize_superadmin(db: Session = Depends(get_db)):
             "warning": "⚠️ IMPORTANTE: Cambia esta contraseña inmediatamente después del primer login",
             "exists": False
         }
-        
+
     except IntegrityError as e:
         db.rollback()
-        raise HTTPException(
-            status_code=400,
-            detail=f"Error de integridad: {str(e)}"
-        )
+        raise HTTPException(status_code=400, detail=f"Error de integridad: {str(e)}")
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error creando/actualizando superadmin: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Error creando/actualizando superadmin: {str(e)}")
