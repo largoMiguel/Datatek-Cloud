@@ -26,10 +26,7 @@ class Settings(BaseSettings):
     superadmin_email: str = "superadmin@sistema.gov.co"
     superadmin_password: str = "changeMe!SuperSecure"
     
-    # Mantenimiento/control (confirmación para operaciones peligrosas)
-    maintenance_confirm_phrase: str = "CONFIRM_RESET"
-    # Token opcional para reforzar seguridad de endpoints de mantenimiento (dejar vacío si no se usa)
-    maintenance_token: str = ""
+    # Nota: Se removieron configuraciones de mantenimiento para producción.
     
     @property
     def cors_origins(self) -> List[str]:
