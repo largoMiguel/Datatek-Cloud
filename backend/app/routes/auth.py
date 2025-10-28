@@ -280,7 +280,8 @@ async def initialize_superadmin(db: Session = Depends(get_db)):
             # Actualizar contraseña y asegurar que esté activo
             superadmin.hashed_password = hashed_password
             superadmin.is_active = True
-            superadmin.role = UserRole.SUPERADMIN
+            # Forzar valor compatible con ENUM de Postgres (mayúsculas)
+            superadmin.role = UserRole.SUPERADMIN.name
             db.commit()
             db.refresh(superadmin)
             
@@ -299,7 +300,8 @@ async def initialize_superadmin(db: Session = Depends(get_db)):
             email="superadmin@sistema.gov.co",
             full_name="Super Administrador del Sistema",
             hashed_password=hashed_password,
-            role=UserRole.SUPERADMIN,
+            # Forzar valor compatible con ENUM de Postgres (mayúsculas)
+            role=UserRole.SUPERADMIN.name,
             entity_id=None,  # Superadmin no pertenece a ninguna entidad
             is_active=True
         )

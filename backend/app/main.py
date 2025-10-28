@@ -26,9 +26,9 @@ def ensure_postgres_enums():
             type_exists = conn.execute(check_type).scalar()
             
             if not type_exists:
-                # Crear el ENUM con todos los valores
+                # Crear el ENUM con valores en MAYÚSCULAS (coinciden con Enum.name)
                 conn.execute(text(
-                    "CREATE TYPE userrole AS ENUM ('superadmin', 'admin', 'secretario', 'ciudadano')"
+                    "CREATE TYPE userrole AS ENUM ('SUPERADMIN', 'ADMIN', 'SECRETARIO', 'CIUDADANO')"
                 ))
                 conn.commit()
             else:
@@ -41,7 +41,7 @@ def ensure_postgres_enums():
                 existing_values = [row[0] for row in conn.execute(check_values).fetchall()]
                 
                 # Agregar valores faltantes
-                required_values = ['superadmin', 'admin', 'secretario', 'ciudadano']
+                required_values = ['SUPERADMIN', 'ADMIN', 'SECRETARIO', 'CIUDADANO']
                 for value in required_values:
                     if value not in existing_values:
                         try:
