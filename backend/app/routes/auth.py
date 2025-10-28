@@ -263,27 +263,37 @@ async def initialize_admin(db: Session = Depends(get_db)):
 @router.post("/init-superadmin")
 async def initialize_superadmin(db: Session = Depends(get_db)):
     """
-    Endpoint para crear el primer super administrador.
-    Solo debe ejecutarse una vez durante la configuración inicial.
+    Endpoint para crear o resetear el super administrador.
+    Si ya existe, resetea la contraseña.
     """
     from sqlalchemy.exc import IntegrityError
 
     try:
-        # Verificar si ya existe un superadmin
-        superadmin_exists = db.query(User).filter(User.role == UserRole.SUPERADMIN).first()
-        
-        if superadmin_exists:
-            return {
-                "message": "Super administrador ya existe",
-                "username": superadmin_exists.username,
-                "exists": True
-            }
-        
         # Contraseña por defecto (DEBE cambiarse después del primer login)
         plain_password = "superadmin123"
         hashed_password = get_password_hash(plain_password)
         
-        # Crear superadmin
+        # Buscar superadmin existente por username
+        superadmin = db.query(User).filter(User.username == "superadmin").first()
+        
+        if superadmin:
+            # Actualizar contraseña y asegurar que esté activo
+            superadmin.hashed_password = hashed_password
+            superadmin.is_active = True
+            superadmin.role = UserRole.SUPERADMIN
+            db.commit()
+            db.refresh(superadmin)
+            
+            return {
+                "message": "Contraseña de superadmin restablecida",
+                "username": "superadmin",
+                "email": superadmin.email,
+                "password": plain_password,
+                "warning": "⚠️ IMPORTANTE: Cambia esta contraseña inmediatamente después del primer login",
+                "exists": True
+            }
+        
+        # Crear nuevo superadmin
         superadmin = User(
             username="superadmin",
             email="superadmin@sistema.gov.co",
@@ -317,5 +327,5 @@ async def initialize_superadmin(db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(
             status_code=500,
-            detail=f"Error creando superadmin: {str(e)}"
+            detail=f"Error creando/actualizando superadmin: {str(e)}"
         )
