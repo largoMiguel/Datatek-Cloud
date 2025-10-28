@@ -98,13 +98,13 @@ def run_postgres_migration():
         
         print("\n🔄 Ejecutando migración de PostgreSQL...")
         
-        # Paso 1: Agregar valor CIUDADANO al enum userrole si no existe
+        # Paso 1: Asegurar enum userrole tiene valor 'ciudadano' (minúsculas)
         try:
             with engine.connect() as conn:
                 check_enum = text("""
                     SELECT EXISTS (
                         SELECT 1 FROM pg_enum
-                        WHERE enumlabel = 'CIUDADANO'
+                        WHERE enumlabel = 'ciudadano'
                         AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'userrole')
                     ) as exists;
                 """)
@@ -112,8 +112,8 @@ def run_postgres_migration():
                 
                 if not result:
                     conn.execute(text("COMMIT"))
-                    conn.execute(text("ALTER TYPE userrole ADD VALUE 'CIUDADANO'"))
-                    print("   ✅ Valor CIUDADANO agregado al enum userrole")
+                    conn.execute(text("ALTER TYPE userrole ADD VALUE 'ciudadano'"))
+                    print("   ✅ Valor 'ciudadano' agregado al enum userrole")
         except Exception as e:
             print(f"   ⚠️  ENUM userrole: {e}")
         
@@ -486,7 +486,8 @@ def _seed_superadmin():
     from sqlalchemy.exc import IntegrityError
     db = next(get_db())
     try:
-        sa_exists = db.query(User).filter(User.role == UserRole.SUPERADMIN).first()
+        # Comparar usando el valor en minúsculas para evitar desajustes de enum nativo
+        sa_exists = db.query(User).filter(User.role == UserRole.SUPERADMIN.value).first()
         if sa_exists:
             if settings.debug:
                 print("Superadmin ya existe")
@@ -500,7 +501,8 @@ def _seed_superadmin():
             email=email,
             full_name="Super Administrador",
             hashed_password=hashed,
-            role=UserRole.SUPERADMIN,
+            # Guardar valor minúscula compatible con enum de Postgres
+            role=UserRole.SUPERADMIN.value,
             secretaria=None,
             entity_id=None
         )
