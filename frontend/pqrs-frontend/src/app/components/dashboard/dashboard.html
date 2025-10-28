@@ -1,26 +1,65 @@
 <div class="dashboard-container">
     <div class="container-fluid">
 
-        <!-- Navbar -->
+        <!-- Navbar Profesional -->
         <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
             <div class="container-fluid">
-                <a class="navbar-brand d-flex align-items-center" href="#">
-                    <img src="assets/logos/lsoftone.png" alt="Logo" class="navbar-logo me-2">
-                    <span><i class="fas fa-city me-2"></i>Sistema PQRS - Alcaldía</span>
-                </a>
+                <!-- Logo y Nombre de la Entidad -->
+                <div class="navbar-brand-section d-flex align-items-center">
+                    <ng-container *ngIf="(entityContext.currentEntity$ | async) as entity; else defaultBrand">
+                        <!-- Logo de la Entidad -->
+                        <div class="entity-logo-wrapper">
+                            <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'" [alt]="entity.name"
+                                class="entity-logo me-3">
+                        </div>
+                        <!-- Separador Vertical -->
+                        <div class="navbar-divider"></div>
+                        <!-- Información de la Entidad -->
+                        <div class="entity-info me-3">
+                            <h6 class="entity-name mb-0">{{ entity.name }}</h6>
+                            <small class="entity-subtitle">Portal Administrativo</small>
+                        </div>
+                    </ng-container>
+                    <ng-template #defaultBrand>
+                        <div class="entity-logo-wrapper">
+                            <img src="assets/logos/lsoftone.png" alt="Logo" class="entity-logo me-3">
+                        </div>
+                        <div class="navbar-divider"></div>
+                        <div class="entity-info me-3">
+                            <h6 class="entity-name mb-0">Sistema PQRS</h6>
+                            <small class="entity-subtitle">Portal Administrativo</small>
+                        </div>
+                    </ng-template>
+                    <!-- Separador Vertical -->
+                    <div class="navbar-divider"></div>
+                    <!-- Logo del Software -->
+                    <div class="software-logo-wrapper">
+                        <img src="assets/logos/lsoftone.png" alt="LSoftOne" class="software-logo">
+                        <small class="software-name">LSoftOne</small>
+                    </div>
+                </div>
 
+                <!-- Usuario y Acciones -->
                 <div class="navbar-nav ms-auto">
                     <div class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user me-1"></i>{{ currentUser?.full_name }}
+                        <a class="nav-link dropdown-toggle text-white user-dropdown" href="#" role="button"
+                            data-bs-toggle="dropdown">
+                            <div class="user-avatar">
+                                <i class="fas fa-user-circle"></i>
+                            </div>
+                            <div class="user-info">
+                                <span class="user-name">{{ currentUser?.full_name }}</span>
+                                <small class="user-role">{{ currentUser?.role | titlecase }}</small>
+                            </div>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><span class="dropdown-item-text">{{ currentUser?.role | titlecase }}</span></li>
+                            <li><span class="dropdown-item-text"><i class="fas fa-id-badge me-2"></i>{{
+                                    currentUser?.role | titlecase }}</span></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
-                            <li><a class="dropdown-item" href="#" (click)="logout()">Cerrar Sesión <i
-                                        class="fas fa-sign-out-alt ms-2"></i></a></li>
+                            <li><a class="dropdown-item" href="#" (click)="logout()"><i
+                                        class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
                         </ul>
                     </div>
                 </div>

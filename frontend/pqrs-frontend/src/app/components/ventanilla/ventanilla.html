@@ -13,7 +13,7 @@
             <h1 class="hero-title">Ventanilla Única de Servicios</h1>
             <h2 class="hero-subtitle">
                 <ng-container *ngIf="(currentEntity$ | async) as entity; else defaultSubtitle">
-                    Sistema de PQRS - {{ entity.name }}
+                    {{ entity.name }}
                 </ng-container>
                 <ng-template #defaultSubtitle> Sistema de PQRS - Alcaldía </ng-template>
             </h2>

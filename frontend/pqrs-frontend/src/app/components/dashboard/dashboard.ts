@@ -95,7 +95,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private alertService: AlertService,
     private aiService: AiService,
     private reportService: ReportService,
-    private entityContext: EntityContextService
+    public entityContext: EntityContextService
   ) {
     this.nuevaPqrsForm = this.fb.group({
       tipo_identificacion: ['personal', Validators.required],

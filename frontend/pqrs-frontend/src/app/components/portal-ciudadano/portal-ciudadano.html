@@ -1,36 +1,61 @@
 <div class="portal-ciudadano-container" *ngIf="pqrsEnabled(); else pqrsOff">
-    <!-- Header -->
-    <nav class="navbar navbar-dark bg-secondary mb-0">
+    <!-- Header Profesional -->
+    <nav class="navbar navbar-dark bg-secondary mb-0 portal-navbar">
         <div class="container-fluid">
-            <a class="navbar-brand d-flex align-items-center" href="javascript:void(0)" (click)="volverAInicio()">
+            <!-- Logo y Nombre de la Entidad -->
+            <div class="navbar-brand-section d-flex align-items-center" (click)="volverAInicio()" style="cursor: pointer;">
                 <ng-container *ngIf="(currentEntity$ | async) as entity; else defaultBrand">
-                    <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'" [alt]="entity.name"
-                        class="navbar-logo me-2">
-                    <span><i class="fas fa-user-circle me-2"></i>{{ entity.name }} - Portal Ciudadano</span>
+                    <!-- Logo de la Entidad -->
+                    <div class="entity-logo-wrapper">
+                        <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'" 
+                             [alt]="entity.name" 
+                             class="entity-logo me-3">
+                    </div>
+                    <!-- Separador Vertical -->
+                    <div class="navbar-divider"></div>
+                    <!-- Información de la Entidad -->
+                    <div class="entity-info me-3">
+                        <h6 class="entity-name mb-0">{{ entity.name }}</h6>
+                        <small class="entity-subtitle">Portal Ciudadano</small>
+                    </div>
                 </ng-container>
                 <ng-template #defaultBrand>
-                    <img src="assets/logos/lsoftone.png" alt="Logo" class="navbar-logo me-2">
-                    <span><i class="fas fa-user-circle me-2"></i>Portal Ciudadano</span>
+                    <div class="entity-logo-wrapper">
+                        <img src="assets/logos/lsoftone.png" alt="Logo" class="entity-logo me-3">
+                    </div>
+                    <div class="navbar-divider"></div>
+                    <div class="entity-info me-3">
+                        <h6 class="entity-name mb-0">Portal Ciudadano</h6>
+                        <small class="entity-subtitle">Sistema PQRS</small>
+                    </div>
                 </ng-template>
-            </a>
+                <!-- Separador Vertical -->
+                <div class="navbar-divider"></div>
+                <!-- Logo del Software -->
+                <div class="software-logo-wrapper">
+                    <img src="assets/logos/lsoftone.png" alt="LSoftOne" class="software-logo">
+                    <small class="software-name">LSoftOne</small>
+                </div>
+            </div>
+
+            <!-- Usuario Logueado -->
             <div *ngIf="isLoggedIn" class="navbar-nav ms-auto">
-                <ng-container *ngIf="(currentEntity$ | async) as entity">
-                    <span class="entity-indicator me-3">
-                        <i class="fas fa-building me-1"></i>
-                        <small>Logueado en: <strong>{{ entity.name }}</strong></small>
-                    </span>
-                </ng-container>
                 <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle text-white" href="#" role="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user me-1"></i>{{ currentUser?.full_name }}
+                    <a class="nav-link dropdown-toggle text-white user-dropdown" href="#" role="button" data-bs-toggle="dropdown">
+                        <div class="user-avatar">
+                            <i class="fas fa-user-circle"></i>
+                        </div>
+                        <div class="user-info">
+                            <span class="user-name">{{ currentUser?.full_name }}</span>
+                            <small class="user-role">Ciudadano</small>
+                        </div>
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li><span class="dropdown-item-text">Ciudadano</span></li>
+                        <li><span class="dropdown-item-text"><i class="fas fa-id-badge me-2"></i>Ciudadano</span></li>
                         <li>
                             <hr class="dropdown-divider">
                         </li>
-                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="logout()">Cerrar Sesión <i
-                                    class="fas fa-sign-out-alt ms-2"></i></a></li>
+                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="logout()"><i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
                     </ul>
                 </div>
             </div>
@@ -48,15 +73,22 @@
                             <div class="col-md-5 auth-info-panel">
                                 <div class="info-content">
                                     <ng-container *ngIf="(currentEntity$ | async) as entity; else defaultInfo">
-                                        <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'" [alt]="entity.name"
-                                            class="info-logo mb-4">
-                                        <h3 class="text-white mb-3">{{ entity.name }}</h3>
+                                        <!-- Logo de la Entidad con efecto -->
+                                        <div class="entity-logo-circle">
+                                            <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'" [alt]="entity.name"
+                                                class="info-logo mb-4">
+                                        </div>
+                                        <h3 class="text-white mb-3 entity-title">{{ entity.name }}</h3>
+                                        <div class="entity-divider"></div>
                                     </ng-container>
                                     <ng-template #defaultInfo>
-                                        <img src="assets/logos/lsoftone.png" alt="Logo" class="info-logo mb-4">
-                                        <h3 class="text-white mb-3">Portal Ciudadano</h3>
+                                        <div class="entity-logo-circle">
+                                            <img src="assets/logos/lsoftone.png" alt="Logo" class="info-logo mb-4">
+                                        </div>
+                                        <h3 class="text-white mb-3 entity-title">Portal Ciudadano</h3>
+                                        <div class="entity-divider"></div>
                                     </ng-template>
-                                    <p class="text-white-50 mb-4">
+                                    <p class="text-white-50 mb-4 info-description">
                                         Accede a tu cuenta para gestionar tus PQRS, ver el historial y recibir
                                         actualizaciones en tiempo real.
                                     </p>
@@ -66,6 +98,11 @@
                                         <li><i class="fas fa-check-circle me-2"></i>Recibir notificaciones</li>
                                         <li><i class="fas fa-check-circle me-2"></i>Seguimiento en tiempo real</li>
                                     </ul>
+                                    <!-- Logo del Software -->
+                                    <div class="software-badge mt-4">
+                                        <img src="assets/logos/lsoftone.png" alt="LSoftOne" class="software-badge-logo">
+                                        <span class="software-badge-text">Powered by LSoftOne</span>
+                                    </div>
                                 </div>
                             </div>
 
