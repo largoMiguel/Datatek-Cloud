@@ -165,6 +165,15 @@
                         [disabled]="loading || !procesosFiltrados.length">
                         <i class="fas fa-file-csv me-1"></i>Exportar CSV
                     </button>
+                    <button class="btn btn-outline-primary btn-sm me-2" (click)="generatePdf()"
+                        [disabled]="loading || !procesosFiltrados.length">
+                        <i class="fas fa-file-pdf me-1"></i>Generar PDF
+                    </button>
+                    <button class="btn btn-primary btn-sm me-2" (click)="generatePdfWithAI()"
+                        [disabled]="loading || !procesosFiltrados.length || generatingPdf">
+                        <i class="fas fa-magic me-1" [class.fa-spin]="generatingPdf"></i>
+                        Informe con IA
+                    </button>
                     <button class="btn btn-primary btn-sm" (click)="buscar()" [disabled]="loading">
                         <i class="fas fa-sync-alt me-1" [class.fa-spin]="loading"></i>Consultar
                     </button>
@@ -321,7 +330,7 @@
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
-                        <canvas baseChart [data]="estadosChartData" [type]="doughnutChartType"
+                        <canvas id="chart-estados" baseChart [data]="estadosChartData" [type]="doughnutChartType"
                             [options]="chartOptions"></canvas>
                     </div>
                 </div>
@@ -334,7 +343,7 @@
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
-                        <canvas baseChart [data]="modalidadesChartData" [type]="barChartType"
+                        <canvas id="chart-modalidades" baseChart [data]="modalidadesChartData" [type]="barChartType"
                             [options]="chartOptions"></canvas>
                     </div>
                 </div>
@@ -347,7 +356,7 @@
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
-                        <canvas baseChart [data]="timelineChartData" [type]="lineChartType"
+                        <canvas id="chart-timeline" baseChart [data]="timelineChartData" [type]="lineChartType"
                             [options]="chartOptions"></canvas>
                     </div>
                 </div>
@@ -364,7 +373,7 @@
                 </div>
                 <div class="card-body">
                     <div class="chart-container">
-                        <canvas baseChart [data]="tiposContratoChartData" [type]="doughnutChartType"
+                        <canvas id="chart-tipos" baseChart [data]="tiposContratoChartData" [type]="doughnutChartType"
                             [options]="chartOptions"></canvas>
                     </div>
                 </div>
@@ -420,7 +429,7 @@
                 </div>
                 <div class="card-body">
                     <div class="chart-container" style="height: 320px;">
-                        <canvas baseChart [data]="proveedoresChartData" [type]="barChartType"
+                        <canvas id="chart-proveedores" baseChart [data]="proveedoresChartData" [type]="barChartType"
                             [options]="proveedoresChartOptions"></canvas>
                     </div>
                 </div>

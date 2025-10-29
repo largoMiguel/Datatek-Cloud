@@ -9,6 +9,9 @@ import { ProcesoContratacion, FiltroContratacion, KPIsContratacion } from '../..
 import { EntityContextService } from '../../services/entity-context.service';
 import { AuthService } from '../../services/auth.service';
 import { Subscription, filter, combineLatest } from 'rxjs';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { AiReportService, ContratacionSummaryPayload } from '../../services/ai-report.service';
 
 Chart.register(...registerables);
 
@@ -115,10 +118,13 @@ export class ContratacionComponent implements OnInit, OnDestroy {
         plugins: { legend: { display: false } }
     };
 
+    generatingPdf = false;
+
     constructor(
         private contratacionService: ContratacionService,
         public entityContext: EntityContextService,
         private authService: AuthService,
+        private aiReport: AiReportService,
         private router: Router
     ) {
         this.currentUser = this.authService.getCurrentUserValue();
@@ -623,5 +629,176 @@ export class ContratacionComponent implements OnInit, OnDestroy {
             publicacionDesde: '', publicacionHasta: '', ultimaDesde: '', ultimaHasta: ''
         };
         this.applyLocalFilters();
+    }
+
+    // ===== Reporte PDF =====
+    private getChartImage(chartId: string): string | null {
+        const canvas = document.getElementById(chartId) as HTMLCanvasElement | null;
+        if (!canvas) return null;
+        try {
+            return canvas.toDataURL('image/png', 1.0);
+        } catch {
+            return null;
+        }
+    }
+
+    private buildSummaryPayload(): ContratacionSummaryPayload {
+        // Distribuciones a partir de chart data
+        const distribEstados: Record<string, number> = {};
+        (this.estadosChartData.labels || []).forEach((l: any, i: number) => {
+            const v = (this.estadosChartData.datasets[0] as any)?.data?.[i] ?? 0;
+            distribEstados[String(l)] = Number(v);
+        });
+        const distribModalidades: Record<string, number> = {};
+        (this.modalidadesChartData.labels || []).forEach((l: any, i: number) => {
+            const v = (this.modalidadesChartData.datasets[0] as any)?.data?.[i] ?? 0;
+            distribModalidades[String(l)] = Number(v);
+        });
+        const distribTipos: Record<string, number> = {};
+        (this.tiposContratoChartData.labels || []).forEach((l: any, i: number) => {
+            const v = (this.tiposContratoChartData.datasets[0] as any)?.data?.[i] ?? 0;
+            distribTipos[String(l)] = Number(v);
+        });
+
+        const top_proveedores: Array<{ nombre: string; valor: number }> = [];
+        const labels = (this.proveedoresChartData.labels || []) as string[];
+        const data = ((this.proveedoresChartData.datasets?.[0] as any)?.data || []) as number[];
+        labels.forEach((name, i) => top_proveedores.push({ nombre: name, valor: Number(data[i] || 0) }));
+
+        return {
+            entity_name: this.entityContext.currentEntity?.name || null,
+            nit: this.entityContext.currentEntity?.nit || this.filtro.entidad || null,
+            periodo: { desde: this.filtro.fechaDesde || null, hasta: this.filtro.fechaHasta || null },
+            kpis: {
+                totalProcesos: this.kpis.totalProcesos,
+                totalAdjudicados: this.kpis.totalAdjudicados,
+                tasaAdjudicacion: this.kpis.tasaAdjudicacion,
+                sumaAdjudicado: this.kpis.sumaAdjudicado,
+                promedioPrecioBase: this.kpis.promedioPrecioBase
+            },
+            distribuciones: {
+                estados: distribEstados,
+                modalidades: distribModalidades,
+                tiposContrato: distribTipos
+            },
+            top_proveedores
+        };
+    }
+
+    generatePdfWithAI(): void {
+        if (!this.procesosFiltrados.length) return;
+        this.generatingPdf = true;
+        const payload = this.buildSummaryPayload();
+        this.aiReport.summarizeContratacion(payload).subscribe({
+            next: (res) => {
+                this.generatePdf(res.summary || undefined);
+                this.generatingPdf = false;
+            },
+            error: () => {
+                // Si falla IA, generamos PDF sin IA
+                this.generatePdf();
+                this.generatingPdf = false;
+            }
+        });
+    }
+
+    generatePdf(aiSummary?: string): void {
+        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+        const margin = 40;
+        let y = margin;
+
+        const entityName = this.entityContext.currentEntity?.name || 'Entidad';
+        const nit = this.entityContext.currentEntity?.nit || this.filtro.entidad || 'N/D';
+
+        // Encabezado
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(16);
+        doc.text(`Informe de Contratación Pública - SECOP II`, margin, y); y += 22;
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+        doc.text(`Entidad: ${entityName}  |  NIT: ${nit}`, margin, y); y += 16;
+        doc.text(`Periodo: ${this.filtro.fechaDesde} a ${this.filtro.fechaHasta}`, margin, y); y += 10;
+        doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, margin, y); y += 18;
+
+        // Línea
+        doc.setDrawColor(33, 107, 168);
+        doc.line(margin, y, 555, y); y += 14;
+
+        // KPIs
+        doc.setFont('helvetica', 'bold');
+        doc.text('Resumen de Indicadores', margin, y); y += 14;
+        doc.setFont('helvetica', 'normal');
+        const k = this.kpis;
+        const kpiLines = [
+            `Total procesos: ${k.totalProcesos}`,
+            `Adjudicados: ${k.totalAdjudicados} (${(k.tasaAdjudicacion * 100).toFixed(1)}%)`,
+            `Total adjudicado: $ ${Math.round(k.sumaAdjudicado).toLocaleString('es-CO')}`,
+            `Precio base promedio: $ ${Math.round(k.promedioPrecioBase).toLocaleString('es-CO')}`
+        ];
+        kpiLines.forEach(line => { doc.text(line, margin, y); y += 14; });
+        y += 6;
+
+        // Resumen IA (opcional)
+        if (aiSummary) {
+            doc.setFont('helvetica', 'bold');
+            doc.text('Resumen con IA', margin, y); y += 14;
+            doc.setFont('helvetica', 'normal');
+            const split = doc.splitTextToSize(aiSummary, 515);
+            split.forEach((line: string) => {
+                if (y > 770) { doc.addPage(); y = margin; }
+                doc.text(line, margin, y);
+                y += 14;
+            });
+            y += 6;
+        }
+
+        // Gráficas como imágenes
+        const charts = [
+            { id: 'chart-estados', title: 'Distribución por Estado' },
+            { id: 'chart-modalidades', title: 'Modalidades' },
+            { id: 'chart-tipos', title: 'Tipos de Contrato' },
+            { id: 'chart-proveedores', title: 'Top Proveedores por Valor' },
+            { id: 'chart-timeline', title: 'Timeline de Publicaciones' }
+        ];
+        for (const c of charts) {
+            const img = this.getChartImage(c.id);
+            if (!img) continue;
+            if (y > 700) { doc.addPage(); y = margin; }
+            doc.setFont('helvetica', 'bold');
+            doc.text(c.title, margin, y); y += 10;
+            try {
+                doc.addImage(img, 'PNG', margin, y, 515, 220, undefined, 'FAST');
+                y += 230;
+            } catch { /* ignore image errors */ }
+        }
+
+        // Tabla (resumen top 20 por tamaño)
+        const headers = [
+            'Referencia', 'Estado', 'Modalidad', 'Tipo', 'Precio base', 'Proveedor', 'Publicación', 'Últ. pub.'
+        ];
+        const body = this.procesosFiltrados.slice(0, 20).map(p => [
+            p.referencia_del_proceso || '-',
+            p.estado_resumen || '-',
+            p.modalidad_de_contratacion || '-',
+            p.tipo_de_contrato || '-',
+            `$ ${this.toNumber(p.precio_base).toLocaleString('es-CO')}`,
+            p.nombre_del_proveedor || '-',
+            p.fecha_de_publicacion_del ? new Date(p.fecha_de_publicacion_del).toLocaleDateString('es-CO') : '-',
+            p.fecha_de_ultima_publicaci ? new Date(p.fecha_de_ultima_publicaci).toLocaleDateString('es-CO') : '-',
+        ]);
+
+        autoTable(doc, {
+            head: [headers],
+            body,
+            startY: y,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [33, 107, 168] },
+            theme: 'grid',
+            margin: { left: margin, right: margin }
+        });
+
+        // Guardar
+        const file = `informe_contratacion_${(this.entityContext.currentEntity?.slug || 'entidad')}_${this.filtro.fechaDesde}_${this.filtro.fechaHasta}.pdf`;
+        doc.save(file);
     }
 }
