@@ -1258,4 +1258,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   reportsPdfEnabled(): boolean {
     return this.entityContext.currentEntity?.enable_reports_pdf ?? false;
   }
+
+  contratacionEnabled(): boolean {
+    return (this.entityContext.currentEntity as any)?.enable_contratacion ?? false;
+  }
 }

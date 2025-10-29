@@ -7,6 +7,7 @@ class EntityBase(BaseModel):
     """Schema base para entidades"""
     name: str = Field(..., min_length=3, max_length=200, description="Nombre de la entidad")
     code: str = Field(..., min_length=2, max_length=50, description="Código único de la entidad")
+    nit: Optional[str] = Field(None, max_length=50, description="NIT de la entidad para consultas SECOP")
     slug: str = Field(..., min_length=2, max_length=100, description="URL slug (ej: chiquiza-boyaca)")
     description: Optional[str] = Field(None, description="Descripción de la entidad")
     address: Optional[str] = Field(None, max_length=300, description="Dirección")
@@ -21,6 +22,7 @@ class EntityBase(BaseModel):
     enable_reports_pdf: Optional[bool] = True
     enable_ai_reports: Optional[bool] = True
     enable_planes_institucionales: Optional[bool] = True
+    enable_contratacion: Optional[bool] = True
 
 
 class EntityCreate(EntityBase):
@@ -32,6 +34,7 @@ class EntityUpdate(BaseModel):
     """Schema para actualizar una entidad"""
     name: Optional[str] = Field(None, min_length=3, max_length=200)
     code: Optional[str] = Field(None, min_length=2, max_length=50)
+    nit: Optional[str] = Field(None, max_length=50)
     slug: Optional[str] = Field(None, min_length=2, max_length=100)
     description: Optional[str] = None
     address: Optional[str] = Field(None, max_length=300)
@@ -46,6 +49,7 @@ class EntityUpdate(BaseModel):
     enable_reports_pdf: Optional[bool] = None
     enable_ai_reports: Optional[bool] = None
     enable_planes_institucionales: Optional[bool] = None
+    enable_contratacion: Optional[bool] = None
 
 
 class EntityResponse(EntityBase):

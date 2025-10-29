@@ -37,6 +37,7 @@ export class SoftAdminComponent implements OnInit {
     newEntity: CreateEntityRequest = {
         name: '',
         code: '',
+        nit: '',
         slug: '',
         description: '',
         address: '',
@@ -49,7 +50,8 @@ export class SoftAdminComponent implements OnInit {
         enable_users_admin: true,
         enable_reports_pdf: true,
         enable_ai_reports: true,
-        enable_planes_institucionales: true
+        enable_planes_institucionales: true,
+        enable_contratacion: true
     };
 
     editingEntity: Entity | null = null;
@@ -128,6 +130,7 @@ export class SoftAdminComponent implements OnInit {
         this.newEntity = {
             name: entity.name,
             code: entity.code,
+            nit: entity.nit || '',
             slug: entity.slug,
             description: entity.description || '',
             address: entity.address || '',
@@ -140,7 +143,8 @@ export class SoftAdminComponent implements OnInit {
             enable_users_admin: (entity as any).enable_users_admin ?? true,
             enable_reports_pdf: (entity as any).enable_reports_pdf ?? true,
             enable_ai_reports: (entity as any).enable_ai_reports ?? true,
-            enable_planes_institucionales: (entity as any).enable_planes_institucionales ?? true
+            enable_planes_institucionales: (entity as any).enable_planes_institucionales ?? true,
+            enable_contratacion: (entity as any).enable_contratacion ?? true
         };
         this.currentView = 'edit-entity';
     }
@@ -380,6 +384,7 @@ export class SoftAdminComponent implements OnInit {
         this.newEntity = {
             name: '',
             code: '',
+            nit: '',
             slug: '',
             description: '',
             address: '',

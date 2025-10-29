@@ -1,0 +1,568 @@
+<!-- Navbar Profesional (barra global) -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+    <div class="container-fluid">
+        <!-- Logo y Nombre de la Entidad -->
+        <div class="navbar-brand-section d-flex align-items-center">
+            <ng-container *ngIf="(entityContext.currentEntity$ | async) as entity; else defaultBrand">
+                <!-- Logo de la Entidad -->
+                <div class="entity-logo-wrapper">
+                    <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'" [alt]="entity.name"
+                        class="entity-logo me-3">
+                </div>
+                <!-- Separador Vertical -->
+                <div class="navbar-divider"></div>
+                <!-- Información de la Entidad -->
+                <div class="entity-info me-3">
+                    <h6 class="entity-name mb-0">{{ entity.name }}</h6>
+                    <small class="entity-subtitle">Portal Administrativo</small>
+                </div>
+            </ng-container>
+            <ng-template #defaultBrand>
+                <div class="entity-logo-wrapper">
+                    <img src="assets/logos/lsoftone.png" alt="Logo" class="entity-logo me-3">
+                </div>
+                <div class="navbar-divider"></div>
+                <div class="entity-info me-3">
+                    <h6 class="entity-name mb-0">Sistema PQRS</h6>
+                    <small class="entity-subtitle">Portal Administrativo</small>
+                </div>
+            </ng-template>
+            <!-- Separador Vertical -->
+            <div class="navbar-divider"></div>
+            <!-- Logo del Software -->
+            <div class="software-logo-wrapper">
+                <img src="assets/logos/lsoftone.png" alt="LSoftOne" class="software-logo">
+                <small class="software-name">LSoftOne</small>
+            </div>
+        </div>
+
+        <!-- Usuario y Acciones -->
+        <div class="navbar-nav ms-auto">
+            <div class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle text-white user-dropdown" href="#" role="button"
+                    data-bs-toggle="dropdown">
+                    <div class="user-avatar">
+                        <i class="fas fa-user-circle"></i>
+                    </div>
+                    <div class="user-info">
+                        <span class="user-name">{{ currentUser?.full_name }}</span>
+                        <small class="user-role">{{ currentUser?.role | titlecase }}</small>
+                    </div>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><span class="dropdown-item-text"><i class="fas fa-id-badge me-2"></i>{{
+                            currentUser?.role | titlecase }}</span></li>
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li><a class="dropdown-item" href="#" (click)="logout()"><i
+                                class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</nav>
+
+<div class="contratacion-container container-fluid py-4">
+    <!-- Header con título y botón volver -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1">
+                        <i class="fas fa-file-contract me-2 text-primary"></i>Contratación Pública - SECOP II
+                    </h2>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-building me-1"></i>{{ entityContext.currentEntity?.name || 'Entidad' }}
+                        <span class="mx-2">|</span>
+                        <i class="fas fa-id-card me-1"></i>NIT: {{ entityContext.currentEntity?.nit || 'N/D' }}
+                    </p>
+                </div>
+                <button class="btn btn-primary" routerLink="../dashboard">
+                    <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Banner informativo -->
+    <div class="alert alert-info alert-dismissible fade show d-flex align-items-center mb-4" role="alert">
+        <i class="fas fa-info-circle me-3 fs-4"></i>
+        <div>
+            <strong>Fuente de datos:</strong> Los datos se consultan en tiempo real desde el sistema SECOP II de
+            Colombia
+            utilizando el NIT configurado para esta entidad.
+        </div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <!-- Alertas de Contratos Vencidos -->
+    <div class="alert alert-danger d-flex align-items-start mb-4" role="alert" *ngIf="contratosVencidos.length > 0">
+        <i class="fas fa-exclamation-triangle me-3 fs-4"></i>
+        <div class="flex-grow-1">
+            <h6 class="alert-heading mb-2">
+                <strong>¡Atención!</strong> Contratos con Plazo de Ejecución Cumplido
+            </h6>
+            <p class="mb-2">
+                Se detectaron {{ contratosVencidos.length }} contrato(s) adjudicado(s) cuyo plazo de ejecución ya ha
+                vencido.
+                Estos contratos requieren revisión y posible liquidación.
+            </p>
+            <button class="btn btn-sm btn-outline-danger"
+                (click)="mostrarContratosVencidos = !mostrarContratosVencidos">
+                <i class="fas" [class.fa-chevron-down]="!mostrarContratosVencidos"
+                    [class.fa-chevron-up]="mostrarContratosVencidos"></i>
+                {{ mostrarContratosVencidos ? 'Ocultar' : 'Ver' }} Detalles
+            </button>
+
+            <div class="mt-3" *ngIf="mostrarContratosVencidos">
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Referencia</th>
+                                <th>Proveedor</th>
+                                <th>Valor</th>
+                                <th>Duración</th>
+                                <th>Fecha Adjudicación</th>
+                                <th>Última publicación</th>
+                                <th>Días Vencidos</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let contrato of contratosVencidos">
+                                <td><strong>{{ contrato.referencia_del_proceso }}</strong></td>
+                                <td>{{ contrato.nombre_del_proveedor || 'N/D' }}</td>
+                                <td>$ {{ toNumber(contrato.valor_total_adjudicacion) | number:'1.0-0' }}</td>
+                                <td>{{ formatearDuracion(contrato) }}</td>
+                                <td>{{ contrato.fecha_adjudicacion | date:'dd/MM/yyyy' }}</td>
+                                <td>{{ contrato.fecha_de_ultima_publicaci | date:'dd/MM/yyyy' }}</td>
+                                <td>
+                                    <span class="badge bg-danger">{{ calcularDiasVencidos(contrato) }} días</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Acciones Principales -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-1"><i class="fas fa-filter me-2 text-primary"></i>Filtros y Acciones</h5>
+                    <small class="text-muted">Configure los parámetros de consulta y gestione los datos</small>
+                </div>
+                <div>
+                    <button class="btn btn-outline-secondary btn-sm me-2" (click)="limpiar()">
+                        <i class="fas fa-eraser me-1"></i>Limpiar
+                    </button>
+                    <button class="btn btn-success btn-sm me-2" (click)="exportCSV()"
+                        [disabled]="loading || !procesosFiltrados.length">
+                        <i class="fas fa-file-csv me-1"></i>Exportar CSV
+                    </button>
+                    <button class="btn btn-primary btn-sm" (click)="buscar()" [disabled]="loading">
+                        <i class="fas fa-sync-alt me-1" [class.fa-spin]="loading"></i>Consultar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <!-- Filtros -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-header bg-white">
+            <h6 class="mb-0"><i class="fas fa-sliders-h me-2 text-primary"></i>Filtros de Búsqueda</h6>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <!-- Fechas -->
+                <div class="col-md-2">
+                    <label class="form-label"><i class="far fa-calendar-alt me-1"></i>Desde</label>
+                    <input type="date" class="form-control" [(ngModel)]="filtro.fechaDesde">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><i class="far fa-calendar-alt me-1"></i>Hasta</label>
+                    <input type="date" class="form-control" [(ngModel)]="filtro.fechaHasta">
+                </div>
+
+                <!-- Modalidad y Tipo -->
+                <div class="col-md-3">
+                    <label class="form-label"><i class="fas fa-tag me-1"></i>Modalidad</label>
+                    <select class="form-select" [(ngModel)]="filtro.modalidad">
+                        <option value="">Todas las modalidades</option>
+                        <option *ngFor="let m of modalidades" [value]="m">{{ m }}</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label"><i class="fas fa-file-contract me-1"></i>Tipo de Contrato</label>
+                    <select class="form-select" [(ngModel)]="filtro.tipoContrato">
+                        <option value="">Todos los tipos</option>
+                        <option *ngFor="let t of tiposContrato" [value]="t">{{ t }}</option>
+                    </select>
+                </div>
+
+                <!-- Estado y Adjudicado -->
+                <div class="col-md-2">
+                    <label class="form-label"><i class="fas fa-info-circle me-1"></i>Estado</label>
+                    <select class="form-select" [(ngModel)]="filtro.estado">
+                        <option value="">Todos</option>
+                        <option *ngFor="let e of estadosResumen" [value]="e">{{ e }}</option>
+                    </select>
+                </div>
+
+                <!-- Segunda fila -->
+                <div class="col-md-2">
+                    <label class="form-label"><i class="fas fa-check-circle me-1"></i>Adjudicado</label>
+                    <select class="form-select" [(ngModel)]="filtro.adjudicado">
+                        <option value="">Todos</option>
+                        <option value="SI">Sí</option>
+                        <option value="NO">No</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><i class="fas fa-dollar-sign me-1"></i>Precio mínimo</label>
+                    <input type="number" class="form-control" [(ngModel)]="filtro.precioMin" placeholder="0">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label"><i class="fas fa-dollar-sign me-1"></i>Precio máximo</label>
+                    <input type="number" class="form-control" [(ngModel)]="filtro.precioMax" placeholder="Sin límite">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label"><i class="fas fa-search me-1"></i>Buscar en descripción o
+                        referencia</label>
+                    <input type="text" class="form-control" [(ngModel)]="filtro.texto"
+                        placeholder="Ingrese términos de búsqueda...">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs Clickeables -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="kpi-card kpi-primary shadow-sm clickeable" (click)="toggleKpiDetail('procesos')"
+                [class.active]="selectedKpi === 'procesos'">
+                <div class="kpi-icon"><i class="fas fa-list"></i></div>
+                <div class="kpi-info">
+                    <div class="kpi-value">{{ kpis.totalProcesos }}</div>
+                    <div class="kpi-label">Total Procesos</div>
+                </div>
+                <i class="fas fa-chevron-right kpi-arrow"></i>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card kpi-success shadow-sm clickeable" (click)="toggleKpiDetail('adjudicados')"
+                [class.active]="selectedKpi === 'adjudicados'">
+                <div class="kpi-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="kpi-info">
+                    <div class="kpi-value">{{ kpis.totalAdjudicados }}</div>
+                    <div class="kpi-label">Adjudicados</div>
+                </div>
+                <i class="fas fa-chevron-right kpi-arrow"></i>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card kpi-info shadow-sm clickeable" (click)="toggleKpiDetail('tasa')"
+                [class.active]="selectedKpi === 'tasa'">
+                <div class="kpi-icon"><i class="fas fa-percentage"></i></div>
+                <div class="kpi-info">
+                    <div class="kpi-value">{{ (kpis.tasaAdjudicacion * 100) | number:'1.0-1' }}%</div>
+                    <div class="kpi-label">Tasa Adjudicación</div>
+                </div>
+                <i class="fas fa-chevron-right kpi-arrow"></i>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="kpi-card kpi-warning shadow-sm clickeable" (click)="toggleKpiDetail('monto')"
+                [class.active]="selectedKpi === 'monto'">
+                <div class="kpi-icon"><i class="fas fa-dollar-sign"></i></div>
+                <div class="kpi-info">
+                    <div class="kpi-value">$ {{ kpis.sumaAdjudicado | number:'1.0-0' }}</div>
+                    <div class="kpi-label">Total Adjudicado</div>
+                </div>
+                <i class="fas fa-chevron-right kpi-arrow"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel de Detalle del KPI -->
+    <div class="card mb-4 shadow-sm" *ngIf="kpiDetailVisible && getKpiDetail()">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>{{ getKpiDetail().title }}</h6>
+            <button class="btn btn-sm btn-light" (click)="kpiDetailVisible = false">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4" *ngFor="let item of getKpiDetail().items">
+                    <div class="detail-item">
+                        <div class="detail-label text-muted">{{ item.label }}</div>
+                        <div class="detail-value text-primary fw-bold fs-4">{{ item.value }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficas -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card chart-card">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Por Estado</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas baseChart [data]="estadosChartData" [type]="doughnutChartType"
+                            [options]="chartOptions"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card chart-card">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Modalidades</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas baseChart [data]="modalidadesChartData" [type]="barChartType"
+                            [options]="chartOptions"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card chart-card">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Timeline publicaciones</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas baseChart [data]="timelineChartData" [type]="lineChartType"
+                            [options]="chartOptions"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Segunda fila de gráficas - Análisis adicional -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card chart-card shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Distribución por Tipo de Contrato</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas baseChart [data]="tiposContratoChartData" [type]="doughnutChartType"
+                            [options]="chartOptions"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Estadísticas Generales</h6>
+                </div>
+                <div class="card-body">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <i class="fas fa-calendar-alt text-primary"></i>
+                            <div>
+                                <div class="stat-value">{{ modalidades.length }}</div>
+                                <div class="stat-label">Modalidades Diferentes</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-file-alt text-success"></i>
+                            <div>
+                                <div class="stat-value">{{ tiposContrato.length }}</div>
+                                <div class="stat-label">Tipos de Contrato</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-list-check text-info"></i>
+                            <div>
+                                <div class="stat-value">{{ estadosResumen.length }}</div>
+                                <div class="stat-label">Estados Registrados</div>
+                            </div>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-money-bill-wave text-warning"></i>
+                            <div>
+                                <div class="stat-value">$ {{ (kpis.promedioPrecioBase | number:'1.0-0') }}</div>
+                                <div class="stat-label">Promedio Precio Base</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="card chart-card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="fas fa-handshake me-2"></i>Top Proveedores por Valor
+                        Adjudicado</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="height: 320px;">
+                        <canvas baseChart [data]="proveedoresChartData" [type]="barChartType"
+                            [options]="proveedoresChartOptions"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="card">
+        <div class="card-header bg-white">
+            <h6 class="mb-0"><i class="fas fa-table me-2 text-primary"></i>Procesos ({{
+                procesosFiltrados.length }})
+            </h6>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Referencia</th>
+                            <th>Estado</th>
+                            <th>Modalidad</th>
+                            <th>Tipo</th>
+                            <th>Precio base</th>
+                            <th>Proveedor</th>
+                            <th>Publicación</th>
+                            <th>Últ. publicación</th>
+                            <th></th>
+                        </tr>
+                        <!-- Fila de filtros por columna -->
+                        <tr>
+                            <th>
+                                <input type="text" class="form-control form-control-sm" placeholder="Buscar..."
+                                    [(ngModel)]="columnFilters.referencia" (ngModelChange)="onColumnFilterChange()">
+                            </th>
+                            <th>
+                                <select class="form-select form-select-sm" [(ngModel)]="columnFilters.estado"
+                                    (change)="onColumnFilterChange()">
+                                    <option value="">Todos</option>
+                                    <option *ngFor="let e of estadosResumen" [value]="e">{{ e }}</option>
+                                </select>
+                            </th>
+                            <th>
+                                <select class="form-select form-select-sm" [(ngModel)]="columnFilters.modalidad"
+                                    (change)="onColumnFilterChange()">
+                                    <option value="">Todas</option>
+                                    <option *ngFor="let m of modalidades" [value]="m">{{ m }}</option>
+                                </select>
+                            </th>
+                            <th>
+                                <select class="form-select form-select-sm" [(ngModel)]="columnFilters.tipo"
+                                    (change)="onColumnFilterChange()">
+                                    <option value="">Todos</option>
+                                    <option *ngFor="let t of tiposContrato" [value]="t">{{ t }}</option>
+                                </select>
+                            </th>
+                            <th>
+                                <div class="row gx-1">
+                                    <div class="col-6"><input type="number" min="0" class="form-control form-control-sm"
+                                            placeholder="Min" [(ngModel)]="columnFilters.precioMin"
+                                            (ngModelChange)="onColumnFilterChange()"></div>
+                                    <div class="col-6"><input type="number" min="0" class="form-control form-control-sm"
+                                            placeholder="Max" [(ngModel)]="columnFilters.precioMax"
+                                            (ngModelChange)="onColumnFilterChange()"></div>
+                                </div>
+                            </th>
+                            <th>
+                                <input type="text" class="form-control form-control-sm" placeholder="Proveedor"
+                                    [(ngModel)]="columnFilters.proveedor" (ngModelChange)="onColumnFilterChange()">
+                            </th>
+                            <th>
+                                <div class="row gx-1">
+                                    <div class="col-6"><input type="date" class="form-control form-control-sm"
+                                            [(ngModel)]="columnFilters.publicacionDesde"
+                                            (change)="onColumnFilterChange()"></div>
+                                    <div class="col-6"><input type="date" class="form-control form-control-sm"
+                                            [(ngModel)]="columnFilters.publicacionHasta"
+                                            (change)="onColumnFilterChange()"></div>
+                                </div>
+                            </th>
+                            <th>
+                                <div class="row gx-1">
+                                    <div class="col-6"><input type="date" class="form-control form-control-sm"
+                                            [(ngModel)]="columnFilters.ultimaDesde" (change)="onColumnFilterChange()">
+                                    </div>
+                                    <div class="col-6"><input type="date" class="form-control form-control-sm"
+                                            [(ngModel)]="columnFilters.ultimaHasta" (change)="onColumnFilterChange()">
+                                    </div>
+                                </div>
+                            </th>
+                            <th>
+                                <button class="btn btn-sm btn-outline-secondary" (click)="clearColumnFilters()"
+                                    title="Limpiar filtros"><i class="fas fa-broom"></i></button>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let p of procesosFiltrados">
+                            <td><strong>{{ p.referencia_del_proceso }}</strong></td>
+                            <td><span class="badge" [ngClass]="getEstadoBadgeClass(p)">{{ p.estado_resumen || 'N/D'
+                                    }}</span>
+                            </td>
+                            <td>{{ p.modalidad_de_contratacion || 'N/D' }}</td>
+                            <td>{{ p.tipo_de_contrato || 'N/D' }}</td>
+                            <td>$ {{ (toNumber(p.precio_base)) | number:'1.0-0' }}</td>
+                            <td>{{ p.nombre_del_proveedor || '-' }}</td>
+                            <td><small>{{ p.fecha_de_publicacion_del | date:'dd/MM/yyyy' }}</small></td>
+                            <td><small>{{ p.fecha_de_ultima_publicaci | date:'dd/MM/yyyy' }}</small></td>
+                            <td>
+                                <a class="btn btn-sm btn-outline-primary" [href]="getProcesoUrl(p)" target="_blank"
+                                    rel="noopener noreferrer">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div *ngIf="loading" class="text-center my-4">
+        <div class="spinner-border text-primary" role="status"></div>
+        <div class="text-muted mt-2">Consultando datos de contratación...</div>
+    </div>
+
+    <div *ngIf="!loading && errorMsg" class="alert alert-warning mt-3">
+        <i class="fas fa-info-circle me-1"></i>{{ errorMsg }}
+    </div>
+
+    <div *ngIf="!loading && !errorMsg && procesosFiltrados.length === 0" class="alert alert-info mt-3">
+        <i class="fas fa-info-circle me-1"></i>
+        <strong>Sin resultados:</strong> No se encontraron procesos de contratación con los filtros
+        aplicados.
+        <div class="mt-2">
+            <small>
+                <strong>Nota:</strong> Asegúrate de que el NIT de la entidad esté correctamente
+                configurado en el
+                super
+                admin
+                y que corresponda al NIT registrado en SECOP II.
+            </small>
+        </div>
+    </div>
+</div>

@@ -2,6 +2,7 @@ export interface Entity {
     id: number;
     name: string;
     code: string;
+    nit?: string;              // NIT de la entidad para consultas SECOP
     slug: string;              // URL slug (ej: chiquiza-boyaca)
     description?: string;
     address?: string;
@@ -17,6 +18,7 @@ export interface Entity {
     enable_reports_pdf: boolean;
     enable_ai_reports: boolean;
     enable_planes_institucionales: boolean;
+    enable_contratacion: boolean;
     created_at: string;
     updated_at?: string;
 }
@@ -29,6 +31,7 @@ export interface EntityWithStats extends Entity {
 export interface CreateEntityRequest {
     name: string;
     code: string;
+    nit?: string;
     slug: string;
     description?: string;
     address?: string;
@@ -42,11 +45,13 @@ export interface CreateEntityRequest {
     enable_reports_pdf?: boolean;
     enable_ai_reports?: boolean;
     enable_planes_institucionales?: boolean;
+    enable_contratacion?: boolean;
 }
 
 export interface UpdateEntityRequest {
     name?: string;
     code?: string;
+    nit?: string;
     slug?: string;
     description?: string;
     address?: string;
@@ -61,4 +66,5 @@ export interface UpdateEntityRequest {
     enable_reports_pdf?: boolean;
     enable_ai_reports?: boolean;
     enable_planes_institucionales?: boolean;
+    enable_contratacion?: boolean;
 }

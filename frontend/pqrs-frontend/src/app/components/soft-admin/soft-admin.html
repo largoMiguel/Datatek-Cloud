@@ -110,6 +110,13 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="nit">NIT</label>
+                    <input type="text" id="nit" [(ngModel)]="newEntity.nit" name="nit" class="form-control"
+                        placeholder="Ej: 891801994">
+                    <small class="form-hint">NIT de la entidad para consultas de contratación SECOP</small>
+                </div>
+
+                <div class="form-group">
                     <label for="slug">URL Slug *</label>
                     <input type="text" id="slug" [(ngModel)]="newEntity.slug" name="slug" required class="form-control"
                         placeholder="Ej: chiquiza-boyaca">
@@ -171,6 +178,9 @@
                         Administración de Usuarios</label>
                     <label><input type="checkbox" [(ngModel)]="newEntity.enable_planes_institucionales"
                             name="enable_planes_institucionales"> Planes Institucionales</label>
+                    <label><input type="checkbox" [(ngModel)]="newEntity.enable_contratacion"
+                            name="enable_contratacion">
+                        Contratación</label>
                     <label><input type="checkbox" [(ngModel)]="newEntity.enable_reports_pdf" name="enable_reports_pdf">
                         Reportes PDF</label>
                     <label><input type="checkbox" [(ngModel)]="newEntity.enable_ai_reports" name="enable_ai_reports">
@@ -210,6 +220,13 @@
                     <label for="edit-code">Código *</label>
                     <input type="text" id="edit-code" [(ngModel)]="newEntity.code" name="code" required
                         class="form-control" placeholder="Ej: ALC-CHIQUIZA">
+                </div>
+
+                <div class="form-group">
+                    <label for="edit-nit">NIT</label>
+                    <input type="text" id="edit-nit" [(ngModel)]="newEntity.nit" name="nit" class="form-control"
+                        placeholder="Ej: 891801994">
+                    <small class="form-hint">NIT de la entidad para consultas de contratación SECOP</small>
                 </div>
 
                 <div class="form-group">
@@ -275,6 +292,9 @@
                             name="edit_enable_users_admin"> Administración de Usuarios</label>
                     <label><input type="checkbox" [(ngModel)]="newEntity.enable_planes_institucionales"
                             name="edit_enable_planes_institucionales"> Planes Institucionales</label>
+                    <label><input type="checkbox" [(ngModel)]="newEntity.enable_contratacion"
+                            name="edit_enable_contratacion">
+                        Contratación</label>
                     <label><input type="checkbox" [(ngModel)]="newEntity.enable_reports_pdf"
                             name="edit_enable_reports_pdf"> Reportes PDF</label>
                     <label><input type="checkbox" [(ngModel)]="newEntity.enable_ai_reports"

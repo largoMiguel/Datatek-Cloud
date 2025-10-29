@@ -14,6 +14,7 @@ class Entity(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(200), unique=True, index=True, nullable=False)
     code = Column(String(50), unique=True, index=True, nullable=False)  # Código único de la entidad
+    nit = Column(String(50), nullable=True, index=True)  # NIT de la entidad para consultas SECOP
     slug = Column(String(100), unique=True, index=True, nullable=False)  # URL slug (ej: chiquiza-boyaca)
     description = Column(Text, nullable=True)
     address = Column(String(300), nullable=True)
@@ -29,6 +30,8 @@ class Entity(Base):
     enable_reports_pdf = Column(Boolean, nullable=False, default=True)
     enable_ai_reports = Column(Boolean, nullable=False, default=True)
     enable_planes_institucionales = Column(Boolean, nullable=False, default=True)
+    # Nuevo módulo de Contratación (SECOP/SODA)
+    enable_contratacion = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

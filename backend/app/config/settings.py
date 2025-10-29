@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     superadmin_email: str = "superadmin@sistema.gov.co"
     superadmin_password: str = "changeMe!SuperSecure"
     
+    # Migration secret key (para endpoint de migraciones)
+    migration_secret_key: str = "change-me-in-production-migration-key-2024"
+    
     # Nota: Se removieron configuraciones de mantenimiento para producción.
     
     @property

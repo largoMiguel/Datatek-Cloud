@@ -9,7 +9,8 @@ def main():
             "ALTER TABLE entities ADD COLUMN IF NOT EXISTS enable_users_admin BOOLEAN NOT NULL DEFAULT TRUE",
             "ALTER TABLE entities ADD COLUMN IF NOT EXISTS enable_reports_pdf BOOLEAN NOT NULL DEFAULT TRUE",
             "ALTER TABLE entities ADD COLUMN IF NOT EXISTS enable_ai_reports BOOLEAN NOT NULL DEFAULT TRUE",
-            "ALTER TABLE entities ADD COLUMN IF NOT EXISTS enable_planes_institucionales BOOLEAN NOT NULL DEFAULT TRUE"
+            "ALTER TABLE entities ADD COLUMN IF NOT EXISTS enable_planes_institucionales BOOLEAN NOT NULL DEFAULT TRUE",
+            "ALTER TABLE entities ADD COLUMN IF NOT EXISTS enable_contratacion BOOLEAN NOT NULL DEFAULT TRUE"
         ]
         for sql in statements:
             try:

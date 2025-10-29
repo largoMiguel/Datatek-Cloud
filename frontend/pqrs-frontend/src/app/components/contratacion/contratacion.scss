@@ -1,0 +1,345 @@
+.contratacion-container {
+    min-height: 100vh;
+    background-color: #f8f9fa;
+
+    .kpi-card {
+        display: flex;
+        align-items: center;
+        padding: 1.25rem;
+        border-radius: 0.75rem;
+        background: #fff;
+        border: none;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        position: relative;
+
+        &.clickeable {
+            cursor: pointer;
+            border: 2px solid transparent;
+
+            .kpi-arrow {
+                position: absolute;
+                right: 1rem;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #6c757d;
+                font-size: 1.2rem;
+                transition: transform 0.2s ease, color 0.2s ease;
+            }
+
+            &:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15) !important;
+
+                .kpi-arrow {
+                    transform: translateY(-50%) translateX(4px);
+                    color: #216ba8;
+                }
+            }
+
+            &.active {
+                border-color: #216ba8;
+                box-shadow: 0 0 0 3px rgba(33, 107, 168, 0.1) !important;
+
+                .kpi-arrow {
+                    transform: translateY(-50%) rotate(90deg);
+                    color: #216ba8;
+                }
+            }
+        }
+
+        &:not(.clickeable):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        .kpi-icon {
+            width: 54px;
+            height: 54px;
+            display: grid;
+            place-items: center;
+            border-radius: 0.75rem;
+            color: #fff;
+            margin-right: 1rem;
+            font-size: 1.5rem;
+        }
+
+        .kpi-info {
+            line-height: 1.2;
+        }
+
+        .kpi-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.25rem;
+        }
+
+        .kpi-label {
+            color: #6c757d;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+    }
+
+    .kpi-primary .kpi-icon {
+        background: linear-gradient(135deg, #216ba8 0%, #1a5686 100%);
+    }
+
+    .kpi-success .kpi-icon {
+        background: linear-gradient(135deg, #28a745 0%, #20883a 100%);
+    }
+
+    .kpi-info .kpi-icon {
+        background: linear-gradient(135deg, #17a2b8 0%, #128293 100%);
+    }
+
+    .kpi-warning .kpi-icon {
+        background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+        color: #212529;
+    }
+
+    // Panel de detalle de KPI
+    .detail-item {
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        text-align: center;
+
+        .detail-label {
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .detail-value {
+            font-size: 1.5rem;
+        }
+    }
+
+    // Grid de estadísticas
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 0.5rem;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+            &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+
+            i {
+                font-size: 2rem;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+                font-weight: 700;
+                color: #216ba8;
+                line-height: 1;
+                margin-bottom: 0.25rem;
+            }
+
+            .stat-label {
+                font-size: 0.875rem;
+                color: #6c757d;
+                line-height: 1.2;
+            }
+        }
+    }
+
+    .chart-card {
+        border: none;
+        border-radius: 0.75rem;
+
+        .card-header {
+            border-radius: 0.75rem 0.75rem 0 0;
+        }
+
+        .chart-container {
+            height: 280px;
+            padding: 1rem;
+        }
+    }
+
+    .card {
+        border-radius: 0.75rem;
+        border: none;
+    }
+}
+
+// Estilos de la Navbar
+.navbar-brand-section {
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
+.entity-logo-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-radius: 10px;
+    padding: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    .entity-logo {
+        height: 50px;
+        width: auto;
+        max-width: 100px;
+        object-fit: contain;
+    }
+}
+
+.navbar-divider {
+    width: 2px;
+    height: 50px;
+    background: rgba(255, 255, 255, 0.3);
+    margin: 0 1rem;
+}
+
+.entity-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    .entity-name {
+        color: white;
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 0;
+        line-height: 1.2;
+    }
+
+    .entity-subtitle {
+        color: rgba(255, 255, 255, 0.85);
+        font-size: 0.8rem;
+        font-weight: 400;
+    }
+}
+
+.software-logo-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    .software-logo {
+        height: 35px;
+        width: auto;
+        max-width: 80px;
+        object-fit: contain;
+        background: white;
+        border-radius: 8px;
+        padding: 4px 8px;
+        margin-bottom: 4px;
+    }
+
+    .software-name {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+}
+
+.user-dropdown {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    transition: background-color 0.3s ease;
+
+    &:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .user-avatar {
+        font-size: 2rem;
+        color: white;
+        line-height: 1;
+    }
+
+    .user-info {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+
+        .user-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            line-height: 1.2;
+        }
+
+        .user-role {
+            font-size: 0.75rem;
+            opacity: 0.85;
+            line-height: 1;
+        }
+    }
+}
+
+// Responsive Navbar
+@media (max-width: 992px) {
+    .navbar-divider {
+        display: none;
+    }
+
+    .software-logo-wrapper {
+        display: none;
+    }
+
+    .entity-info {
+        .entity-name {
+            font-size: 0.95rem;
+        }
+
+        .entity-subtitle {
+            font-size: 0.7rem;
+        }
+    }
+
+    .entity-logo-wrapper {
+        .entity-logo {
+            height: 40px;
+            max-width: 80px;
+        }
+    }
+}
+
+@media (max-width: 576px) {
+    .navbar-brand-section {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .entity-info {
+        .entity-name {
+            font-size: 0.85rem;
+        }
+
+        .entity-subtitle {
+            font-size: 0.65rem;
+        }
+    }
+
+    .user-dropdown {
+        .user-info {
+            display: none;
+        }
+
+        .user-avatar {
+            font-size: 1.5rem;
+        }
+    }
+}

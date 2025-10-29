@@ -95,6 +95,11 @@
                     <i class="fas fa-clipboard-list me-2"></i>Planes Institucionales
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" *ngIf="contratacionEnabled()" routerLink="../contratacion">
+                    <i class="fas fa-file-contract me-2"></i>Contratación
+                </a>
+            </li>
             <li class="nav-item ms-auto" *ngIf="isAdmin() && reportsPdfEnabled()">
                 <button class="btn btn-success btn-sm mt-1" (click)="mostrarFormularioInforme()">
                     <i class="fas fa-file-pdf me-2"></i>Generar Informe

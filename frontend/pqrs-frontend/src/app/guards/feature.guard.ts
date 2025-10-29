@@ -53,3 +53,28 @@ export const pqrsEnabledGuard: CanActivateFn = (route, state) => {
         map(loaded => allowOrRedirect(!!loaded.enable_pqrs))
     );
 };
+
+export const contratacionEnabledGuard: CanActivateFn = (route, state) => {
+    const router = inject(Router);
+    const entityContext = inject(EntityContextService);
+
+    const slug = route.params?.['slug'] || route.parent?.params?.['slug'] || null;
+    const entity = entityContext.currentEntity;
+
+    const allowOrRedirect = (enabled: boolean): boolean | UrlTree => {
+        if (enabled) return true;
+        return router.createUrlTree(slug ? ['/', slug, 'dashboard'] : ['/']);
+    };
+
+    if (entity && (!slug || entity.slug === slug)) {
+        return allowOrRedirect(!!(entity as any).enable_contratacion);
+    }
+
+    if (!slug) {
+        return router.createUrlTree(['/']);
+    }
+
+    return entityContext.setEntityBySlug(slug).pipe(
+        map(loaded => allowOrRedirect(!!(loaded as any).enable_contratacion))
+    );
+};
