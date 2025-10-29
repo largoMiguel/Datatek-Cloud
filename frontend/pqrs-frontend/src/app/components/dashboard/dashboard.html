@@ -49,12 +49,11 @@
                             </div>
                             <div class="user-info">
                                 <span class="user-name">{{ currentUser?.full_name }}</span>
-                                <small class="user-role">{{ currentUser?.role | titlecase }}</small>
+                                <small class="user-role">{{ getUserLabel() }}</small>
                             </div>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><span class="dropdown-item-text"><i class="fas fa-id-badge me-2"></i>{{
-                                    currentUser?.role | titlecase }}</span></li>
+                <li><span class="dropdown-item-text"><i class="fas fa-id-badge me-2"></i>{{ getUserLabel() }}</span></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>

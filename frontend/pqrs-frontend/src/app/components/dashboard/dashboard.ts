@@ -1316,4 +1316,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
   canAccessContratacion(): boolean {
     return this.contratacionEnabled() && this.userHasModule('contratacion');
   }
+
+  // Etiqueta legible del usuario para la barra superior
+  getUserLabel(): string {
+    const u = this.currentUser;
+    if (!u) return '';
+    if (u.role === 'admin') return 'Admin';
+    if (u.role === 'superadmin') return 'Superadmin';
+    if (u.role === 'secretario') {
+      return u.user_type === 'contratista' ? 'Contratista' : 'Secretario';
+    }
+    if (u.role === 'ciudadano') return 'Ciudadano';
+    return String(u.role || '');
+  }
 }
