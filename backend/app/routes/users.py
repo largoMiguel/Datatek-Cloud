@@ -397,3 +397,53 @@ async def toggle_user_status(
     db.refresh(user)
     
     return user
+
+@router.patch("/users/{user_id}/modules/", response_model=UserResponse)
+async def update_user_modules(
+    user_id: int,
+    modules: List[str],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Actualizar los módulos permitidos para un usuario.
+    Solo admins y superadmins pueden modificar los módulos.
+    """
+    # Verificar permisos
+    if current_user.role not in [UserRole.ADMIN, UserRole.SUPERADMIN]:
+        raise HTTPException(status_code=403, detail="No tienes permisos para editar módulos de usuarios")
+    
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    # Admin solo puede editar usuarios de su entidad
+    if current_user.role == UserRole.ADMIN:
+        if user.entity_id != current_user.entity_id:
+            raise HTTPException(status_code=403, detail="No puedes editar usuarios de otra entidad")
+    
+    # Validar que los módulos están activos en la entidad
+    if user.entity_id:
+        entity = db.query(Entity).filter(Entity.id == user.entity_id).first()
+        if entity:
+            valid_modules = []
+            if entity.enable_pqrs:
+                valid_modules.append("pqrs")
+            if entity.enable_planes_institucionales:
+                valid_modules.append("planes_institucionales")
+            if entity.enable_contratacion:
+                valid_modules.append("contratacion")
+            
+            for module in modules:
+                if module not in valid_modules:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"El módulo '{module}' no está activo en esta entidad"
+                    )
+    
+    # Actualizar los módulos
+    user.allowed_modules = modules
+    db.commit()
+    db.refresh(user)
+    
+    return user

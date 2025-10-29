@@ -824,8 +824,14 @@ export class PlanesInstitucionalesComponent implements OnInit, OnDestroy {
     }
 
     canGenerateReport(): boolean {
-        // Tanto admin como secretario pueden generar informes
-        return this.isAdmin() || this.isSecretario();
+        // Tanto admin como secretario pueden generar informes, y la entidad debe tener habilitado el módulo
+        const hasPermission = this.isAdmin() || this.isSecretario();
+        const entityAllows = this.entityContextService.currentEntity?.enable_reports_pdf ?? false;
+        return hasPermission && entityAllows;
+    }
+
+    get entity() {
+        return this.entityContextService.currentEntity;
     }
 
     // Exponer Object para el template

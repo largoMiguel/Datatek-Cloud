@@ -171,6 +171,7 @@
                         <i class="fas fa-file-csv me-1"></i>Exportar CSV
                     </button>
                     <button class="btn btn-primary btn-sm me-2" (click)="abrirModalInforme()"
+                        *ngIf="entity?.enable_reports_pdf"
                         [disabled]="loading || !procesosFiltrados.length || generatingPdf">
                         <i class="fas fa-file-pdf me-1" [class.fa-spin]="generatingPdf"></i>
                         Generar Informe
@@ -600,7 +601,7 @@
                     </small>
                 </div>
 
-                <div class="form-check mb-3">
+                <div class="form-check mb-3" *ngIf="entity?.enable_ai_reports">
                     <input class="form-check-input" type="checkbox" id="incluirIA" [(ngModel)]="incluirResumenIA">
                     <label class="form-check-label" for="incluirIA">
                         <i class="fas fa-magic me-1 text-primary"></i>

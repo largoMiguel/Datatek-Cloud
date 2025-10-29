@@ -545,6 +545,10 @@ export class ContratacionComponent implements OnInit, OnDestroy {
         this.router.navigate([`/${this.entityContext.currentEntity?.slug}/login`]);
     }
 
+    get entity() {
+        return this.entityContext.currentEntity;
+    }
+
     pqrsEnabled(): boolean {
         return this.entityContext.currentEntity?.enable_pqrs ?? false;
     }

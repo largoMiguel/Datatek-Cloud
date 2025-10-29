@@ -43,4 +43,8 @@ export class UserService {
     changeUserPassword(id: number, newPassword: string): Observable<{ message: string }> {
         return this.http.post<{ message: string }>(`${this.baseUrl}${id}/change-password/`, { new_password: newPassword });
     }
+
+    updateUserModules(id: number, modules: string[]): Observable<User> {
+        return this.http.patch<User>(`${this.baseUrl}${id}/modules/`, modules);
+    }
 }

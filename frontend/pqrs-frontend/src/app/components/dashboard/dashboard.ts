@@ -86,6 +86,16 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   };
 
+  // Modal de edición de módulos
+  mostrarModalModulos = false;
+  usuarioEditandoModulos: User | null = null;
+  modulosSeleccionados = {
+    pqrs: false,
+    planes_institucionales: false,
+    contratacion: false
+  };
+  guardandoModulos = false;
+
   constructor(
     private authService: AuthService,
     private pqrsService: PqrsService,
@@ -1329,4 +1339,64 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (u.role === 'ciudadano') return 'Ciudadano';
     return String(u.role || '');
   }
+
+  // Getter para acceso fácil a la entidad
+  get entity() {
+    return this.entityContext.currentEntity;
+  }
+
+  // Gestión de módulos
+  abrirModalModulos(usuario: User): void {
+    this.usuarioEditandoModulos = usuario;
+    // Inicializar checkboxes según los módulos actuales del usuario
+    this.modulosSeleccionados = {
+      pqrs: usuario.allowed_modules?.includes('pqrs') || false,
+      planes_institucionales: usuario.allowed_modules?.includes('planes_institucionales') || false,
+      contratacion: usuario.allowed_modules?.includes('contratacion') || false
+    };
+    this.mostrarModalModulos = true;
+  }
+
+  cerrarModalModulos(): void {
+    this.mostrarModalModulos = false;
+    this.usuarioEditandoModulos = null;
+    this.guardandoModulos = false;
+  }
+
+  async guardarModulos(): Promise<void> {
+    if (!this.usuarioEditandoModulos) return;
+
+    this.guardandoModulos = true;
+
+    // Construir array de módulos seleccionados
+    const modules: string[] = [];
+    if (this.modulosSeleccionados.pqrs) modules.push('pqrs');
+    if (this.modulosSeleccionados.planes_institucionales) modules.push('planes_institucionales');
+    if (this.modulosSeleccionados.contratacion) modules.push('contratacion');
+
+    try {
+      const updated = await this.userService.updateUserModules(this.usuarioEditandoModulos.id!, modules).toPromise();
+
+      // Actualizar en la lista local
+      const index = this.usuariosList.findIndex(u => u.id === this.usuarioEditandoModulos!.id);
+      if (index !== -1 && updated) {
+        this.usuariosList[index] = updated;
+      }
+
+      this.alertService.success(
+        'Módulos actualizados',
+        `Los módulos de ${this.usuarioEditandoModulos.full_name} han sido actualizados correctamente.`
+      );
+
+      this.cerrarModalModulos();
+    } catch (error: any) {
+      console.error('Error al actualizar módulos:', error);
+      this.alertService.error(
+        'Error al actualizar módulos',
+        error.error?.detail || 'No se pudieron actualizar los módulos del usuario.'
+      );
+      this.guardandoModulos = false;
+    }
+  }
 }
+
