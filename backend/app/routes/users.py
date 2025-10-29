@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.config.database import get_db
-from app.models.user import User, UserRole
+from app.models.user import User, UserRole, UserType
 from app.models.entity import Entity
 from app.schemas.user import UserCreate, UserUpdate, UserResponse, ChangePasswordRequest
 from app.utils.auth import (
@@ -162,6 +162,18 @@ async def create_user(
     # Crear el hash de la contraseña
     hashed_password = get_password_hash(user_data.password)
     
+    # Normalizar y validar user_type (acepta Enum o string), guardar en minúsculas
+    normalized_user_type = None
+    if user_data.user_type is not None:
+        if isinstance(user_data.user_type, UserType):
+            normalized_user_type = user_data.user_type.value  # 'secretario' | 'contratista'
+        else:
+            # Puede venir como string, normalizar
+            ut_str = str(user_data.user_type).strip().lower()
+            if ut_str not in {UserType.SECRETARIO.value, UserType.CONTRATISTA.value}:
+                raise HTTPException(status_code=400, detail="user_type inválido (use 'secretario' o 'contratista')")
+            normalized_user_type = ut_str
+
     # Crear el usuario
     db_user = User(
         username=user_data.username,
@@ -170,7 +182,7 @@ async def create_user(
         hashed_password=hashed_password,
         role=user_data.role,
         entity_id=user_data.entity_id,
-        user_type=user_data.user_type,
+        user_type=normalized_user_type,
         allowed_modules=user_data.allowed_modules or [],
         secretaria=user_data.secretaria,
         is_active=True
@@ -265,6 +277,19 @@ async def update_user(
     if current_user.role == UserRole.ADMIN and "entity_id" in update_data:
         if update_data["entity_id"] != current_user.entity_id:
             raise HTTPException(status_code=403, detail="No puedes mover usuarios a otra entidad")
+
+    # Normalizar user_type si viene en la actualización
+    if "user_type" in update_data:
+        raw_ut = update_data["user_type"]
+        if raw_ut is None:
+            update_data["user_type"] = None
+        elif isinstance(raw_ut, UserType):
+            update_data["user_type"] = raw_ut.value
+        else:
+            ut_str = str(raw_ut).strip().lower()
+            if ut_str not in {UserType.SECRETARIO.value, UserType.CONTRATISTA.value}:
+                raise HTTPException(status_code=400, detail="user_type inválido (use 'secretario' o 'contratista')")
+            update_data["user_type"] = ut_str
 
     # Aplicar las actualizaciones
     for field, value in update_data.items():
