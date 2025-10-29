@@ -6,8 +6,14 @@
             <ng-container *ngIf="(entityContext.currentEntity$ | async) as entity; else defaultBrand">
                 <!-- Logo de la Entidad -->
                 <div class="entity-logo-wrapper">
-                    <img [src]="entity.logo_url || 'assets/logos/logo_icono.png'" [alt]="entity.name"
-                        class="entity-logo me-3">
+                    <ng-container *ngIf="entity.logo_url; else entityLogoFallback">
+                        <img [src]="entity.logo_url" [alt]="entity.name" class="entity-logo me-3">
+                    </ng-container>
+                    <ng-template #entityLogoFallback>
+                        <div class="entity-placeholder me-3" title="Entidad">
+                            <i class="fas fa-landmark"></i>
+                        </div>
+                    </ng-template>
                 </div>
                 <!-- Separador Vertical -->
                 <div class="navbar-divider"></div>
@@ -15,6 +21,13 @@
                 <div class="entity-info me-3">
                     <h6 class="entity-name mb-0">{{ entity.name }}</h6>
                     <small class="entity-subtitle">Portal Administrativo</small>
+                </div>
+                <!-- Separador Vertical -->
+                <div class="navbar-divider"></div>
+                <!-- Logo del Software (solo con entidad para evitar duplicados) -->
+                <div class="software-logo-wrapper">
+                    <img src="assets/logos/logo_icono.png" alt="SoftOne360" class="software-logo">
+                    <small class="software-name">SoftOne360</small>
                 </div>
             </ng-container>
             <ng-template #defaultBrand>
@@ -27,13 +40,7 @@
                     <small class="entity-subtitle">Portal Administrativo</small>
                 </div>
             </ng-template>
-            <!-- Separador Vertical -->
-            <div class="navbar-divider"></div>
-            <!-- Logo del Software -->
-            <div class="software-logo-wrapper">
-                <img src="assets/logos/logo_icono.png" alt="SoftOne360" class="software-logo">
-                <small class="software-name">SoftOne360</small>
-            </div>
+            <!-- En modo defaultBrand NO mostramos el logo de software para evitar duplicar íconos -->
         </div>
 
         <!-- Usuario y Acciones -->
