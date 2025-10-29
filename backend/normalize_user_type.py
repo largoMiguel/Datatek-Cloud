@@ -19,6 +19,7 @@ def normalize_user_types():
     
     # Crear engine de base de datos
     engine = create_engine(settings.database_url)
+    is_sqlite = 'sqlite' in settings.database_url.lower()
     
     try:
         with engine.connect() as conn:
@@ -26,14 +27,22 @@ def normalize_user_types():
             trans = conn.begin()
             
             try:
-                # Verificar si la columna existe
-                result = conn.execute(text("""
-                    SELECT column_name 
-                    FROM information_schema.columns 
-                    WHERE table_name='users' AND column_name='user_type'
-                """))
+                # Verificar si la columna existe (compatible con SQLite y PostgreSQL)
+                if is_sqlite:
+                    # SQLite: usar PRAGMA
+                    result = conn.execute(text("PRAGMA table_info(users)"))
+                    columns = [row[1] for row in result.fetchall()]
+                    column_exists = 'user_type' in columns
+                else:
+                    # PostgreSQL: usar information_schema
+                    result = conn.execute(text("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name='users' AND column_name='user_type'
+                    """))
+                    column_exists = result.fetchone() is not None
                 
-                if not result.fetchone():
+                if not column_exists:
                     print("⚠️  La columna 'user_type' no existe en la tabla 'users'")
                     print("   Ejecuta primero la migración: POST /api/migrations/run")
                     return
