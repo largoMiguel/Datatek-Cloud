@@ -40,7 +40,12 @@ class User(Base):
     
     # Tipo de usuario (para diferenciar secretarios de contratistas)
     user_type = Column(
-        Enum(UserType, name="usertype", native_enum=False),
+        Enum(
+            UserType,
+            name="usertype",
+            native_enum=False,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls]  # usa valores en minúsculas
+        ),
         nullable=True  # NULL para ciudadanos y admins
     )
     
