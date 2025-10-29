@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Enum, Boolean, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.config.database import Base
@@ -9,6 +9,10 @@ class UserRole(enum.Enum):
     ADMIN = "admin"  # Administrador de entidad
     SECRETARIO = "secretario"  # Secretario de entidad
     CIUDADANO = "ciudadano"  # Ciudadano
+
+class UserType(enum.Enum):
+    SECRETARIO = "secretario"  # Personal de planta
+    CONTRATISTA = "contratista"  # Personal contratado
 
 class User(Base):
     __tablename__ = "users"
@@ -33,6 +37,16 @@ class User(Base):
     # Relación con entidad (solo para ADMIN y SECRETARIO)
     entity_id = Column(Integer, ForeignKey("entities.id", ondelete="CASCADE"), nullable=True)
     entity = relationship("Entity", back_populates="users")
+    
+    # Tipo de usuario (para diferenciar secretarios de contratistas)
+    user_type = Column(
+        Enum(UserType, name="usertype", native_enum=False),
+        nullable=True  # NULL para ciudadanos y admins
+    )
+    
+    # Módulos permitidos para este usuario (JSON array de strings)
+    # Ejemplo: ["pqrs", "planes_institucionales", "contratacion"]
+    allowed_modules = Column(JSON, nullable=True, default=list)
     
     # Campos legacy (mantener por compatibilidad)
     secretaria = Column(String, nullable=True)  # Secretaría a la que pertenece (legacy)

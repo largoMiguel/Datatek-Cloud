@@ -163,6 +163,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
       username: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
       secretaria: [''],
+      user_type: ['', Validators.required],
+      module_pqrs: [false],
+      module_planes: [false],
+      module_contratacion: [false],
       password: ['', [Validators.required, Validators.minLength(6)]],
       password_confirm: ['', Validators.required]
     }, { validators: this.passwordMatchValidator });
@@ -615,23 +619,30 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   onSubmitNuevoSecretario() {
-    if (this.nuevoSecretarioForm.valid && !this.isSubmitting) {
+    if (this.nuevoSecretarioForm.valid && !this.isSubmitting && this.hasAnyModuleSelected()) {
       this.isSubmitting = true;
 
-      const { password_confirm, ...userData } = this.nuevoSecretarioForm.value;
+      const { password_confirm, module_pqrs, module_planes, module_contratacion, ...userData } = this.nuevoSecretarioForm.value;
 
-      // Agregar el rol de secretario
+      // Construir array de módulos permitidos
+      const allowed_modules: string[] = [];
+      if (module_pqrs) allowed_modules.push('pqrs');
+      if (module_planes) allowed_modules.push('planes_institucionales');
+      if (module_contratacion) allowed_modules.push('contratacion');
+
+      // Agregar el rol de secretario y los módulos
       const createData = {
         ...userData,
-        role: 'secretario'
+        role: 'secretario',
+        allowed_modules
       };
 
       this.userService.createUser(createData).subscribe({
         next: (response) => {
-          // console.log('Secretario creado exitosamente:', response);
+          const tipoLabel = userData.user_type === 'secretario' ? 'Secretario' : 'Contratista';
           this.alertService.success(
-            `El secretario ${userData.full_name} ha sido creado exitosamente.\n\nUsuario: ${userData.username}\nEstá activo y listo para recibir asignaciones.`,
-            'Secretario Creado'
+            `El ${tipoLabel.toLowerCase()} ${userData.full_name} ha sido creado exitosamente.\n\nUsuario: ${userData.username}\nMódulos: ${allowed_modules.map(m => this.getModuleName(m)).join(', ')}`,
+            `${tipoLabel} Creado`
           );
           this.nuevoSecretarioForm.reset();
           this.isSubmitting = false;
@@ -639,10 +650,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.loadUsuarios();
         },
         error: (error) => {
-          // console.error('Error creando secretario:', error);
           this.alertService.error(
-            error.error?.message || 'No se pudo crear el secretario. Verifica que el usuario y email no existan.',
-            'Error al Crear Secretario'
+            error.error?.detail || 'No se pudo crear el usuario. Verifica que el usuario y email no existan.',
+            'Error al Crear Usuario'
           );
           this.isSubmitting = false;
         }
@@ -1261,5 +1271,49 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   contratacionEnabled(): boolean {
     return (this.entityContext.currentEntity as any)?.enable_contratacion ?? false;
+  }
+
+  // Métodos auxiliares para gestión de usuarios
+  hasAnyModuleSelected(): boolean {
+    const form = this.nuevoSecretarioForm;
+    return form.get('module_pqrs')?.value ||
+      form.get('module_planes')?.value ||
+      form.get('module_contratacion')?.value;
+  }
+
+  getModuleName(module: string): string {
+    const names: Record<string, string> = {
+      'pqrs': 'PQRS',
+      'planes_institucionales': 'Planes',
+      'contratacion': 'Contratación'
+    };
+    return names[module] || module;
+  }
+
+  // Verificar si el usuario tiene acceso a un módulo específico
+  userHasModule(moduleName: string): boolean {
+    // Admin siempre tiene acceso a todo
+    if (this.isAdmin()) return true;
+
+    // Si no tiene allowed_modules definido, tiene acceso a todo (comportamiento legacy)
+    if (!this.currentUser?.allowed_modules || this.currentUser.allowed_modules.length === 0) {
+      return true;
+    }
+
+    // Verificar si el módulo está en la lista de permitidos
+    return this.currentUser.allowed_modules.includes(moduleName);
+  }
+
+  // Verificar si el módulo está activo Y el usuario tiene permiso
+  canAccessPqrs(): boolean {
+    return this.pqrsEnabled() && this.userHasModule('pqrs');
+  }
+
+  canAccessPlanes(): boolean {
+    return this.planesEnabled() && this.userHasModule('planes_institucionales');
+  }
+
+  canAccessContratacion(): boolean {
+    return this.contratacionEnabled() && this.userHasModule('contratacion');
   }
 }

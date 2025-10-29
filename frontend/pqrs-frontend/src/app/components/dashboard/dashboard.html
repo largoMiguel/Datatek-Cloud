@@ -74,13 +74,13 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" *ngIf="pqrsEnabled()" [class.active]="activeView === 'mis-pqrs'"
+                <a class="nav-link" *ngIf="canAccessPqrs()" [class.active]="activeView === 'mis-pqrs'"
                     (click)="setActiveView('mis-pqrs')">
                     <i class="fas fa-list me-2"></i>Mis PQRS
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" *ngIf="pqrsEnabled()" [class.active]="activeView === 'nueva-pqrs'"
+                <a class="nav-link" *ngIf="canAccessPqrs()" [class.active]="activeView === 'nueva-pqrs'"
                     (click)="setActiveView('nueva-pqrs')">
                     <i class="fas fa-plus me-2"></i>Nueva PQRS
                 </a>
@@ -91,12 +91,12 @@
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" *ngIf="planesEnabled()" routerLink="../planes-institucionales">
+                <a class="nav-link" *ngIf="canAccessPlanes()" routerLink="../planes-institucionales">
                     <i class="fas fa-clipboard-list me-2"></i>Planes Institucionales
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" *ngIf="contratacionEnabled()" routerLink="../contratacion">
+                <a class="nav-link" *ngIf="canAccessContratacion()" routerLink="../contratacion">
                     <i class="fas fa-file-contract me-2"></i>Contratación
                 </a>
             </li>
@@ -200,7 +200,7 @@
         </div>
 
         <!-- Dashboard View -->
-        <div *ngIf="activeView === 'dashboard' && pqrsEnabled()">
+        <div *ngIf="activeView === 'dashboard' && canAccessPqrs()">
             <!-- Header -->
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3 class="mb-0 fw-bold"><i class="fas fa-chart-line me-2 text-primary"></i>Análisis del Panel</h3>
@@ -426,15 +426,15 @@
         </div>
 
         <!-- Estado cuando PQRS está desactivado -->
-        <div *ngIf="activeView === 'dashboard' && !pqrsEnabled()" class="card">
+        <div *ngIf="activeView === 'dashboard' && !canAccessPqrs()" class="card">
             <div class="card-body text-center text-muted">
                 <i class="fas fa-ban fa-2x mb-2"></i>
-                <p>El módulo de PQRS está desactivado para esta entidad.</p>
+                <p>El módulo de PQRS está desactivado para esta entidad o no tienes permisos para acceder.</p>
             </div>
         </div>
 
         <!-- Mis PQRS View -->
-        <div *ngIf="activeView === 'mis-pqrs' && pqrsEnabled()">
+        <div *ngIf="activeView === 'mis-pqrs' && canAccessPqrs()">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="mb-0"><i class="fas fa-list me-2"></i>Mis PQRS</h5>
                 <button class="btn btn-primary btn-sm" (click)="setActiveView('nueva-pqrs')"><i
@@ -606,7 +606,7 @@
         </div>
 
         <!-- Nueva PQRS View -->
-        <div *ngIf="activeView === 'nueva-pqrs' && pqrsEnabled()">
+        <div *ngIf="activeView === 'nueva-pqrs' && canAccessPqrs()">
             <div class="card">
                 <div class="card-body">
                     <form [formGroup]="nuevaPqrsForm" (ngSubmit)="onSubmitNuevaPqrs()">
@@ -793,7 +793,7 @@
                     <h5 class="mb-0"><i class="fas fa-users me-2"></i>Gestión de Usuarios</h5>
                     <div>
                         <button class="btn btn-success btn-sm me-2" (click)="setActiveView('crear-secretario')">
-                            <i class="fas fa-user-plus me-1"></i>Nuevo Secretario
+                            <i class="fas fa-user-plus me-1"></i>Nuevo Usuario
                         </button>
                         <button class="btn btn-primary btn-sm" (click)="loadUsuarios()"><i
                                 class="fas fa-sync me-1"></i>Actualizar</button>
@@ -815,6 +815,8 @@
                                     <th>Usuario</th>
                                     <th>Email</th>
                                     <th>Rol</th>
+                                    <th>Tipo</th>
+                                    <th>Módulos</th>
                                     <th>Estado</th>
                                     <th>Acciones</th>
                                 </tr>
@@ -827,6 +829,28 @@
                                     <td><span
                                             [ngClass]="'badge bg-' + (usuario.role === 'admin' ? 'primary' : 'secondary')">{{
                                             usuario.role | titlecase }}</span></td>
+                                    <td>
+                                        <span *ngIf="usuario.user_type" class="badge bg-info">
+                                            {{ usuario.user_type | titlecase }}
+                                        </span>
+                                        <span *ngIf="!usuario.user_type" class="text-muted">-</span>
+                                    </td>
+                                    <td>
+                                        <div *ngIf="usuario.allowed_modules && usuario.allowed_modules.length > 0"
+                                            class="d-flex flex-wrap gap-1">
+                                            <span *ngFor="let module of usuario.allowed_modules"
+                                                class="badge bg-light text-dark border" style="font-size: 0.7rem;">
+                                                <i class="fas" [ngClass]="{
+                                                    'fa-inbox': module === 'pqrs',
+                                                    'fa-tasks': module === 'planes_institucionales',
+                                                    'fa-file-contract': module === 'contratacion'
+                                                }"></i>
+                                                {{ getModuleName(module) }}
+                                            </span>
+                                        </div>
+                                        <span *ngIf="!usuario.allowed_modules || usuario.allowed_modules.length === 0"
+                                            class="text-muted">Todos</span>
+                                    </td>
                                     <td><span [ngClass]="usuario.is_active ? 'badge bg-success' : 'badge bg-danger'">{{
                                             usuario.is_active ? 'Activo' : 'Inactivo' }}</span></td>
                                     <td>
@@ -857,7 +881,7 @@
                 <div class="card-header bg-success text-white">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">
-                            <i class="fas fa-user-plus me-2"></i>Crear Nuevo Secretario
+                            <i class="fas fa-user-plus me-2"></i>Crear Nuevo Usuario
                         </h5>
                         <button class="btn btn-light btn-sm" (click)="setActiveView('usuarios')">
                             <i class="fas fa-times me-1"></i>Cancelar
@@ -924,6 +948,58 @@
                             </div>
 
                             <div class="col-md-6 mb-3">
+                                <label for="user_type" class="form-label">
+                                    <i class="fas fa-id-badge me-1 text-success"></i>Tipo de Usuario *
+                                </label>
+                                <select class="form-select" id="user_type" formControlName="user_type" required>
+                                    <option value="">Seleccione...</option>
+                                    <option value="secretario">Secretario</option>
+                                    <option value="contratista">Contratista</option>
+                                </select>
+                                <div class="text-danger small mt-1"
+                                    *ngIf="nuevoSecretarioForm.get('user_type')?.invalid && nuevoSecretarioForm.get('user_type')?.touched">
+                                    Debe seleccionar un tipo de usuario
+                                </div>
+                            </div>
+
+                            <div class="col-12 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-th-large me-1 text-success"></i>Módulos Permitidos *
+                                </label>
+                                <div class="alert alert-light border">
+                                    <div class="form-check" *ngIf="pqrsEnabled()">
+                                        <input class="form-check-input" type="checkbox" value="pqrs" id="module_pqrs"
+                                            formControlName="module_pqrs">
+                                        <label class="form-check-label" for="module_pqrs">
+                                            <i class="fas fa-inbox me-1 text-primary"></i>
+                                            <strong>PQRS</strong> - Gestión de Peticiones, Quejas, Reclamos y
+                                            Sugerencias
+                                        </label>
+                                    </div>
+                                    <div class="form-check mt-2" *ngIf="planesEnabled()">
+                                        <input class="form-check-input" type="checkbox" value="planes_institucionales"
+                                            id="module_planes" formControlName="module_planes">
+                                        <label class="form-check-label" for="module_planes">
+                                            <i class="fas fa-tasks me-1 text-success"></i>
+                                            <strong>Planes Institucionales</strong> - Gestión de objetivos e indicadores
+                                        </label>
+                                    </div>
+                                    <div class="form-check mt-2" *ngIf="contratacionEnabled()">
+                                        <input class="form-check-input" type="checkbox" value="contratacion"
+                                            id="module_contratacion" formControlName="module_contratacion">
+                                        <label class="form-check-label" for="module_contratacion">
+                                            <i class="fas fa-file-contract me-1 text-warning"></i>
+                                            <strong>Contratación</strong> - Consulta y análisis SECOP II
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="text-danger small"
+                                    *ngIf="!hasAnyModuleSelected() && nuevoSecretarioForm.get('user_type')?.touched">
+                                    Debe seleccionar al menos un módulo
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
                                 <label for="password" class="form-label">
                                     <i class="fas fa-lock me-1 text-success"></i>Contraseña *
                                 </label>
@@ -950,8 +1026,9 @@
 
                         <div class="alert alert-info mt-3">
                             <i class="fas fa-info-circle me-2"></i>
-                            <strong>Nota:</strong> Se creará un usuario con rol de "Secretario" que podrá gestionar las
-                            PQRS asignadas a su secretaría.
+                            <strong>Nota:</strong> Este usuario podrá gestionar únicamente los módulos que se le
+                            asignen.
+                            Los módulos disponibles dependen de la configuración de la entidad.
                         </div>
 
                         <div class="d-flex justify-content-between mt-4">
@@ -959,10 +1036,10 @@
                                 <i class="fas fa-arrow-left me-1"></i>Volver
                             </button>
                             <button type="submit" class="btn btn-success"
-                                [disabled]="nuevoSecretarioForm.invalid || isSubmitting">
+                                [disabled]="nuevoSecretarioForm.invalid || isSubmitting || !hasAnyModuleSelected()">
                                 <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-2"></span>
                                 <i *ngIf="!isSubmitting" class="fas fa-save me-1"></i>
-                                {{ isSubmitting ? 'Creando...' : 'Crear Secretario' }}
+                                {{ isSubmitting ? 'Creando...' : 'Crear Usuario' }}
                             </button>
                         </div>
                     </form>

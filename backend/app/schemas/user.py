@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
-from app.models.user import UserRole
+from app.models.user import UserRole, UserType
 
 # Esquemas base
 class UserBase(BaseModel):
@@ -10,6 +10,8 @@ class UserBase(BaseModel):
     full_name: str
     role: UserRole
     entity_id: Optional[int] = None  # ID de la entidad a la que pertenece
+    user_type: Optional[UserType] = None  # Tipo: secretario o contratista
+    allowed_modules: Optional[List[str]] = None  # Módulos permitidos: ["pqrs", "planes_institucionales", "contratacion"]
     secretaria: Optional[str] = None  # Legacy, mantener por compatibilidad
     cedula: Optional[str] = None
     telefono: Optional[str] = None
@@ -24,6 +26,8 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     role: Optional[UserRole] = None
     entity_id: Optional[int] = None
+    user_type: Optional[UserType] = None
+    allowed_modules: Optional[List[str]] = None
     secretaria: Optional[str] = None
     cedula: Optional[str] = None
     telefono: Optional[str] = None

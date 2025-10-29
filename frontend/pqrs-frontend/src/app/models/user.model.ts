@@ -5,7 +5,9 @@ export interface User {
     full_name: string;
     role: 'superadmin' | 'admin' | 'secretario' | 'ciudadano';
     is_active?: boolean;
-    entity_id?: number;  // Nueva: ID de la entidad a la que pertenece
+    entity_id?: number;  // ID de la entidad a la que pertenece
+    user_type?: 'secretario' | 'contratista' | null;  // Tipo de usuario (para secretarios/contratistas)
+    allowed_modules?: string[];  // Módulos permitidos: ["pqrs", "planes_institucionales", "contratacion"]
     secretaria?: string;
     cedula?: string;
     telefono?: string;
@@ -31,6 +33,8 @@ export interface CreateUserRequest {
     full_name: string;
     role: 'superadmin' | 'admin' | 'secretario' | 'ciudadano';
     entity_id?: number;
+    user_type?: 'secretario' | 'contratista' | null;
+    allowed_modules?: string[];
     secretaria?: string;
     cedula?: string;
     telefono?: string;

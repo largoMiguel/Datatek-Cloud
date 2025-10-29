@@ -34,6 +34,7 @@ def run_migrations(
     Ejecuta las migraciones pendientes relacionadas con:
     - Campo NIT en entities (para consultas SECOP II)
     - Flag enable_contratacion en entities
+    - Permisos modulares: user_type y allowed_modules en users
     """
     try:
         migrations_applied = []
@@ -74,6 +75,45 @@ def run_migrations(
         else:
             migrations_applied.append("ℹ️ Columna 'enable_contratacion' ya existe en entities")
 
+        # ====== MIGRACIONES PARA PERMISOS MODULARES ======
+        
+        # Verificar que exista la tabla users
+        if not inspector.has_table("users"):
+            raise HTTPException(status_code=500, detail="La tabla 'users' no existe. Ejecuta migraciones base primero.")
+
+        users_cols = {c["name"] for c in inspector.get_columns("users")}
+
+        # 3) Agregar columna 'user_type' si falta
+        if "user_type" not in users_cols:
+            if is_postgres:
+                # Crear ENUM type si no existe
+                db.execute(text("""
+                    DO $$ BEGIN
+                        CREATE TYPE usertype AS ENUM ('secretario', 'contratista');
+                    EXCEPTION
+                        WHEN duplicate_object THEN null;
+                    END $$;
+                """))
+                db.execute(text("ALTER TABLE users ADD COLUMN user_type usertype"))
+            else:
+                # SQLite: usar VARCHAR
+                db.execute(text("ALTER TABLE users ADD COLUMN user_type VARCHAR(20)"))
+            migrations_applied.append("🆕 Agregada columna 'user_type' en users (secretario/contratista)")
+        else:
+            migrations_applied.append("ℹ️ Columna 'user_type' ya existe en users")
+
+        # 4) Agregar columna 'allowed_modules' si falta
+        if "allowed_modules" not in users_cols:
+            if is_postgres:
+                # PostgreSQL: usar JSON o JSONB
+                db.execute(text("ALTER TABLE users ADD COLUMN allowed_modules JSON"))
+            else:
+                # SQLite: usar TEXT para almacenar JSON
+                db.execute(text("ALTER TABLE users ADD COLUMN allowed_modules TEXT"))
+            migrations_applied.append("🆕 Agregada columna 'allowed_modules' en users (array JSON de módulos)")
+        else:
+            migrations_applied.append("ℹ️ Columna 'allowed_modules' ya existe en users")
+
         # Commit de cambios
         db.commit()
 
@@ -82,7 +122,7 @@ def run_migrations(
             "status": "success",
             "message": "Migraciones ejecutadas correctamente",
             "migrations": migrations_applied,
-            "details": "Migraciones para NIT y enable_contratacion aplicadas (si estaban pendientes)."
+            "details": "Migraciones aplicadas: NIT, enable_contratacion, user_type y allowed_modules (si estaban pendientes)."
         }
 
     except Exception as e:
@@ -106,11 +146,12 @@ def migration_status(
         status_info = {
             "database_connection": "✅ Conectado",
             "pending_migrations": [],
-            "last_migration": "NIT y enable_contratacion",
+            "last_migration": "Permisos modulares (user_type y allowed_modules)",
             "notes": [
                 "El módulo de Contratación usa SECOP II (API externa)",
                 "Se requiere el campo 'nit' en entities para consultar por NIT",
-                "'enable_contratacion' controla la visibilidad del módulo"
+                "'enable_contratacion' controla la visibilidad del módulo",
+                "Permisos modulares: asignar módulos específicos por usuario (secretario/contratista)"
             ]
         }
 
@@ -136,6 +177,27 @@ def migration_status(
         else:
             status_info["enable_contratacion_field"] = "⚠️ Campo 'enable_contratacion' no encontrado - se requiere migración"
             status_info["pending_migrations"].append("add_enable_contratacion_flag")
+
+        # Comprobar tabla users
+        if inspector.has_table("users"):
+            users_cols = {c["name"] for c in inspector.get_columns("users")}
+            
+            # Comprobar 'user_type'
+            if "user_type" in users_cols:
+                status_info["user_type_field"] = "✅ Campo 'user_type' existe en tabla users"
+            else:
+                status_info["user_type_field"] = "⚠️ Campo 'user_type' no encontrado - se requiere migración"
+                status_info["pending_migrations"].append("add_user_type_column")
+
+            # Comprobar 'allowed_modules'
+            if "allowed_modules" in users_cols:
+                status_info["allowed_modules_field"] = "✅ Campo 'allowed_modules' existe en tabla users"
+            else:
+                status_info["allowed_modules_field"] = "⚠️ Campo 'allowed_modules' no encontrado - se requiere migración"
+                status_info["pending_migrations"].append("add_allowed_modules_column")
+        else:
+            status_info["users_table"] = "⚠️ Tabla 'users' no encontrada"
+            status_info["pending_migrations"].append("create_users_table")
 
         return status_info
 

@@ -130,6 +130,24 @@ async def create_user(
             raise HTTPException(status_code=400, detail="La entidad especificada no existe")
         if not entity.is_active:
             raise HTTPException(status_code=400, detail="La entidad está inactiva")
+        
+        # Validar que los módulos asignados están activos en la entidad
+        if user_data.allowed_modules:
+            valid_modules = []
+            if entity.enable_pqrs:
+                valid_modules.append("pqrs")
+            if entity.enable_planes_institucionales:
+                valid_modules.append("planes_institucionales")
+            if entity.enable_contratacion:
+                valid_modules.append("contratacion")
+            
+            # Verificar que todos los módulos solicitados están activos
+            for module in user_data.allowed_modules:
+                if module not in valid_modules:
+                    raise HTTPException(
+                        status_code=400, 
+                        detail=f"El módulo '{module}' no está activo en esta entidad"
+                    )
     
     # Verificar si el username ya existe
     existing_user = db.query(User).filter(User.username == user_data.username).first()
@@ -152,6 +170,8 @@ async def create_user(
         hashed_password=hashed_password,
         role=user_data.role,
         entity_id=user_data.entity_id,
+        user_type=user_data.user_type,
+        allowed_modules=user_data.allowed_modules or [],
         secretaria=user_data.secretaria,
         is_active=True
     )
@@ -197,6 +217,25 @@ async def update_user(
     # Si se proporciona una nueva contraseña, hashearla
     if "password" in update_data:
         update_data["hashed_password"] = get_password_hash(update_data.pop("password"))
+    
+    # Validar módulos permitidos si se actualizan
+    if "allowed_modules" in update_data and user.entity_id:
+        entity = db.query(Entity).filter(Entity.id == user.entity_id).first()
+        if entity:
+            valid_modules = []
+            if entity.enable_pqrs:
+                valid_modules.append("pqrs")
+            if entity.enable_planes_institucionales:
+                valid_modules.append("planes_institucionales")
+            if entity.enable_contratacion:
+                valid_modules.append("contratacion")
+            
+            for module in update_data.get("allowed_modules", []):
+                if module not in valid_modules:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"El módulo '{module}' no está activo en esta entidad"
+                    )
     
     # Verificar si el username ya existe (si se está cambiando)
     if "username" in update_data and update_data["username"] != user.username:
