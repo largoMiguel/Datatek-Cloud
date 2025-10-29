@@ -8,7 +8,7 @@
                 <ng-container *ngIf="(currentEntity$ | async) as entity; else defaultBrand">
                     <!-- Logo de la Entidad -->
                     <div class="entity-logo-wrapper">
-                        <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'" [alt]="entity.name"
+                        <img [src]="entity.logo_url || 'assets/logos/logo_icono.png'" [alt]="entity.name"
                             class="entity-logo me-3">
                     </div>
                     <!-- Separador Vertical -->
@@ -21,20 +21,20 @@
                 </ng-container>
                 <ng-template #defaultBrand>
                     <div class="entity-logo-wrapper">
-                        <img src="assets/logos/lsoftone.png" alt="Logo" class="entity-logo me-3">
+                        <img src="assets/logos/logo_icono.png" alt="SoftOne360" class="entity-logo me-3">
                     </div>
                     <div class="navbar-divider"></div>
                     <div class="entity-info me-3">
                         <h6 class="entity-name mb-0">Portal Ciudadano</h6>
-                        <small class="entity-subtitle">Sistema PQRS</small>
+                        <small class="entity-subtitle">SoftOne360 Gestión Completa, Visión Total</small>
                     </div>
                 </ng-template>
                 <!-- Separador Vertical -->
                 <div class="navbar-divider"></div>
                 <!-- Logo del Software -->
                 <div class="software-logo-wrapper">
-                    <img src="assets/logos/lsoftone.png" alt="LSoftOne" class="software-logo">
-                    <small class="software-name">LSoftOne</small>
+                    <img src="assets/logos/logo_icono.png" alt="SoftOne360" class="software-logo">
+                    <small class="software-name">SoftOne360</small>
                 </div>
             </div>
 
@@ -77,7 +77,7 @@
                                     <ng-container *ngIf="(currentEntity$ | async) as entity; else defaultInfo">
                                         <!-- Logo de la Entidad con efecto -->
                                         <div class="entity-logo-circle">
-                                            <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'"
+                                            <img [src]="entity.logo_url || 'assets/logos/logo_icono.png'"
                                                 [alt]="entity.name" class="info-logo mb-4">
                                         </div>
                                         <h3 class="text-white mb-3 entity-title">{{ entity.name }}</h3>
@@ -85,7 +85,8 @@
                                     </ng-container>
                                     <ng-template #defaultInfo>
                                         <div class="entity-logo-circle">
-                                            <img src="assets/logos/lsoftone.png" alt="Logo" class="info-logo mb-4">
+                                            <img src="assets/logos/logo_completo.png"
+                                                alt="SoftOne360 Gestión Completa, Visión Total" class="info-logo mb-4">
                                         </div>
                                         <h3 class="text-white mb-3 entity-title">Portal Ciudadano</h3>
                                         <div class="entity-divider"></div>
@@ -102,8 +103,9 @@
                                     </ul>
                                     <!-- Logo del Software -->
                                     <div class="software-badge mt-4">
-                                        <img src="assets/logos/lsoftone.png" alt="LSoftOne" class="software-badge-logo">
-                                        <span class="software-badge-text">Powered by LSoftOne</span>
+                                        <img src="assets/logos/logo_icono.png" alt="SoftOne360"
+                                            class="software-badge-logo">
+                                        <span class="software-badge-text">Powered by SoftOne360</span>
                                     </div>
                                 </div>
                             </div>

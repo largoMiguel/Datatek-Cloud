@@ -6,7 +6,7 @@
             <ng-container *ngIf="(entityContext.currentEntity$ | async) as entity; else defaultBrand">
                 <!-- Logo de la Entidad -->
                 <div class="entity-logo-wrapper">
-                    <img [src]="entity.logo_url || 'assets/logos/lsoftone.png'" [alt]="entity.name"
+                    <img [src]="entity.logo_url || 'assets/logos/logo_icono.png'" [alt]="entity.name"
                         class="entity-logo me-3">
                 </div>
                 <!-- Separador Vertical -->
@@ -19,11 +19,11 @@
             </ng-container>
             <ng-template #defaultBrand>
                 <div class="entity-logo-wrapper">
-                    <img src="assets/logos/lsoftone.png" alt="Logo" class="entity-logo me-3">
+                    <img src="assets/logos/logo_icono.png" alt="SoftOne360" class="entity-logo me-3">
                 </div>
                 <div class="navbar-divider"></div>
                 <div class="entity-info me-3">
-                    <h6 class="entity-name mb-0">Sistema PQRS</h6>
+                    <h6 class="entity-name mb-0">SoftOne360</h6>
                     <small class="entity-subtitle">Portal Administrativo</small>
                 </div>
             </ng-template>
@@ -31,8 +31,8 @@
             <div class="navbar-divider"></div>
             <!-- Logo del Software -->
             <div class="software-logo-wrapper">
-                <img src="assets/logos/lsoftone.png" alt="LSoftOne" class="software-logo">
-                <small class="software-name">LSoftOne</small>
+                <img src="assets/logos/logo_icono.png" alt="SoftOne360" class="software-logo">
+                <small class="software-name">SoftOne360</small>
             </div>
         </div>
 
