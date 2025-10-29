@@ -563,6 +563,19 @@ export class ContratacionComponent implements OnInit, OnDestroy {
         return this.currentUser?.role === 'admin';
     }
 
+    // Etiqueta legible del usuario para la barra superior (consistente con Dashboard)
+    getUserLabel(): string {
+        const u = this.currentUser;
+        if (!u) return '';
+        if (u.role === 'admin') return 'Admin';
+        if (u.role === 'superadmin') return 'Superadmin';
+        if (u.role === 'secretario') {
+            return u.user_type === 'contratista' ? 'Contratista' : 'Secretario';
+        }
+        if (u.role === 'ciudadano') return 'Ciudadano';
+        return String(u.role || '');
+    }
+
     // Métodos para KPIs clickeables
     toggleKpiDetail(kpiType: string): void {
         if (this.selectedKpi === kpiType) {
