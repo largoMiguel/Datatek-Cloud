@@ -119,6 +119,8 @@ export class ContratacionComponent implements OnInit, OnDestroy {
     };
 
     generatingPdf = false;
+    mostrarModalInforme = false;
+    incluirResumenIA = false;
 
     constructor(
         private contratacionService: ContratacionService,
@@ -574,6 +576,29 @@ export class ContratacionComponent implements OnInit, OnDestroy {
         }
         if (u.role === 'ciudadano') return 'Ciudadano';
         return String(u.role || '');
+    }
+
+    // Modal de configuración de informe
+    abrirModalInforme(): void {
+        if (!this.procesosFiltrados.length) {
+            return;
+        }
+        this.mostrarModalInforme = true;
+        this.incluirResumenIA = false;
+    }
+
+    cerrarModalInforme(): void {
+        this.mostrarModalInforme = false;
+        this.incluirResumenIA = false;
+    }
+
+    generarInformeConOpciones(): void {
+        this.mostrarModalInforme = false;
+        if (this.incluirResumenIA) {
+            this.generatePdfWithAI();
+        } else {
+            this.generatePdf();
+        }
     }
 
     // Métodos para KPIs clickeables

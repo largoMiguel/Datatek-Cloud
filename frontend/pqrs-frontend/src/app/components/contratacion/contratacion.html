@@ -170,14 +170,10 @@
                         [disabled]="loading || !procesosFiltrados.length">
                         <i class="fas fa-file-csv me-1"></i>Exportar CSV
                     </button>
-                    <button class="btn btn-outline-primary btn-sm me-2" (click)="generatePdf()"
-                        [disabled]="loading || !procesosFiltrados.length">
-                        <i class="fas fa-file-pdf me-1"></i>Generar PDF
-                    </button>
-                    <button class="btn btn-primary btn-sm me-2" (click)="generatePdfWithAI()"
+                    <button class="btn btn-primary btn-sm me-2" (click)="abrirModalInforme()"
                         [disabled]="loading || !procesosFiltrados.length || generatingPdf">
-                        <i class="fas fa-magic me-1" [class.fa-spin]="generatingPdf"></i>
-                        Informe con IA
+                        <i class="fas fa-file-pdf me-1" [class.fa-spin]="generatingPdf"></i>
+                        Generar Informe
                     </button>
                     <button class="btn btn-primary btn-sm" (click)="buscar()" [disabled]="loading">
                         <i class="fas fa-sync-alt me-1" [class.fa-spin]="loading"></i>Consultar
@@ -579,4 +575,57 @@
             </small>
         </div>
     </div>
+</div>
+
+<!-- Modal de configuración de informe -->
+<div class="modal fade show d-block" *ngIf="mostrarModalInforme" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-file-pdf me-2"></i>Configurar Informe de Contratación
+                </h5>
+                <button type="button" class="btn-close btn-close-white" (click)="cerrarModalInforme()"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Selecciona las opciones para generar el informe de contratación pública.
+                </p>
+
+                <div class="alert alert-info">
+                    <small>
+                        <strong>Periodo:</strong> {{ filtro.fechaDesde }} a {{ filtro.fechaHasta }}<br>
+                        <strong>Total procesos:</strong> {{ procesosFiltrados.length }}
+                    </small>
+                </div>
+
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="incluirIA" [(ngModel)]="incluirResumenIA">
+                    <label class="form-check-label" for="incluirIA">
+                        <i class="fas fa-magic me-1 text-primary"></i>
+                        <strong>Incluir resumen generado con IA</strong>
+                        <br>
+                        <small class="text-muted">
+                            El sistema generará un análisis narrativo automático basado en los datos de contratación.
+                        </small>
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="cerrarModalInforme()">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" (click)="generarInformeConOpciones()">
+                    <i class="fas fa-file-pdf me-2"></i>Generar Informe PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+</div>
+</div>
+
 </div>

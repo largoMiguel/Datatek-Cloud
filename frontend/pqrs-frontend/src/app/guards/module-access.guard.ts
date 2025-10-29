@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { EntityContextService } from '../services/entity-context.service';
 
 /**
  * Guard para proteger rutas según los módulos asignados al usuario.
@@ -8,7 +9,7 @@ import { AuthService } from '../services/auth.service';
  * 
  * Uso: canActivate: [moduleAccessGuard('pqrs')]
  */
-function getSlugFromRoute(route: any, stateUrl: string, entityContext: any): string | null {
+function getSlugFromRoute(route: any, stateUrl: string, entityContext: EntityContextService): string | null {
     const fromParams = route?.params?.['slug'] || route?.parent?.params?.['slug'] || null;
     if (fromParams) return fromParams;
     const fromUrl = (stateUrl || '').replace(/^\//, '').split('/')[0] || null;
@@ -20,8 +21,7 @@ export const moduleAccessGuard = (requiredModule: string): CanActivateFn => {
     return (route, state) => {
         const authService = inject(AuthService);
         const router = inject(Router);
-        const entityContext = inject<any>(Object as any as any); // Trick to avoid circular typed import
-        // Nota: EntityContextService no se importa aquí para evitar ciclos; usamos getSlugFromRoute para calcular slug con route/state
+        const entityContext = inject(EntityContextService);
 
         const currentUser = authService.getCurrentUserValue();
 
