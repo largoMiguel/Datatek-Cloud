@@ -8,15 +8,26 @@ import { AuthService } from '../services/auth.service';
  * 
  * Uso: canActivate: [moduleAccessGuard('pqrs')]
  */
+function getSlugFromRoute(route: any, stateUrl: string, entityContext: any): string | null {
+    const fromParams = route?.params?.['slug'] || route?.parent?.params?.['slug'] || null;
+    if (fromParams) return fromParams;
+    const fromUrl = (stateUrl || '').replace(/^\//, '').split('/')[0] || null;
+    if (fromUrl) return fromUrl;
+    return entityContext.currentEntity?.slug || null;
+}
+
 export const moduleAccessGuard = (requiredModule: string): CanActivateFn => {
-    return () => {
+    return (route, state) => {
         const authService = inject(AuthService);
         const router = inject(Router);
+        const entityContext = inject<any>(Object as any as any); // Trick to avoid circular typed import
+        // Nota: EntityContextService no se importa aquí para evitar ciclos; usamos getSlugFromRoute para calcular slug con route/state
 
         const currentUser = authService.getCurrentUserValue();
 
         if (!currentUser) {
-            router.navigate(['/login']);
+            const slug = getSlugFromRoute(route, state.url, entityContext);
+            router.navigate(slug ? ['/', slug, 'login'] : ['/']);
             return false;
         }
 
@@ -31,7 +42,8 @@ export const moduleAccessGuard = (requiredModule: string): CanActivateFn => {
 
         // Si tiene allowed_modules vacío, no tiene acceso a nada
         if (currentUser.allowed_modules.length === 0) {
-            router.navigate(['/dashboard']);
+            const slug = getSlugFromRoute(route, state.url, entityContext);
+            router.navigate(slug ? ['/', slug, 'dashboard'] : ['/']);
             return false;
         }
 
@@ -39,7 +51,8 @@ export const moduleAccessGuard = (requiredModule: string): CanActivateFn => {
         const hasAccess = currentUser.allowed_modules.includes(requiredModule);
 
         if (!hasAccess) {
-            router.navigate(['/dashboard']);
+            const slug = getSlugFromRoute(route, state.url, entityContext);
+            router.navigate(slug ? ['/', slug, 'dashboard'] : ['/']);
             return false;
         }
 

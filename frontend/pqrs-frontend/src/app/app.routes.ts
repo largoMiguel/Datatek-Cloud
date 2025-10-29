@@ -34,7 +34,8 @@ export const routes: Routes = [
         children: [
             { path: '', component: VentanillaComponent },
             { path: 'login', component: LoginComponent, canActivate: [loginGuard] },
-            { path: 'portal-ciudadano', component: PortalCiudadanoComponent, canActivate: [ciudadanoGuard, pqrsEnabledGuard, moduleAccessGuard('pqrs')] },
+            // El portal ciudadano no requiere permisos por módulos ni autenticación
+            { path: 'portal-ciudadano', component: PortalCiudadanoComponent, canActivate: [ciudadanoGuard, pqrsEnabledGuard] },
             { path: 'dashboard', component: DashboardComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard] },
             { path: 'planes-institucionales', component: PlanesInstitucionalesComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard, planesEnabledGuard, moduleAccessGuard('planes_institucionales')] },
             { path: 'contratacion', component: ContratacionComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard, contratacionEnabledGuard, moduleAccessGuard('contratacion')] },

@@ -20,11 +20,11 @@ export const ensureEntityGuard: CanActivateFn = (route, state) => {
 
     return entityContext.setEntityBySlug(slug).pipe(
         map(() => true as boolean | UrlTree),
-        catchError(() => {
-            // Si falla cargar la entidad, redirigir a soft-admin en lugar de '/'
-            // para evitar bucle infinito con defaultEntityGuard
-            console.error(`No se pudo cargar la entidad con slug: ${slug}`);
-            return of(router.createUrlTree(['/soft-admin']));
+        catchError((err) => {
+            console.error(`No se pudo cargar la entidad con slug: ${slug}`, err);
+            // Redirigir a la raíz para que defaultEntityGuard seleccione una entidad activa
+            // Evitamos enviar al soft-admin para no exigir superadmin a usuarios públicos
+            return of(router.createUrlTree(['/']));
         })
     );
 };
