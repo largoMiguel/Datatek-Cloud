@@ -114,6 +114,35 @@ def run_migrations(
         else:
             migrations_applied.append("ℹ️ Columna 'allowed_modules' ya existe en users")
 
+        # 5) Normalizar valores existentes de user_type (MAYÚSCULAS -> minúsculas)
+        if "user_type" in users_cols:
+            # Contar registros a normalizar
+            count_result = db.execute(text("""
+                SELECT COUNT(*) 
+                FROM users 
+                WHERE user_type IN ('SECRETARIO', 'CONTRATISTA')
+            """))
+            count = count_result.scalar()
+            
+            if count and count > 0:
+                # Actualizar SECRETARIO -> secretario
+                db.execute(text("""
+                    UPDATE users 
+                    SET user_type = 'secretario' 
+                    WHERE user_type = 'SECRETARIO'
+                """))
+                
+                # Actualizar CONTRATISTA -> contratista
+                db.execute(text("""
+                    UPDATE users 
+                    SET user_type = 'contratista' 
+                    WHERE user_type = 'CONTRATISTA'
+                """))
+                
+                migrations_applied.append(f"🔧 Normalizados {count} registros: user_type a minúsculas")
+            else:
+                migrations_applied.append("ℹ️ Valores de user_type ya están normalizados")
+
         # Commit de cambios
         db.commit()
 
