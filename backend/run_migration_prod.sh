@@ -16,7 +16,7 @@ echo -e "${GREEN}╚════════════════════
 echo ""
 
 # URL del backend en producción
-BACKEND_URL="${BACKEND_URL:-https://pqrs-backend-mvcp.onrender.com}"
+BACKEND_URL="${BACKEND_URL:-https://pqrs-backend.onrender.com}"
 
 # Clave de migración (leer desde variable de entorno o solicitar)
 if [ -z "$MIGRATION_KEY" ]; then
@@ -82,9 +82,9 @@ echo -e "${GREEN}║              ✅ Proceso completado                     ║
 echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "${YELLOW}📋 Notas importantes:${NC}"
-echo -e "  • El módulo de Contratación no requiere cambios en la BD"
-echo -e "  • Todos los datos se obtienen de SECOP II en tiempo real"
-echo -e "  • Solo se usa el campo 'nit' de la tabla entities"
+echo -e "  • Se valida y agrega el campo 'nit' en 'entities' si falta (para consultas SECOP II)"
+echo -e "  • Se valida y agrega el flag 'enable_contratacion' en 'entities' si falta"
+echo -e "  • El módulo de Contratación consume datos de SECOP II en tiempo real"
 echo ""
 echo -e "${GREEN}Puedes verificar el frontend en:${NC}"
 echo -e "  https://pqrs-frontend.onrender.com"

@@ -2,7 +2,10 @@
 
 ## 📋 Resumen
 
-El módulo de Contratación **NO requiere cambios en la base de datos**. Todos los datos se obtienen en tiempo real desde la API pública SECOP II de Colombia.
+El módulo de Contratación consume datos en tiempo real desde la API pública SECOP II de Colombia, pero requiere cambios mínimos en la base de datos:
+
+- Agregar el campo `nit` a la tabla `entities` (para consultar por NIT)
+- Agregar el flag `enable_contratacion` a `entities` (para habilitar/ocultar el módulo)
 
 ## 🔧 Cambios Realizados
 
@@ -60,7 +63,7 @@ export MIGRATION_KEY="tu-clave-secreta-super-segura-2024"
 **1. Verificar estado:**
 ```bash
 curl -X GET \
-  https://pqrs-backend-mvcp.onrender.com/api/migrations/status \
+  https://pqrs-backend.onrender.com/api/migrations/status \
   -H "X-Migration-Key: tu-clave-secreta-super-segura-2024" \
   | jq '.'
 ```
@@ -68,7 +71,7 @@ curl -X GET \
 **2. Ejecutar migraciones:**
 ```bash
 curl -X POST \
-  https://pqrs-backend-mvcp.onrender.com/api/migrations/run \
+  https://pqrs-backend.onrender.com/api/migrations/run \
   -H "X-Migration-Key: tu-clave-secreta-super-segura-2024" \
   | jq '.'
 ```
@@ -96,10 +99,10 @@ print(response.json())
 ### 1. Backend
 ```bash
 # Health check
-curl https://pqrs-backend-mvcp.onrender.com/health
+curl https://pqrs-backend.onrender.com/health
 
 # Verificar endpoint de contratación
-curl "https://pqrs-backend-mvcp.onrender.com/api/contratacion/proxy?nit_entidad=891801994&limit=10"
+curl "https://pqrs-backend.onrender.com/api/contratacion/proxy?nit_entidad=891801994&limit=10"
 ```
 
 ### 2. Frontend
@@ -126,7 +129,7 @@ GET /api/contratacion/proxy
 
 **Ejemplo:**
 ```bash
-curl "https://pqrs-backend-mvcp.onrender.com/api/contratacion/proxy?nit_entidad=891801994&limit=50&fecha_desde=2024-01-01"
+curl "https://pqrs-backend.onrender.com/api/contratacion/proxy?nit_entidad=891801994&limit=50&fecha_desde=2024-01-01"
 ```
 
 ### Endpoints de Migraciones
@@ -178,9 +181,9 @@ ng serve
 
 ## 📝 Notas Importantes
 
-1. **Sin cambios en BD**: Este módulo NO modifica la estructura de la base de datos
+1. **Cambios mínimos en BD**: Se agregan `nit` y `enable_contratacion` en `entities` si faltan
 2. **API Externa**: Los datos vienen de SECOP II (datos.gov.co)
-3. **Campo NIT**: Solo se requiere que la tabla `entities` tenga el campo `nit`
+3. **Campo NIT**: La tabla `entities` debe tener el campo `nit`
 4. **Rate Limiting**: SECOP II puede tener límites de rate, considerar caché en futuro
 5. **Datos en Tiempo Real**: No se almacenan datos de contratación localmente
 

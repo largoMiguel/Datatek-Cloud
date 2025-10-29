@@ -1,10 +1,12 @@
 """
 Endpoint de migración para actualizar base de datos en producción
-Ejecutar: curl -X POST https://tu-backend.onrender.com/api/migrations/run -H "X-Migration-Key: TU_CLAVE_SECRETA"
+Ejecutar:
+    curl -X POST https://<backend>/api/migrations/run -H "X-Migration-Key: <CLAVE>"
 """
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from sqlalchemy import inspect as sa_inspect
 from app.config.database import get_db
 from app.config.settings import settings
 import logging
@@ -29,34 +31,60 @@ def run_migrations(
     authorized: bool = Depends(verify_migration_key)
 ):
     """
-    Ejecuta las migraciones pendientes para el módulo de Contratación.
-    
-    Cambios aplicados:
-    - No se requieren cambios en la BD para este módulo (todo es frontend)
-    - Este endpoint queda listo para futuras migraciones
+    Ejecuta las migraciones pendientes relacionadas con:
+    - Campo NIT en entities (para consultas SECOP II)
+    - Flag enable_contratacion en entities
     """
     try:
         migrations_applied = []
-        
+
         # Verificar conexión
         db.execute(text("SELECT 1"))
         migrations_applied.append("✅ Conexión a base de datos verificada")
-        
-        # Las migraciones del módulo de Contratación no requieren cambios en BD
-        # porque todo el procesamiento es en frontend consumiendo API externa (SECOP II)
-        migrations_applied.append("✅ Módulo Contratación: No requiere cambios en BD (consume API externa)")
-        
-        # Commit de cambios si los hubiera
+
+        # Inspeccionar esquema actual
+        bind = db.get_bind()
+        inspector = sa_inspect(bind)
+        if not inspector.has_table("entities"):
+            raise HTTPException(status_code=500, detail="La tabla 'entities' no existe. Ejecuta migraciones base primero.")
+
+        existing_cols = {c["name"] for c in inspector.get_columns("entities")}
+        is_postgres = bind.dialect.name.startswith("postgres")
+
+        # 1) Agregar columna 'nit' si falta
+        if "nit" not in existing_cols:
+            if is_postgres:
+                db.execute(text("ALTER TABLE entities ADD COLUMN IF NOT EXISTS nit VARCHAR(50)"))
+                db.execute(text("CREATE INDEX IF NOT EXISTS ix_entities_nit ON entities (nit)"))
+            else:
+                # SQLite y otros: agregar columna e índice si no existen
+                db.execute(text("ALTER TABLE entities ADD COLUMN nit VARCHAR(50)"))
+                db.execute(text("CREATE INDEX IF NOT EXISTS ix_entities_nit ON entities (nit)"))
+            migrations_applied.append("🆕 Agregada columna 'nit' en entities y creado índice")
+        else:
+            migrations_applied.append("ℹ️ Columna 'nit' ya existe en entities")
+
+        # 2) Agregar flag 'enable_contratacion' si falta
+        if "enable_contratacion" not in existing_cols:
+            default_true = "TRUE" if is_postgres else "1"
+            db.execute(text(f"ALTER TABLE entities ADD COLUMN enable_contratacion BOOLEAN NOT NULL DEFAULT {default_true}"))
+            # Backfill explícito para filas existentes en algunos motores
+            db.execute(text(f"UPDATE entities SET enable_contratacion = {default_true} WHERE enable_contratacion IS NULL"))
+            migrations_applied.append("🆕 Agregada columna 'enable_contratacion' con valor por defecto TRUE")
+        else:
+            migrations_applied.append("ℹ️ Columna 'enable_contratacion' ya existe en entities")
+
+        # Commit de cambios
         db.commit()
-        
+
         logger.info("Migraciones ejecutadas exitosamente")
         return {
             "status": "success",
             "message": "Migraciones ejecutadas correctamente",
             "migrations": migrations_applied,
-            "details": "El módulo de Contratación no requiere migraciones de BD. Todos los cambios son en frontend."
+            "details": "Migraciones para NIT y enable_contratacion aplicadas (si estaban pendientes)."
         }
-        
+
     except Exception as e:
         db.rollback()
         logger.error(f"Error ejecutando migraciones: {e}")
@@ -78,29 +106,39 @@ def migration_status(
         status_info = {
             "database_connection": "✅ Conectado",
             "pending_migrations": [],
-            "last_migration": "Módulo Contratación - Frontend only",
+            "last_migration": "NIT y enable_contratacion",
             "notes": [
-                "El módulo de Contratación no requiere cambios en la base de datos",
-                "Todos los datos se obtienen de la API pública SECOP II en tiempo real",
-                "Solo se usa el campo 'nit' de la tabla entities para hacer las consultas"
+                "El módulo de Contratación usa SECOP II (API externa)",
+                "Se requiere el campo 'nit' en entities para consultar por NIT",
+                "'enable_contratacion' controla la visibilidad del módulo"
             ]
         }
-        
-        # Verificar que el campo NIT existe en entities
-        result = db.execute(text("""
-            SELECT column_name 
-            FROM information_schema.columns 
-            WHERE table_name = 'entities' AND column_name = 'nit'
-        """))
-        
-        if result.fetchone():
+
+        bind = db.get_bind()
+        inspector = sa_inspect(bind)
+        if not inspector.has_table("entities"):
+            status_info["database_connection"] = "⚠️ Sin tabla 'entities'"
+            status_info["pending_migrations"].append("create_entities_table")
+            return status_info
+
+        cols = {c["name"] for c in inspector.get_columns("entities")}
+
+        # Comprobar 'nit'
+        if "nit" in cols:
             status_info["nit_field"] = "✅ Campo 'nit' existe en tabla entities"
         else:
             status_info["nit_field"] = "⚠️ Campo 'nit' no encontrado - se requiere migración"
             status_info["pending_migrations"].append("add_nit_column")
-        
+
+        # Comprobar 'enable_contratacion'
+        if "enable_contratacion" in cols:
+            status_info["enable_contratacion_field"] = "✅ Campo 'enable_contratacion' existe en entities"
+        else:
+            status_info["enable_contratacion_field"] = "⚠️ Campo 'enable_contratacion' no encontrado - se requiere migración"
+            status_info["pending_migrations"].append("add_enable_contratacion_flag")
+
         return status_info
-        
+
     except Exception as e:
         logger.error(f"Error verificando estado: {e}")
         raise HTTPException(
