@@ -7,6 +7,68 @@ $info: #17a2b8;
 $dark: #212529;
 $light: #f8f9fa;
 
+// Navbar
+.showcase-navbar {
+    background: rgba(33, 37, 41, 0.95);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    padding: 0.5rem 0;
+
+    .navbar-brand {
+        .brand-text {
+            .brand-name {
+                font-size: 1.25rem;
+                font-weight: 700;
+                color: #fff;
+                line-height: 1.2;
+                margin-bottom: 0;
+            }
+
+            .brand-slogan {
+                font-size: 0.75rem;
+                color: rgba(255, 255, 255, 0.7);
+                line-height: 1;
+                font-weight: 400;
+            }
+        }
+
+        img {
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+        }
+
+        &:hover {
+            .brand-text .brand-name {
+                color: $primary;
+            }
+        }
+    }
+
+    .nav-link {
+        color: rgba(255, 255, 255, 0.85);
+        font-weight: 500;
+        padding: 0.5rem 1rem;
+        transition: all 0.3s ease;
+
+        &:hover {
+            color: #fff;
+            transform: translateY(-2px);
+        }
+    }
+
+    .btn-success {
+        padding: 0.5rem 1.25rem;
+        font-weight: 600;
+        border-radius: 25px;
+        transition: all 0.3s ease;
+
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+        }
+    }
+}
+
 // Animaciones
 @keyframes fadeInUp {
     from {
@@ -63,7 +125,7 @@ $light: #f8f9fa;
     overflow: hidden;
     display: flex;
     align-items: center;
-    padding: 80px 0 120px;
+    padding: 140px 0 120px; // Aumentado para compensar navbar fixed
 
     .hero-overlay {
         position: absolute;
@@ -646,6 +708,33 @@ $light: #f8f9fa;
 
     p {
         margin: 0;
+    }
+
+    h5, h6 {
+        color: #fff;
+    }
+
+    a {
+        transition: all 0.3s ease;
+
+        &:hover {
+            color: $primary !important;
+            transform: translateX(5px);
+        }
+    }
+
+    .btn-success {
+        border-radius: 25px;
+        transition: all 0.3s ease;
+
+        &:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+        }
+    }
+
+    img {
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
     }
 }
 
