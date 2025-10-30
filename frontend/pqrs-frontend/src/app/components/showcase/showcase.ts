@@ -42,39 +42,39 @@ interface Testimonial {
 export class ShowcaseComponent implements OnInit {
     features: Feature[] = [
         {
+            icon: 'fas fa-brain',
+            title: 'IA Generativa Integrada',
+            description: 'Resúmenes ejecutivos automáticos con OpenAI para reportes de PQRS, Planes y Contratación. Análisis narrativos profesionales en segundos.',
+            color: '#412991'
+        },
+        {
             icon: 'fas fa-shield-alt',
             title: 'Seguro y Confiable',
-            description: 'Autenticación robusta con JWT, roles de usuario y control de acceso granular. Cumple con estándares de seguridad gubernamental.',
+            description: 'Autenticación robusta con JWT, control de acceso granular por módulo y usuario. Cumple con estándares de seguridad gubernamental.',
             color: '#216ba8'
         },
         {
             icon: 'fas fa-mobile-alt',
             title: 'Responsivo 100%',
-            description: 'Diseño adaptativo que funciona perfectamente en escritorio, tablet y móvil. Acceso desde cualquier dispositivo.',
+            description: 'Diseño adaptativo que funciona perfectamente en escritorio, tablet y móvil. Acceso desde cualquier dispositivo, en cualquier momento.',
             color: '#28a745'
-        },
-        {
-            icon: 'fas fa-tachometer-alt',
-            title: 'Alto Rendimiento',
-            description: 'Arquitectura optimizada con FastAPI y Angular 18. Respuestas rápidas y experiencia de usuario fluida.',
-            color: '#ffc107'
         },
         {
             icon: 'fas fa-chart-line',
             title: 'Analytics Avanzado',
-            description: 'Dashboards interactivos con gráficas en tiempo real, KPIs y reportes exportables en PDF y CSV.',
+            description: 'Dashboards interactivos con gráficas en tiempo real, KPIs automáticos y reportes exportables en PDF profesional y CSV.',
             color: '#17a2b8'
         },
         {
-            icon: 'fas fa-database',
-            title: 'Base de Datos Robusta',
-            description: 'PostgreSQL con migraciones automáticas, backup y recuperación. Escalable para miles de registros.',
+            icon: 'fas fa-th-large',
+            title: 'Permisos Granulares',
+            description: 'Asigna módulos específicos a cada usuario. Control total sobre quién accede a PQRS, Planes, Contratación e informes con IA.',
             color: '#6610f2'
         },
         {
             icon: 'fas fa-cogs',
-            title: 'Multi-entidad',
-            description: 'Soporta múltiples entidades gubernamentales en una sola instalación. Personalización por entidad.',
+            title: 'Multi-entidad Configurable',
+            description: 'Soporta múltiples entidades con personalización completa: logos, configuración de módulos, permisos y funcionalidades por entidad.',
             color: '#dc3545'
         }
     ];
@@ -91,7 +91,7 @@ export class ShowcaseComponent implements OnInit {
                 'Asignación automática por departamento',
                 'Notificaciones por correo electrónico',
                 'Respuestas con adjuntos y trazabilidad completa',
-                'Reportes estadísticos exportables',
+                'Reportes estadísticos exportables con IA',
                 'Búsqueda avanzada y filtros dinámicos'
             ],
             image: 'fas fa-clipboard-list',
@@ -100,15 +100,15 @@ export class ShowcaseComponent implements OnInit {
         {
             name: 'Planes Institucionales',
             icon: 'fas fa-tasks',
-            description: 'Gestión estratégica de planes con seguimiento de objetivos, indicadores y cumplimiento. Alineado con normativa gubernamental colombiana.',
+            description: 'Gestión estratégica de planes con seguimiento de objetivos, metas e indicadores. Reportes profesionales en PDF con análisis de cumplimiento.',
             features: [
-                'Creación de planes por entidad',
+                'Creación de planes anuales por entidad',
                 'Objetivos estratégicos con metas medibles',
                 'Indicadores de gestión con fórmulas personalizadas',
                 'Seguimiento de avance con línea de tiempo',
+                'Analytics visuales con gráficas de progreso',
+                'Reportes PDF profesionales con resumen ejecutivo',
                 'Alertas de cumplimiento y vencimientos',
-                'Visualización con gráficas de progreso',
-                'Exportación de informes ejecutivos',
                 'Integración con dashboard central'
             ],
             image: 'fas fa-project-diagram',
@@ -117,33 +117,33 @@ export class ShowcaseComponent implements OnInit {
         {
             name: 'Contratación Pública - SECOP II',
             icon: 'fas fa-file-contract',
-            description: 'Consulta en tiempo real de procesos de contratación desde SECOP II. Análisis inteligente con IA y reportes profesionales.',
+            description: 'Consulta en tiempo real de procesos de contratación desde SECOP II. Análisis inteligente con IA y reportes profesionales con resúmenes ejecutivos.',
             features: [
-                'Integración directa con datos.gov.co',
-                'Consulta por NIT de la entidad',
+                'Integración directa con datos.gov.co (API SODA)',
+                'Consulta automática por NIT de la entidad',
                 'KPIs de contratación: adjudicados, montos, tasa de éxito',
                 'Gráficas interactivas: estados, modalidades, proveedores',
                 'Detección automática de contratos vencidos',
                 'Exportación CSV y PDF profesional',
-                'Resumen ejecutivo con IA (OpenAI)',
-                'Filtros avanzados por fecha, modalidad, tipo'
+                'Resumen ejecutivo generado con IA (OpenAI)',
+                'Filtros avanzados por fecha, modalidad, tipo y estado'
             ],
             image: 'fas fa-handshake',
             color: '#ffc107'
         },
         {
-            name: 'Gestión de Usuarios y Roles',
+            name: 'Gestión de Usuarios y Permisos',
             icon: 'fas fa-users-cog',
-            description: 'Control total de usuarios, permisos y accesos. Sistema de roles jerárquicos con administradores, secretarios, contratistas y portal ciudadano.',
+            description: 'Control granular de usuarios, roles y accesos por módulo. Sistema jerárquico con administradores, secretarios, contratistas y portal ciudadano público.',
             features: [
-                'Admin por entidad con gestión local',
-                'Secretarios y contratistas con permisos por módulo',
-                'Asignación granular de módulos permitidos',
+                'Admin por entidad con gestión local completa',
+                'Secretarios y contratistas con permisos personalizables',
+                'Asignación granular de módulos permitidos por usuario',
+                'Control de funcionalidades por entidad (IA, PDF, módulos)',
                 'Portal ciudadano sin registro necesario',
-                'Activación/desactivación de usuarios',
-                'Auditoría completa de acciones',
-                'Control de acceso por módulos activos',
-                'Gestión simplificada de equipos de trabajo'
+                'Activación/desactivación de usuarios en un clic',
+                'Edición de permisos desde dashboard administrativo',
+                'Auditoría completa de acciones por usuario'
             ],
             image: 'fas fa-user-shield',
             color: '#6610f2'
@@ -274,5 +274,12 @@ export class ShowcaseComponent implements OnInit {
         if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
+    }
+
+    contactarWhatsApp(mensaje: string = ''): void {
+        const telefono = '573102432469'; // Número en formato internacional sin +
+        const mensajeDefault = mensaje || 'Hola, me gustaría solicitar una demostración de SoftOne360 para mi entidad.';
+        const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensajeDefault)}`;
+        window.open(url, '_blank');
     }
 }

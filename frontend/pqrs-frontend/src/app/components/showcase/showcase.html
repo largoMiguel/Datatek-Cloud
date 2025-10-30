@@ -12,14 +12,15 @@
                 </h1>
                 <p class="hero-subtitle mb-4">
                     Plataforma integral para PQRS, Planes Institucionales y Contratación Pública.
-                    Tecnología de punta con IA, dashboards en tiempo real y cumplimiento normativo garantizado.
+                    IA generativa para reportes ejecutivos, control granular de permisos y dashboards en tiempo real.
                 </p>
                 <div class="hero-actions">
                     <button class="btn btn-primary btn-lg me-3" (click)="scrollToSection('modules')">
                         <i class="fas fa-rocket me-2"></i>Ver Módulos
                     </button>
-                    <button class="btn btn-outline-light btn-lg" (click)="scrollToSection('contact')">
-                        <i class="fas fa-envelope me-2"></i>Solicitar Demo
+                    <button class="btn btn-outline-light btn-lg"
+                        (click)="contactarWhatsApp('Hola, me gustaría solicitar una demostración de SoftOne360 para mi entidad.')">
+                        <i class="fab fa-whatsapp me-2"></i>Solicitar Demo
                     </button>
                 </div>
                 <div class="hero-stats mt-5">
@@ -165,7 +166,7 @@
     </div>
 </section>
 
-<!-- Testimonials Section -->
+<!-- Testimonials Section 
 <section class="testimonials-section py-5">
     <div class="container">
         <div class="section-header text-center mb-5 animate">
@@ -193,7 +194,7 @@
             </div>
         </div>
     </div>
-</section>
+</section>-->
 
 <!-- Tech Stack Section -->
 <section class="tech-section py-5 bg-dark text-white">
@@ -226,8 +227,9 @@
                     </p>
                 </div>
                 <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
-                    <button class="btn btn-light btn-lg">
-                        <i class="fas fa-calendar-alt me-2"></i>Agendar Demo
+                    <button class="btn btn-light btn-lg"
+                        (click)="contactarWhatsApp('Hola, quiero agendar una reunión para conocer más sobre SoftOne360.')">
+                        <i class="fab fa-whatsapp me-2"></i>Contactar por WhatsApp
                     </button>
                 </div>
             </div>
@@ -239,21 +241,21 @@
                     <div class="contact-item">
                         <i class="fas fa-envelope contact-icon"></i>
                         <h4>Email</h4>
-                        <p>contacto@sistema-pqrs.com</p>
+                        <p>contactenos@softone360.com</p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="contact-item">
                         <i class="fas fa-phone contact-icon"></i>
                         <h4>Teléfono</h4>
-                        <p>+57 (1) 234-5678</p>
+                        <p>3162987496 - 310 2432469</p>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="contact-item">
                         <i class="fas fa-map-marker-alt contact-icon"></i>
                         <h4>Ubicación</h4>
-                        <p>Bogotá D.C., Colombia</p>
+                        <p>Tunja - Boyacá, Colombia</p>
                     </div>
                 </div>
             </div>
