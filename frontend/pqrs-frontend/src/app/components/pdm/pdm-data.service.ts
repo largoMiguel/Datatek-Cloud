@@ -347,32 +347,46 @@ export class PdmDataService {
     }
 
     private calcularEstadosYAvances(pdmData: PDMData): void {
-        const añoActual = new Date().getFullYear();
+        // Nueva lógica: una meta anual se considera cumplida si tiene presupuesto (> 0) asignado ese año.
+        // El avance del producto = (# de años programados con presupuesto) / (# de años programados) * 100
+        // Estado del producto:
+        //  - CUMPLIDA: todos los años programados tienen presupuesto
+        //  - EN_PROGRESO: >= 50% de años programados con presupuesto (y no todos)
+        //  - PENDIENTE: > 0% y < 50%
+        //  - POR_CUMPLIR: 0% de años programados con presupuesto
 
         pdmData.planIndicativoProductos.forEach(producto => {
-            const totalProgramado =
-                producto.programacion2024 +
-                producto.programacion2025 +
-                producto.programacion2026 +
-                producto.programacion2027;
+            const anios = [2024, 2025, 2026, 2027] as const;
+            const programadoPorAnio: Record<typeof anios[number], number> = {
+                2024: producto.programacion2024,
+                2025: producto.programacion2025,
+                2026: producto.programacion2026,
+                2027: producto.programacion2027
+            } as any;
+            const presupuestoPorAnio: Record<typeof anios[number], number> = {
+                2024: producto.total2024,
+                2025: producto.total2025,
+                2026: producto.total2026,
+                2027: producto.total2027
+            } as any;
 
-            let totalEjecutado = 0;
+            const aniosProgramados = anios.filter(a => (programadoPorAnio[a] || 0) > 0);
+            const aniosConPresupuesto = aniosProgramados.filter(a => (presupuestoPorAnio[a] || 0) > 0);
 
-            // Calcular ejecutado basado en el año actual
-            if (añoActual >= 2024) totalEjecutado += producto.programacion2024;
-            if (añoActual >= 2025) totalEjecutado += producto.programacion2025;
-            if (añoActual >= 2026) totalEjecutado += producto.programacion2026;
-            if (añoActual >= 2027) totalEjecutado += producto.programacion2027;
+            const totalProgramados = aniosProgramados.length;
+            const totalConPresupuesto = aniosConPresupuesto.length;
 
-            // Calcular avance
-            producto.avance = totalProgramado > 0 ? (totalEjecutado / totalProgramado) * 100 : 0;
+            const ratio = totalProgramados > 0 ? totalConPresupuesto / totalProgramados : 0;
+            producto.avance = ratio * 100;
 
-            // Determinar estado
-            if (producto.avance >= 100) {
+            if (totalProgramados === 0) {
+                // Sin programación: se considera por cumplir
+                producto.estado = EstadoMeta.POR_CUMPLIR;
+            } else if (totalConPresupuesto === totalProgramados) {
                 producto.estado = EstadoMeta.CUMPLIDA;
-            } else if (producto.avance >= 50) {
+            } else if (ratio >= 0.5) {
                 producto.estado = EstadoMeta.EN_PROGRESO;
-            } else if (producto.avance > 0) {
+            } else if (ratio > 0) {
                 producto.estado = EstadoMeta.PENDIENTE;
             } else {
                 producto.estado = EstadoMeta.POR_CUMPLIR;
@@ -393,6 +407,7 @@ export class PdmDataService {
 
         // Análisis por año
         const analisisPorAnio = [2024, 2025, 2026, 2027].map(anio => {
+            // Total de metas programadas ese año
             const metasAnio = productos.filter(p => {
                 const prog = anio === 2024 ? p.programacion2024 :
                     anio === 2025 ? p.programacion2025 :
@@ -401,20 +416,29 @@ export class PdmDataService {
                 return prog > 0;
             });
 
+            // Metas cumplidas del año: aquellas con presupuesto > 0 en ese año
+            const metasCumplidasAnio = metasAnio.filter(p => {
+                const total = anio === 2024 ? p.total2024 :
+                    anio === 2025 ? p.total2025 :
+                        anio === 2026 ? p.total2026 :
+                            p.total2027;
+                return (total || 0) > 0;
+            });
+
             const presupuestoTotal = productos.reduce((sum, p) => {
                 const total = anio === 2024 ? p.total2024 :
                     anio === 2025 ? p.total2025 :
                         anio === 2026 ? p.total2026 :
                             p.total2027;
-                return sum + total;
+                return sum + (total || 0);
             }, 0);
 
             return {
                 anio,
                 totalMetas: metasAnio.length,
-                metasCumplidas: metasAnio.filter(p => p.estado === EstadoMeta.CUMPLIDA).length,
+                metasCumplidas: metasCumplidasAnio.length,
                 porcentajeCumplimiento: metasAnio.length > 0
-                    ? (metasAnio.filter(p => p.estado === EstadoMeta.CUMPLIDA).length / metasAnio.length) * 100
+                    ? (metasCumplidasAnio.length / metasAnio.length) * 100
                     : 0,
                 presupuestoTotal
             };
