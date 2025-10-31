@@ -1,0 +1,404 @@
+// ===================================================================
+// PDM Dashboard - Bootstrap Based Styles
+// ===================================================================
+
+// Container principal
+.container-fluid {
+    background: #f8f9fa;
+    min-height: 100vh;
+}
+
+// Cards con efectos hover
+.card {
+    transition: all 0.3s ease;
+    border-radius: 12px !important;
+
+    &:hover:not(.bg-gradient) {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+    }
+}
+
+// Iconos en cards
+.card-body {
+    .fa-2x {
+        font-size: 2.5rem !important;
+    }
+
+    .bg-opacity-10 {
+        width: 64px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+// Progress bars personalizadas
+.progress {
+    border-radius: 10px;
+    background-color: rgba(0, 0, 0, 0.05);
+
+    .progress-bar {
+        border-radius: 10px;
+        transition: width 0.6s ease;
+    }
+}
+
+// Alerts personalizadas
+.alert {
+    border-radius: 10px;
+    border-left: 4px solid;
+
+    &.alert-warning {
+        border-left-color: #ffc107;
+        background-color: #fff3cd;
+    }
+
+    &.alert-info {
+        border-left-color: #0dcaf0;
+        background-color: #cff4fc;
+    }
+}
+
+// Tabs de Material (mantener para gráficos)
+::ng-deep {
+    .mat-mdc-tab-labels {
+        justify-content: center;
+        background: #fff;
+        border-bottom: 2px solid #e2e8f0;
+        padding: 0.5rem 0;
+    }
+
+    .mat-mdc-tab {
+        min-width: 140px;
+        font-weight: 600;
+        font-size: 0.95rem;
+    }
+
+    .mat-mdc-tab-body-wrapper {
+        padding: 2rem;
+
+        @media (max-width: 768px) {
+            padding: 1rem;
+        }
+    }
+}
+
+// Chart cards
+.chart-card {
+    mat-card-header {
+        background: #f8fafc;
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+
+        mat-card-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0;
+        }
+    }
+
+    mat-card-content {
+        padding: 1.5rem;
+        background: white;
+    }
+
+    .chart-container {
+        position: relative;
+        width: 100%;
+
+        canvas {
+            max-height: 400px;
+            display: block;
+        }
+    }
+}
+
+// Grid de gráficos
+.chart-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+
+    @media (max-width: 1200px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+// Tabla de datos
+.table-container {
+    overflow-x: auto;
+    border-radius: 12px;
+    background: white;
+
+    &::-webkit-scrollbar {
+        height: 8px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+
+        &:hover {
+            background: #94a3b8;
+        }
+    }
+}
+
+.data-table {
+    width: 100%;
+    min-width: 1200px;
+
+    thead {
+        background: #f8fafc;
+
+        th {
+            font-weight: 700;
+            color: #334155;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 1rem 1.25rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+    }
+
+    tbody {
+        tr {
+            transition: background 0.2s;
+
+            &:hover {
+                background: #f8fafc;
+            }
+
+            td {
+                padding: 1rem 1.25rem;
+                border-bottom: 1px solid #f1f5f9;
+            }
+        }
+    }
+
+    .product-cell {
+        max-width: 350px;
+        min-width: 250px;
+
+        .product-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #1e293b;
+            font-weight: 600;
+        }
+    }
+
+    .progress-cell {
+        min-width: 150px;
+
+        span {
+            display: block;
+            margin-bottom: 0.625rem;
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 0.95rem;
+        }
+
+        mat-progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+    }
+}
+
+// Badges personalizadas
+.badge {
+    padding: 0.375rem 0.875rem;
+    border-radius: 16px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
+// Filtros
+.filters-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+    align-items: end;
+
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+    }
+
+    mat-form-field {
+        width: 100%;
+    }
+
+    button {
+        height: 56px;
+        border-radius: 8px;
+    }
+}
+
+// Expansion panels
+mat-expansion-panel {
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
+    margin-bottom: 1rem;
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    ::ng-deep {
+        .mat-expansion-panel-header {
+            padding: 1rem 1.25rem;
+            font-weight: 600;
+
+            &:hover {
+                background: #f8fafc;
+            }
+        }
+    }
+}
+
+// Recomendaciones
+.recommendations-card {
+    .recommendation-item {
+        display: flex;
+        gap: 1.25rem;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        background: #eff6ff;
+        border-radius: 12px;
+        border-left: 4px solid #3b82f6;
+        box-shadow: 0 2px 6px rgba(59, 130, 246, 0.15);
+        transition: all 0.2s;
+
+        &:hover {
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+            transform: translateX(4px);
+        }
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+
+        .recommendation-number {
+            flex-shrink: 0;
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            background: #3b82f6;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.1rem;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+        }
+
+        p {
+            flex: 1;
+            margin: 0;
+            color: #1e293b;
+            line-height: 1.7;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+    }
+}
+
+// Loading y no data states
+.loading-container,
+.no-data-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+    padding: 3rem;
+    text-align: center;
+    background: white;
+    border-radius: 12px;
+    margin: 2rem auto;
+    max-width: 600px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    i {
+        font-size: 6rem;
+        color: #cbd5e1;
+        margin-bottom: 2rem;
+    }
+
+    h2,
+    h3 {
+        margin: 1rem 0;
+        color: #334155;
+        font-weight: 700;
+    }
+
+    p {
+        color: #64748b;
+        margin-bottom: 2rem;
+        line-height: 1.6;
+        max-width: 400px;
+        font-weight: 500;
+    }
+
+    button {
+        border-radius: 10px;
+        padding: 12px 24px;
+        font-weight: 600;
+    }
+}
+
+// Chips de Material
+::ng-deep mat-chip {
+    background: #e0f2fe;
+    border: 1px solid #bae6fd;
+    color: #075985;
+    font-weight: 600;
+    border-radius: 16px;
+    padding: 4px 12px;
+    font-size: 0.875rem;
+
+    &.high-progress {
+        background: #d1fae5;
+        border-color: #a7f3d0;
+        color: #065f46;
+    }
+
+    &.medium-progress {
+        background: #fef3c7;
+        border-color: #fde68a;
+        color: #92400e;
+    }
+
+    &.low-progress {
+        background: #fee2e2;
+        border-color: #fecaca;
+        color: #991b1b;
+    }
+}
+
+// Tooltips
+::ng-deep .mat-mdc-tooltip {
+    background: rgba(30, 41, 59, 0.95);
+    color: white;
+    font-size: 0.875rem;
+    padding: 8px 12px;
+    border-radius: 6px;
+    max-width: 300px;
+    word-wrap: break-word;
+}

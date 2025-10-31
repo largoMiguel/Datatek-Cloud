@@ -92,7 +92,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   modulosSeleccionados = {
     pqrs: false,
     planes_institucionales: false,
-    contratacion: false
+    contratacion: false,
+    pdm: false
   };
   guardandoModulos = false;
 
@@ -177,6 +178,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       module_pqrs: [false],
       module_planes: [false],
       module_contratacion: [false],
+      module_pdm: [false],
       password: ['', [Validators.required, Validators.minLength(6)]],
       password_confirm: ['', Validators.required]
     }, { validators: this.passwordMatchValidator });
@@ -632,13 +634,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.nuevoSecretarioForm.valid && !this.isSubmitting && this.hasAnyModuleSelected()) {
       this.isSubmitting = true;
 
-      const { password_confirm, module_pqrs, module_planes, module_contratacion, ...userData } = this.nuevoSecretarioForm.value;
+      const { password_confirm, module_pqrs, module_planes, module_contratacion, module_pdm, ...userData } = this.nuevoSecretarioForm.value;
 
       // Construir array de módulos permitidos
       const allowed_modules: string[] = [];
       if (module_pqrs) allowed_modules.push('pqrs');
       if (module_planes) allowed_modules.push('planes_institucionales');
       if (module_contratacion) allowed_modules.push('contratacion');
+      if (module_pdm) allowed_modules.push('pdm');
 
       // Agregar el rol de secretario y los módulos
       const createData = {
@@ -1283,19 +1286,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return (this.entityContext.currentEntity as any)?.enable_contratacion ?? false;
   }
 
+  pdmEnabled(): boolean {
+    return (this.entityContext.currentEntity as any)?.enable_pdm ?? true;
+  }
+
   // Métodos auxiliares para gestión de usuarios
   hasAnyModuleSelected(): boolean {
     const form = this.nuevoSecretarioForm;
     return form.get('module_pqrs')?.value ||
       form.get('module_planes')?.value ||
-      form.get('module_contratacion')?.value;
+      form.get('module_contratacion')?.value ||
+      form.get('module_pdm')?.value;
   }
 
   getModuleName(module: string): string {
     const names: Record<string, string> = {
       'pqrs': 'PQRS',
       'planes_institucionales': 'Planes',
-      'contratacion': 'Contratación'
+      'contratacion': 'Contratación',
+      'pdm': 'PDM'
     };
     return names[module] || module;
   }
@@ -1327,6 +1336,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     return this.contratacionEnabled() && this.userHasModule('contratacion');
   }
 
+  canAccessPdm(): boolean {
+    return this.pdmEnabled() && this.userHasModule('pdm');
+  }
+
   // Etiqueta legible del usuario para la barra superior
   getUserLabel(): string {
     const u = this.currentUser;
@@ -1352,7 +1365,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.modulosSeleccionados = {
       pqrs: usuario.allowed_modules?.includes('pqrs') || false,
       planes_institucionales: usuario.allowed_modules?.includes('planes_institucionales') || false,
-      contratacion: usuario.allowed_modules?.includes('contratacion') || false
+      contratacion: usuario.allowed_modules?.includes('contratacion') || false,
+      pdm: usuario.allowed_modules?.includes('pdm') || false
     };
     this.mostrarModalModulos = true;
   }
@@ -1373,6 +1387,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.modulosSeleccionados.pqrs) modules.push('pqrs');
     if (this.modulosSeleccionados.planes_institucionales) modules.push('planes_institucionales');
     if (this.modulosSeleccionados.contratacion) modules.push('contratacion');
+    if (this.modulosSeleccionados.pdm) modules.push('pdm');
 
     try {
       const updated = await this.userService.updateUserModules(this.usuarioEditandoModulos.id!, modules).toPromise();

@@ -1,7 +1,17 @@
 """
 Endpoint de migración para actualizar base de datos en producción
+
+IMPORTANTE: Esta migración incluye:
+- Tablas PDM (pdm_meta_assignments, pdm_avances)
+- Flag enable_pdm en entities
+- Campos NIT y enable_contratacion
+- Permisos modulares (user_type, allowed_modules)
+
 Ejecutar:
     curl -X POST https://<backend>/api/migrations/run -H "X-Migration-Key: <CLAVE>"
+    
+Verificar estado:
+    curl -X GET https://<backend>/api/migrations/status -H "X-Migration-Key: <CLAVE>"
 """
 from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
@@ -75,6 +85,91 @@ def run_migrations(
         else:
             migrations_applied.append("ℹ️ Columna 'enable_contratacion' ya existe en entities")
 
+        # ====== MIGRACIONES PARA PDM (Plan de Desarrollo Municipal) ======
+        
+        # 3) Crear tabla pdm_meta_assignments si no existe
+        if not inspector.has_table("pdm_meta_assignments"):
+            if is_postgres:
+                db.execute(text("""
+                    CREATE TABLE pdm_meta_assignments (
+                        id SERIAL PRIMARY KEY,
+                        entity_id INTEGER NOT NULL REFERENCES entities(id),
+                        codigo_indicador_producto VARCHAR(128) NOT NULL,
+                        secretaria VARCHAR(256),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT uq_meta_assignment_entity_codigo UNIQUE (entity_id, codigo_indicador_producto)
+                    )
+                """))
+                db.execute(text("CREATE INDEX ix_pdm_meta_assignments_entity_id ON pdm_meta_assignments(entity_id)"))
+                db.execute(text("CREATE INDEX ix_pdm_meta_assignments_codigo ON pdm_meta_assignments(codigo_indicador_producto)"))
+            else:
+                db.execute(text("""
+                    CREATE TABLE pdm_meta_assignments (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        entity_id INTEGER NOT NULL,
+                        codigo_indicador_producto VARCHAR(128) NOT NULL,
+                        secretaria VARCHAR(256),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (entity_id) REFERENCES entities(id),
+                        UNIQUE(entity_id, codigo_indicador_producto)
+                    )
+                """))
+                db.execute(text("CREATE INDEX ix_pdm_meta_assignments_entity_id ON pdm_meta_assignments(entity_id)"))
+                db.execute(text("CREATE INDEX ix_pdm_meta_assignments_codigo ON pdm_meta_assignments(codigo_indicador_producto)"))
+            migrations_applied.append("🆕 Tabla 'pdm_meta_assignments' creada para asignación de metas a secretarías")
+        else:
+            migrations_applied.append("ℹ️ Tabla 'pdm_meta_assignments' ya existe")
+
+        # 4) Crear tabla pdm_avances si no existe
+        if not inspector.has_table("pdm_avances"):
+            if is_postgres:
+                db.execute(text("""
+                    CREATE TABLE pdm_avances (
+                        id SERIAL PRIMARY KEY,
+                        entity_id INTEGER NOT NULL REFERENCES entities(id),
+                        codigo_indicador_producto VARCHAR(128) NOT NULL,
+                        anio INTEGER NOT NULL,
+                        valor_ejecutado FLOAT NOT NULL DEFAULT 0.0,
+                        comentario VARCHAR(512),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT uq_avance_entity_codigo_anio UNIQUE (entity_id, codigo_indicador_producto, anio)
+                    )
+                """))
+                db.execute(text("CREATE INDEX ix_pdm_avances_entity_id ON pdm_avances(entity_id)"))
+                db.execute(text("CREATE INDEX ix_pdm_avances_codigo ON pdm_avances(codigo_indicador_producto)"))
+            else:
+                db.execute(text("""
+                    CREATE TABLE pdm_avances (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        entity_id INTEGER NOT NULL,
+                        codigo_indicador_producto VARCHAR(128) NOT NULL,
+                        anio INTEGER NOT NULL,
+                        valor_ejecutado REAL NOT NULL DEFAULT 0.0,
+                        comentario VARCHAR(512),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (entity_id) REFERENCES entities(id),
+                        UNIQUE(entity_id, codigo_indicador_producto, anio)
+                    )
+                """))
+                db.execute(text("CREATE INDEX ix_pdm_avances_entity_id ON pdm_avances(entity_id)"))
+                db.execute(text("CREATE INDEX ix_pdm_avances_codigo ON pdm_avances(codigo_indicador_producto)"))
+            migrations_applied.append("🆕 Tabla 'pdm_avances' creada para registro de avances por año")
+        else:
+            migrations_applied.append("ℹ️ Tabla 'pdm_avances' ya existe")
+
+        # 5) Agregar flag 'enable_pdm' si falta en entities
+        if "enable_pdm" not in existing_cols:
+            default_true = "TRUE" if is_postgres else "1"
+            db.execute(text(f"ALTER TABLE entities ADD COLUMN enable_pdm BOOLEAN NOT NULL DEFAULT {default_true}"))
+            db.execute(text(f"UPDATE entities SET enable_pdm = {default_true} WHERE enable_pdm IS NULL"))
+            migrations_applied.append("🆕 Agregada columna 'enable_pdm' con valor por defecto TRUE en entities")
+        else:
+            migrations_applied.append("ℹ️ Columna 'enable_pdm' ya existe en entities")
+
         # ====== MIGRACIONES PARA PERMISOS MODULARES ======
         
         # Verificar que exista la tabla users
@@ -83,7 +178,7 @@ def run_migrations(
 
         users_cols = {c["name"] for c in inspector.get_columns("users")}
 
-        # 3) Agregar columna 'user_type' si falta
+        # 6) Agregar columna 'user_type' si falta
         if "user_type" not in users_cols:
             if is_postgres:
                 # Crear ENUM type si no existe
@@ -102,7 +197,7 @@ def run_migrations(
         else:
             migrations_applied.append("ℹ️ Columna 'user_type' ya existe en users")
 
-        # 4) Agregar columna 'allowed_modules' si falta
+        # 7) Agregar columna 'allowed_modules' si falta
         if "allowed_modules" not in users_cols:
             if is_postgres:
                 # PostgreSQL: usar JSON o JSONB
@@ -114,7 +209,7 @@ def run_migrations(
         else:
             migrations_applied.append("ℹ️ Columna 'allowed_modules' ya existe en users")
 
-        # 5) Normalizar valores existentes de user_type (MAYÚSCULAS -> minúsculas)
+        # 8) Normalizar valores existentes de user_type (MAYÚSCULAS -> minúsculas)
         if "user_type" in users_cols:
             # Contar registros a normalizar
             count_result = db.execute(text("""
@@ -151,7 +246,7 @@ def run_migrations(
             "status": "success",
             "message": "Migraciones ejecutadas correctamente",
             "migrations": migrations_applied,
-            "details": "Migraciones aplicadas: NIT, enable_contratacion, user_type y allowed_modules (si estaban pendientes)."
+            "details": "Migraciones aplicadas: NIT, enable_contratacion, tablas PDM (meta_assignments, avances), enable_pdm, user_type y allowed_modules (si estaban pendientes)."
         }
 
     except Exception as e:
@@ -175,8 +270,11 @@ def migration_status(
         status_info = {
             "database_connection": "✅ Conectado",
             "pending_migrations": [],
-            "last_migration": "Permisos modulares (user_type y allowed_modules)",
+            "last_migration": "PDM (Plan de Desarrollo Municipal) y Permisos modulares",
             "notes": [
+                "El módulo PDM gestiona metas, asignaciones a secretarías y avances por año",
+                "Tablas: pdm_meta_assignments, pdm_avances",
+                "'enable_pdm' controla la visibilidad del módulo PDM",
                 "El módulo de Contratación usa SECOP II (API externa)",
                 "Se requiere el campo 'nit' en entities para consultar por NIT",
                 "'enable_contratacion' controla la visibilidad del módulo",
@@ -206,6 +304,26 @@ def migration_status(
         else:
             status_info["enable_contratacion_field"] = "⚠️ Campo 'enable_contratacion' no encontrado - se requiere migración"
             status_info["pending_migrations"].append("add_enable_contratacion_flag")
+
+        # Comprobar 'enable_pdm'
+        if "enable_pdm" in cols:
+            status_info["enable_pdm_field"] = "✅ Campo 'enable_pdm' existe en entities"
+        else:
+            status_info["enable_pdm_field"] = "⚠️ Campo 'enable_pdm' no encontrado - se requiere migración"
+            status_info["pending_migrations"].append("add_enable_pdm_flag")
+
+        # Comprobar tablas PDM
+        if inspector.has_table("pdm_meta_assignments"):
+            status_info["pdm_meta_assignments_table"] = "✅ Tabla 'pdm_meta_assignments' existe"
+        else:
+            status_info["pdm_meta_assignments_table"] = "⚠️ Tabla 'pdm_meta_assignments' no encontrada - se requiere migración"
+            status_info["pending_migrations"].append("create_pdm_meta_assignments_table")
+
+        if inspector.has_table("pdm_avances"):
+            status_info["pdm_avances_table"] = "✅ Tabla 'pdm_avances' existe"
+        else:
+            status_info["pdm_avances_table"] = "⚠️ Tabla 'pdm_avances' no encontrada - se requiere migración"
+            status_info["pending_migrations"].append("create_pdm_avances_table")
 
         # Comprobar tabla users
         if inspector.has_table("users"):

@@ -32,6 +32,8 @@ class Entity(Base):
     enable_planes_institucionales = Column(Boolean, nullable=False, default=True)
     # Nuevo módulo de Contratación (SECOP/SODA)
     enable_contratacion = Column(Boolean, nullable=False, default=True)
+    # Nuevo módulo de Plan de Desarrollo Municipal (PDM)
+    enable_pdm = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     

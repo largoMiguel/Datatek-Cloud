@@ -1,0 +1,78 @@
+<div class="modal-content">
+    <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+            <i class="fas fa-chart-line me-2"></i>
+            Registrar Avance
+        </h5>
+    </div>
+
+    <div class="modal-body">
+        <div class="alert alert-info mb-3">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong>Código:</strong> {{ data.codigo }}
+        </div>
+
+        <!-- Histórico de Avances -->
+        <div class="card mb-3 border-primary" *ngIf="data.avances">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    Histórico de Avances
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="badge bg-secondary fs-6 py-2 px-3" *ngFor="let a of anios">
+                        <strong>{{ a }}:</strong>
+                        <ng-container *ngIf="data.avances[a]; else sinDato">
+                            {{ data.avances[a].valor }}%
+                        </ng-container>
+                        <ng-template #sinDato>—</ng-template>
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulario -->
+        <div class="mb-3">
+            <label for="anio" class="form-label fw-bold">
+                <i class="fas fa-calendar me-2"></i>Año
+            </label>
+            <select class="form-select form-select-lg" id="anio" [(ngModel)]="anio" (change)="onAnioChange()">
+                <option *ngFor="let a of anios" [value]="a">{{ a }}</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label for="valor" class="form-label fw-bold">
+                <i class="fas fa-percentage me-2"></i>Valor Ejecutado (%)
+            </label>
+            <input type="number" class="form-control form-control-lg" id="valor" [(ngModel)]="valor_ejecutado" min="0"
+                max="100" placeholder="Ingrese un valor entre 0 y 100">
+            <div class="form-text">Valor entre 0 y 100</div>
+        </div>
+
+        <div class="mb-3">
+            <label for="comentario" class="form-label fw-bold">
+                <i class="fas fa-comment-alt me-2"></i>Comentario (Opcional)
+            </label>
+            <textarea class="form-control" id="comentario" rows="3" [(ngModel)]="comentario"
+                placeholder="Notas, fuente, aclaraciones..."></textarea>
+        </div>
+
+        <!-- Error Alert -->
+        <div class="alert alert-danger d-flex align-items-center" role="alert" *ngIf="error">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <div>{{ error }}</div>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-lg" mat-dialog-close>
+            <i class="fas fa-times me-2"></i>Cancelar
+        </button>
+        <button type="button" class="btn btn-primary btn-lg" (click)="guardar()">
+            <i class="fas fa-save me-2"></i>Guardar
+        </button>
+    </div>
+</div>

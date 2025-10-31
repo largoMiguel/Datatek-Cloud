@@ -23,6 +23,7 @@ class EntityBase(BaseModel):
     enable_ai_reports: Optional[bool] = True
     enable_planes_institucionales: Optional[bool] = True
     enable_contratacion: Optional[bool] = True
+    enable_pdm: Optional[bool] = True
 
 
 class EntityCreate(EntityBase):
@@ -50,6 +51,7 @@ class EntityUpdate(BaseModel):
     enable_ai_reports: Optional[bool] = None
     enable_planes_institucionales: Optional[bool] = None
     enable_contratacion: Optional[bool] = None
+    enable_pdm: Optional[bool] = None
 
 
 class EntityResponse(EntityBase):

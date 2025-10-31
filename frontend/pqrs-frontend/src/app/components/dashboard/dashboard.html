@@ -105,6 +105,11 @@
                     <i class="fas fa-file-contract me-2"></i>Contratación
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link" *ngIf="canAccessPdm()" routerLink="../pdm">
+                    <i class="fas fa-chart-line me-2"></i>Plan de Desarrollo
+                </a>
+            </li>
             <li class="nav-item ms-auto" *ngIf="isAdmin() && reportsPdfEnabled()">
                 <button class="btn btn-success btn-sm mt-1" (click)="mostrarFormularioInforme()">
                     <i class="fas fa-file-pdf me-2"></i>Generar Informe
@@ -848,7 +853,8 @@
                                                 <i class="fas" [ngClass]="{
                                                     'fa-inbox': module === 'pqrs',
                                                     'fa-tasks': module === 'planes_institucionales',
-                                                    'fa-file-contract': module === 'contratacion'
+                                                    'fa-file-contract': module === 'contratacion',
+                                                    'fa-chart-line': module === 'pdm'
                                                 }"></i>
                                                 {{ getModuleName(module) }}
                                             </span>
@@ -999,6 +1005,14 @@
                                         <label class="form-check-label" for="module_contratacion">
                                             <i class="fas fa-file-contract me-1 text-warning"></i>
                                             <strong>Contratación</strong> - Consulta y análisis SECOP II
+                                        </label>
+                                    </div>
+                                    <div class="form-check mt-2" *ngIf="pdmEnabled()">
+                                        <input class="form-check-input" type="checkbox" value="pdm" id="module_pdm"
+                                            formControlName="module_pdm">
+                                        <label class="form-check-label" for="module_pdm">
+                                            <i class="fas fa-chart-line me-1 text-info"></i>
+                                            <strong>Plan de Desarrollo</strong> - Análisis y seguimiento del PDM
                                         </label>
                                     </div>
                                 </div>
@@ -1447,8 +1461,19 @@
                             </label>
                         </div>
 
+                        <div class="form-check mb-2" *ngIf="pdmEnabled()">
+                            <input class="form-check-input" type="checkbox" id="module_pdm"
+                                [(ngModel)]="modulosSeleccionados.pdm">
+                            <label class="form-check-label" for="module_pdm">
+                                <i class="fas fa-chart-line me-2 text-info"></i>
+                                <strong>Plan de Desarrollo Municipal</strong>
+                                <br>
+                                <small class="text-muted">Análisis y seguimiento del Plan de Desarrollo</small>
+                            </label>
+                        </div>
+
                         <div class="alert alert-info mt-3"
-                            *ngIf="!entity?.enable_pqrs && !entity?.enable_planes_institucionales && !entity?.enable_contratacion">
+                            *ngIf="!entity?.enable_pqrs && !entity?.enable_planes_institucionales && !entity?.enable_contratacion && !pdmEnabled()">
                             <i class="fas fa-exclamation-circle me-2"></i>
                             No hay módulos disponibles para esta entidad. Contacta al super administrador para habilitar
                             módulos.

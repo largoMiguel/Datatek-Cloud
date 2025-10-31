@@ -5,7 +5,7 @@ from sqlalchemy import inspect, text
 from app.config.database import engine, get_db, Base
 from app.config.settings import settings
 from app.routes import auth, pqrs, users, planes, entities, contratacion, migrations
-from app.models import user, pqrs as pqrs_model, plan, entity
+from app.models import user, pqrs as pqrs_model, plan, entity, pdm as pdm_model
 from app.models.user import User, UserRole
 from app.utils.auth import get_password_hash
 
@@ -140,6 +140,8 @@ app.include_router(planes.router, prefix="/api/planes", tags=["Planes Institucio
 app.include_router(entities.router, prefix="/api", tags=["Entidades"])
 app.include_router(contratacion.router, prefix="/api", tags=["Contratación"])
 app.include_router(migrations.router, prefix="/api", tags=["Migrations"])
+from app.routes import pdm as pdm_routes
+app.include_router(pdm_routes.router, prefix="/api", tags=["PDM"])
 # Router de mantenimiento eliminado para despliegue limpio
 
 @app.get("/")

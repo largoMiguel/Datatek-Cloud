@@ -1,0 +1,781 @@
+<!-- Toast Container -->
+<div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
+
+<div class="container-fluid py-4">
+    <!-- Loading State -->
+    @if (cargando) {
+    <div class="d-flex justify-content-center align-items-center" style="min-height: 400px;">
+        <div class="text-center">
+            <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-3 text-muted fs-5">Cargando datos del PDM...</p>
+        </div>
+    </div>
+    }
+
+    <!-- No Data State -->
+    @else if (!pdmData || !analisis) {
+    <div class="text-center py-5">
+        <i class="fas fa-cloud-off fa-5x text-muted mb-4"></i>
+        <h3 class="mb-3">No hay datos disponibles</h3>
+        <p class="text-muted mb-4">Por favor carga un archivo Excel del PDM</p>
+        <button class="btn btn-primary btn-lg" (click)="cargarNuevoArchivo()">
+            <i class="fas fa-upload me-2"></i>Cargar Archivo
+        </button>
+    </div>
+    }
+
+    <!-- Main Dashboard -->
+    @else {
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary bg-opacity-10 rounded-3 p-3 me-3">
+                                    <i class="fas fa-chart-line fa-3x text-primary"></i>
+                                </div>
+                                <div>
+                                    <h1 class="h3 mb-1">Dashboard PDM</h1>
+                                    <p class="text-muted mb-0">Análisis y seguimiento del Plan de Desarrollo Municipal
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-outline-secondary me-2" (click)="exportarDatos()">
+                                <i class="fas fa-download me-2"></i>Exportar
+                            </button>
+                            <button class="btn btn-primary" (click)="cargarNuevoArchivo()">
+                                <i class="fas fa-sync-alt me-2"></i>Cargar Nuevo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row mb-4 g-3">
+        <!-- Total Metas -->
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-bullseye fa-2x text-primary"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-0 small">Total Metas</h6>
+                            <h2 class="mb-0">{{ analisis.indicadoresGenerales.totalMetas }}</h2>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-primary" style="width: 100%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cumplidas -->
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-check-circle fa-2x text-success"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-0 small">Cumplidas</h6>
+                            <h2 class="mb-0">{{ analisis.indicadoresGenerales.metasCumplidas }}</h2>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success"
+                            [style.width.%]="(analisis.indicadoresGenerales.metasCumplidas / analisis.indicadoresGenerales.totalMetas) * 100">
+                        </div>
+                    </div>
+                    <small class="text-success">
+                        <i class="fas fa-arrow-up me-1"></i>
+                        {{ formatearPorcentaje((analisis.indicadoresGenerales.metasCumplidas /
+                        analisis.indicadoresGenerales.totalMetas) * 100) }}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- En Progreso -->
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-clock fa-2x text-info"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-0 small">En Progreso</h6>
+                            <h2 class="mb-0">{{ analisis.indicadoresGenerales.metasEnProgreso }}</h2>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-info"
+                            [style.width.%]="(analisis.indicadoresGenerales.metasEnProgreso / analisis.indicadoresGenerales.totalMetas) * 100">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pendientes -->
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-danger bg-opacity-10 rounded-circle p-3 me-3">
+                            <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-0 small">Pendientes</h6>
+                            <h2 class="mb-0">{{ analisis.indicadoresGenerales.metasPendientes }}</h2>
+                        </div>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-danger"
+                            [style.width.%]="(analisis.indicadoresGenerales.metasPendientes / analisis.indicadoresGenerales.totalMetas) * 100">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts Section -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="alert alert-success d-flex align-items-center">
+                <i class="fas fa-check-circle fa-2x me-3"></i>
+                <div>
+                    <strong>{{ analisis.indicadoresGenerales.metasCumplidas }}</strong> metas cumplidas
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="alert alert-info d-flex align-items-center">
+                <i class="fas fa-spinner fa-2x me-3"></i>
+                <div>
+                    <strong>{{ analisis.indicadoresGenerales.metasEnProgreso }}</strong> metas en progreso
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="alert alert-warning d-flex align-items-center">
+                <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+                <div>
+                    <strong>{{ analisis.indicadoresGenerales.metasPorCumplir }}</strong> metas por cumplir
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section with Bootstrap Tabs -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="chartsTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="cumplimiento-tab" data-bs-toggle="tab"
+                                data-bs-target="#cumplimiento" type="button" role="tab">
+                                <i class="fas fa-chart-pie me-2"></i>Cumplimiento General
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="sector-tab" data-bs-toggle="tab" data-bs-target="#sector"
+                                type="button" role="tab">
+                                <i class="fas fa-chart-bar me-2"></i>Por Sector
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="presupuesto-tab" data-bs-toggle="tab"
+                                data-bs-target="#presupuesto" type="button" role="tab">
+                                <i class="fas fa-dollar-sign me-2"></i>Presupuesto
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content pt-4" id="chartsTabContent">
+                        <!-- Cumplimiento Tab -->
+                        <div class="tab-pane fade show active" id="cumplimiento" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h5 class="mb-3">
+                                        <i class="fas fa-chart-pie me-2 text-primary"></i>
+                                        Distribución de Metas por Estado
+                                    </h5>
+                                    @if (chartCumplimiento) {
+                                    <div class="chart-container" style="height: 300px;">
+                                        <canvas baseChart [data]="chartCumplimiento" [type]="'doughnut'"
+                                            [options]="doughnutOptions"></canvas>
+                                    </div>
+                                    }
+                                </div>
+                                <div class="col-md-6">
+                                    <h5 class="mb-3">
+                                        <i class="fas fa-chart-bar me-2 text-primary"></i>
+                                        Metas por Año
+                                    </h5>
+                                    @if (chartPorAnio) {
+                                    <div class="chart-container" style="height: 300px;">
+                                        <canvas baseChart [data]="chartPorAnio" [type]="'bar'"
+                                            [options]="chartOptions"></canvas>
+                                    </div>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sector Tab -->
+                        <div class="tab-pane fade" id="sector" role="tabpanel">
+                            <h5 class="mb-3">
+                                <i class="fas fa-chart-bar me-2 text-primary"></i>
+                                Cumplimiento por Sector (Top 10)
+                            </h5>
+                            @if (chartPorSector) {
+                            <div class="chart-container" style="height: 500px;">
+                                <canvas baseChart [data]="chartPorSector" [type]="'bar'"
+                                    [options]="barHorizontalOptions"></canvas>
+                            </div>
+                            }
+                        </div>
+
+                        <!-- Presupuesto Tab -->
+                        <div class="tab-pane fade" id="presupuesto" role="tabpanel">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h5 class="mb-3">
+                                        <i class="fas fa-line-chart me-2 text-primary"></i>
+                                        Presupuesto por Año
+                                    </h5>
+                                    @if (chartPresupuesto) {
+                                    <div class="chart-container" style="height: 300px;">
+                                        <canvas baseChart [data]="chartPresupuesto" [type]="'line'"
+                                            [options]="lineOptions"></canvas>
+                                    </div>
+                                    }
+                                </div>
+                                <div class="col-md-4">
+                                    <h5 class="mb-3">
+                                        <i class="fas fa-calculator me-2 text-primary"></i>
+                                        Resumen por Año
+                                    </h5>
+                                    <div class="list-group">
+                                        @for (a of analisis.analisisPorAnio; track a.anio) {
+                                        <div class="list-group-item">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h6 class="mb-1">{{ a.anio }}</h6>
+                                                    <small class="text-muted">{{ formatearMoneda(a.presupuestoTotal)
+                                                        }}</small>
+                                                </div>
+                                                <span class="badge bg-primary rounded-pill">{{ a.totalMetas }}
+                                                    metas</span>
+                                            </div>
+                                        </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estadísticas Avanzadas -->
+    <div class="row mb-4">
+        <div class="col">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h5 class="mb-4">
+                        <i class="fas fa-chart-area me-2 text-primary"></i>
+                        Resumen de Avances por Año
+                    </h5>
+
+                    <ul class="nav nav-pills mb-4" id="statsTab" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="secretaria-stats-tab" data-bs-toggle="tab"
+                                data-bs-target="#secretaria-stats" type="button" role="tab">
+                                <i class="fas fa-building me-2"></i>Por Secretaría
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="linea-stats-tab" data-bs-toggle="tab"
+                                data-bs-target="#linea-stats" type="button" role="tab">
+                                <i class="fas fa-project-diagram me-2"></i>Por Línea Estratégica
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content" id="statsTabContent">
+                        <!-- Stats por Secretaría -->
+                        <div class="tab-pane fade show active" id="secretaria-stats" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Secretaría</th>
+                                            <th class="text-center">Total Metas</th>
+                                            <th class="text-center">Avance 2024</th>
+                                            <th class="text-center">Avance 2025</th>
+                                            <th class="text-center">Avance 2026</th>
+                                            <th class="text-center">Avance 2027</th>
+                                            <th class="text-center">Promedio</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (stat of estadisticasPorSecretaria; track stat.secretaria) {
+                                        <tr>
+                                            <td>
+                                                <strong>{{ stat.secretaria }}</strong>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-secondary">{{ stat.totalMetas }}</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                                    <div class="progress" style="width: 60px; height: 8px;">
+                                                        <div class="progress-bar"
+                                                            [class.bg-success]="stat.avance2024 >= 70"
+                                                            [class.bg-warning]="stat.avance2024 >= 40 && stat.avance2024 < 70"
+                                                            [class.bg-danger]="stat.avance2024 < 40"
+                                                            [style.width.%]="stat.avance2024">
+                                                        </div>
+                                                    </div>
+                                                    <small class="fw-bold">{{ formatearPorcentaje(stat.avance2024)
+                                                        }}</small>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                                    <div class="progress" style="width: 60px; height: 8px;">
+                                                        <div class="progress-bar"
+                                                            [class.bg-success]="stat.avance2025 >= 70"
+                                                            [class.bg-warning]="stat.avance2025 >= 40 && stat.avance2025 < 70"
+                                                            [class.bg-danger]="stat.avance2025 < 40"
+                                                            [style.width.%]="stat.avance2025">
+                                                        </div>
+                                                    </div>
+                                                    <small class="fw-bold">{{ formatearPorcentaje(stat.avance2025)
+                                                        }}</small>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                                    <div class="progress" style="width: 60px; height: 8px;">
+                                                        <div class="progress-bar"
+                                                            [class.bg-success]="stat.avance2026 >= 70"
+                                                            [class.bg-warning]="stat.avance2026 >= 40 && stat.avance2026 < 70"
+                                                            [class.bg-danger]="stat.avance2026 < 40"
+                                                            [style.width.%]="stat.avance2026">
+                                                        </div>
+                                                    </div>
+                                                    <small class="fw-bold">{{ formatearPorcentaje(stat.avance2026)
+                                                        }}</small>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                                    <div class="progress" style="width: 60px; height: 8px;">
+                                                        <div class="progress-bar"
+                                                            [class.bg-success]="stat.avance2027 >= 70"
+                                                            [class.bg-warning]="stat.avance2027 >= 40 && stat.avance2027 < 70"
+                                                            [class.bg-danger]="stat.avance2027 < 40"
+                                                            [style.width.%]="stat.avance2027">
+                                                        </div>
+                                                    </div>
+                                                    <small class="fw-bold">{{ formatearPorcentaje(stat.avance2027)
+                                                        }}</small>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge fs-6" [class.bg-success]="stat.avancePromedio >= 70"
+                                                    [class.bg-warning]="stat.avancePromedio >= 40 && stat.avancePromedio < 70"
+                                                    [class.bg-danger]="stat.avancePromedio < 40">
+                                                    {{ formatearPorcentaje(stat.avancePromedio) }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        }
+                                        @if (estadisticasPorSecretaria.length === 0) {
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted py-4">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                No hay estadísticas disponibles
+                                            </td>
+                                        </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Stats por Línea Estratégica -->
+                        <div class="tab-pane fade" id="linea-stats" role="tabpanel">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Línea Estratégica</th>
+                                            <th class="text-center">Total Metas</th>
+                                            <th class="text-center">Avance 2024</th>
+                                            <th class="text-center">Avance 2025</th>
+                                            <th class="text-center">Avance 2026</th>
+                                            <th class="text-center">Avance 2027</th>
+                                            <th class="text-center">Promedio</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (stat of estadisticasPorLinea; track stat.lineaEstrategica) {
+                                        <tr>
+                                            <td>
+                                                <strong>{{ stat.lineaEstrategica }}</strong>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge bg-secondary">{{ stat.totalMetas }}</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                                    <div class="progress" style="width: 60px; height: 8px;">
+                                                        <div class="progress-bar"
+                                                            [class.bg-success]="stat.avance2024 >= 70"
+                                                            [class.bg-warning]="stat.avance2024 >= 40 && stat.avance2024 < 70"
+                                                            [class.bg-danger]="stat.avance2024 < 40"
+                                                            [style.width.%]="stat.avance2024">
+                                                        </div>
+                                                    </div>
+                                                    <small class="fw-bold">{{ formatearPorcentaje(stat.avance2024)
+                                                        }}</small>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                                    <div class="progress" style="width: 60px; height: 8px;">
+                                                        <div class="progress-bar"
+                                                            [class.bg-success]="stat.avance2025 >= 70"
+                                                            [class.bg-warning]="stat.avance2025 >= 40 && stat.avance2025 < 70"
+                                                            [class.bg-danger]="stat.avance2025 < 40"
+                                                            [style.width.%]="stat.avance2025">
+                                                        </div>
+                                                    </div>
+                                                    <small class="fw-bold">{{ formatearPorcentaje(stat.avance2025)
+                                                        }}</small>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                                    <div class="progress" style="width: 60px; height: 8px;">
+                                                        <div class="progress-bar"
+                                                            [class.bg-success]="stat.avance2026 >= 70"
+                                                            [class.bg-warning]="stat.avance2026 >= 40 && stat.avance2026 < 70"
+                                                            [class.bg-danger]="stat.avance2026 < 40"
+                                                            [style.width.%]="stat.avance2026">
+                                                        </div>
+                                                    </div>
+                                                    <small class="fw-bold">{{ formatearPorcentaje(stat.avance2026)
+                                                        }}</small>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-flex align-items-center justify-content-center gap-2">
+                                                    <div class="progress" style="width: 60px; height: 8px;">
+                                                        <div class="progress-bar"
+                                                            [class.bg-success]="stat.avance2027 >= 70"
+                                                            [class.bg-warning]="stat.avance2027 >= 40 && stat.avance2027 < 70"
+                                                            [class.bg-danger]="stat.avance2027 < 40"
+                                                            [style.width.%]="stat.avance2027">
+                                                        </div>
+                                                    </div>
+                                                    <small class="fw-bold">{{ formatearPorcentaje(stat.avance2027)
+                                                        }}</small>
+                                                </div>
+                                            </td>
+                                            <td class="text-center">
+                                                <span class="badge fs-6" [class.bg-success]="stat.avancePromedio >= 70"
+                                                    [class.bg-warning]="stat.avancePromedio >= 40 && stat.avancePromedio < 70"
+                                                    [class.bg-danger]="stat.avancePromedio < 40">
+                                                    {{ formatearPorcentaje(stat.avancePromedio) }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        }
+                                        @if (estadisticasPorLinea.length === 0) {
+                                        <tr>
+                                            <td colspan="7" class="text-center text-muted py-4">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                No hay estadísticas disponibles
+                                            </td>
+                                        </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="row">
+        <div class="col">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white border-0 pt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0">
+                            <i class="fas fa-table me-2 text-primary"></i>
+                            Detalle de Productos e Indicadores
+                        </h5>
+                        <span class="badge bg-primary fs-6">{{ productosFiltrados.length }} productos</span>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="row g-3 mb-3">
+                        <!-- Search -->
+                        <div class="col-md-3">
+                            <input type="text" class="form-control" placeholder="🔍 Buscar..." [(ngModel)]="searchTerm"
+                                (ngModelChange)="onSearchChange()">
+                        </div>
+
+                        <!-- Sector -->
+                        <div class="col-md-2">
+                            <select class="form-select" [(ngModel)]="filtros.sector" (ngModelChange)="aplicarFiltros()">
+                                <option [value]="undefined">Todos los sectores</option>
+                                @for (sector of sectoresDisponibles; track sector) {
+                                <option [value]="sector">{{ sector }}</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Linea -->
+                        <div class="col-md-3">
+                            <select class="form-select" [(ngModel)]="filtros.lineaEstrategica"
+                                (ngModelChange)="aplicarFiltros()">
+                                <option [value]="undefined">Todas las líneas</option>
+                                @for (linea of lineasDisponibles; track linea) {
+                                <option [value]="linea">{{ linea }}</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Estado -->
+                        <div class="col-md-2">
+                            <select class="form-select" [(ngModel)]="filtros.estado" (ngModelChange)="aplicarFiltros()">
+                                <option [value]="undefined">Todos los estados</option>
+                                @for (estado of estadosDisponibles; track estado.valor) {
+                                <option [value]="estado.valor">{{ estado.etiqueta }}</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Secretaria -->
+                        <div class="col-md-2">
+                            <select class="form-select" [(ngModel)]="filtros.secretaria"
+                                (ngModelChange)="aplicarFiltros()">
+                                <option [value]="undefined">Todas</option>
+                                @for (sec of pdmService.obtenerSecretariasUnicas(); track sec) {
+                                <option [value]="sec">{{ sec }}</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-outline-secondary btn-sm" (click)="limpiarFiltros()">
+                        <i class="fas fa-times me-2"></i>Limpiar filtros
+                    </button>
+                </div>
+
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th (click)="onSort('codigoIndicadorProducto')" style="cursor: pointer;">
+                                        Código
+                                        <i class="fas fa-sort ms-1"></i>
+                                    </th>
+                                    <th (click)="onSort('sector')" style="cursor: pointer;">
+                                        Sector
+                                        <i class="fas fa-sort ms-1"></i>
+                                    </th>
+                                    <th>Producto</th>
+                                    <th>Secretaría</th>
+                                    <th class="text-center">Meta</th>
+                                    <th class="text-center">2024</th>
+                                    <th class="text-center">2025</th>
+                                    <th class="text-center">2026</th>
+                                    <th class="text-center">2027</th>
+                                    <th class="text-center">Avance</th>
+                                    <th class="text-center">Estado</th>
+                                    <th class="text-end">Presupuesto</th>
+                                    <th class="text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (row of paginatedData; track row.codigoIndicadorProducto) {
+                                <tr>
+                                    <td><code>{{ row.codigoIndicadorProducto }}</code></td>
+                                    <td><small>{{ row.sector }}</small></td>
+                                    <td>
+                                        <div style="max-width: 300px;" class="text-truncate">
+                                            {{ row.personalizacion || row.indicadorProducto }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <select class="form-select form-select-sm"
+                                            [value]="row.secretariaAsignada || ''"
+                                            (change)="onCambiarSecretaria(row, $any($event.target).value || undefined)">
+                                            <option value="">Sin asignar</option>
+                                            <option value="Planeación">Planeación</option>
+                                            <option value="Hacienda">Hacienda</option>
+                                            <option value="Infraestructura">Infraestructura</option>
+                                            <option value="Educación">Educación</option>
+                                            <option value="Salud">Salud</option>
+                                            <option value="Desarrollo Social">Desarrollo Social</option>
+                                        </select>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-secondary">{{ row.metaCuatrienio || 'N/A' }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge" [class.bg-success]="(row.avances?.[2024]?.valor || 0) >= 70"
+                                            [class.bg-warning]="(row.avances?.[2024]?.valor || 0) >= 40 && (row.avances?.[2024]?.valor || 0) < 70"
+                                            [class.bg-secondary]="(row.avances?.[2024]?.valor || 0) < 40">
+                                            {{ row.avances?.[2024]?.valor || 0 }}%
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge" [class.bg-success]="(row.avances?.[2025]?.valor || 0) >= 70"
+                                            [class.bg-warning]="(row.avances?.[2025]?.valor || 0) >= 40 && (row.avances?.[2025]?.valor || 0) < 70"
+                                            [class.bg-secondary]="(row.avances?.[2025]?.valor || 0) < 40">
+                                            {{ row.avances?.[2025]?.valor || 0 }}%
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge" [class.bg-success]="(row.avances?.[2026]?.valor || 0) >= 70"
+                                            [class.bg-warning]="(row.avances?.[2026]?.valor || 0) >= 40 && (row.avances?.[2026]?.valor || 0) < 70"
+                                            [class.bg-secondary]="(row.avances?.[2026]?.valor || 0) < 40">
+                                            {{ row.avances?.[2026]?.valor || 0 }}%
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge" [class.bg-success]="(row.avances?.[2027]?.valor || 0) >= 70"
+                                            [class.bg-warning]="(row.avances?.[2027]?.valor || 0) >= 40 && (row.avances?.[2027]?.valor || 0) < 70"
+                                            [class.bg-secondary]="(row.avances?.[2027]?.valor || 0) < 40">
+                                            {{ row.avances?.[2027]?.valor || 0 }}%
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="progress" style="height: 24px; min-width: 80px;">
+                                            <div class="progress-bar" [class.bg-success]="(row.avance || 0) >= 70"
+                                                [class.bg-warning]="(row.avance || 0) >= 40 && (row.avance || 0) < 70"
+                                                [class.bg-danger]="(row.avance || 0) < 40"
+                                                [style.width.%]="row.avance || 0">
+                                                {{ formatearPorcentaje(row.avance || 0) }}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge" [ngClass]="{
+                                            'bg-success': obtenerColorEstado(row.estado) === 'success',
+                                            'bg-info': obtenerColorEstado(row.estado) === 'primary',
+                                            'bg-warning': obtenerColorEstado(row.estado) === 'warn',
+                                            'bg-danger': obtenerColorEstado(row.estado) === 'accent'
+                                        }">
+                                            {{ obtenerEtiquetaEstado(row.estado) }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <small>{{ formatearMoneda(row.total2027 || 0) }}</small>
+                                    </td>
+                                    <td class="text-center">
+                                        <button class="btn btn-sm btn-primary" (click)="abrirDialogoAvance(row)">
+                                            <i class="fas fa-plus-circle"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    @if (totalPages > 1) {
+                    <div class="card-footer bg-white border-0">
+                        <nav>
+                            <ul class="pagination justify-content-center mb-0">
+                                <li class="page-item" [class.disabled]="currentPage === 1">
+                                    <button class="page-link" (click)="currentPage = 1" [disabled]="currentPage === 1">
+                                        <i class="fas fa-angle-double-left"></i>
+                                    </button>
+                                </li>
+                                <li class="page-item" [class.disabled]="currentPage === 1">
+                                    <button class="page-link" (click)="currentPage = currentPage - 1"
+                                        [disabled]="currentPage === 1">
+                                        <i class="fas fa-angle-left"></i>
+                                    </button>
+                                </li>
+
+                                @for (page of pages; track page) {
+                                @if (page === currentPage || (page >= currentPage - 2 && page <= currentPage + 2)) { <li
+                                    class="page-item" [class.active]="page === currentPage">
+                                    <button class="page-link" (click)="currentPage = page">{{ page }}</button>
+                                    </li>
+                                    }
+                                    }
+
+                                    <li class="page-item" [class.disabled]="currentPage === totalPages">
+                                        <button class="page-link" (click)="currentPage = currentPage + 1"
+                                            [disabled]="currentPage === totalPages">
+                                            <i class="fas fa-angle-right"></i>
+                                        </button>
+                                    </li>
+                                    <li class="page-item" [class.disabled]="currentPage === totalPages">
+                                        <button class="page-link" (click)="currentPage = totalPages"
+                                            [disabled]="currentPage === totalPages">
+                                            <i class="fas fa-angle-double-right"></i>
+                                        </button>
+                                    </li>
+                            </ul>
+                        </nav>
+                        <p class="text-center text-muted mt-2 mb-0">
+                            Mostrando {{ (currentPage - 1) * itemsPerPage + 1 }} a {{ currentPage * itemsPerPage >
+                            productosFiltrados.length ? productosFiltrados.length : currentPage * itemsPerPage }}
+                            de {{ productosFiltrados.length }} productos
+                        </p>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+</div>
+
+<!-- Avance Modal -->
+@if (avanceDialogData) {
+<div class="modal fade" id="avanceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <app-pdm-avance-dialog [data]="avanceDialogData" (onSave)="onAvanceSave($event)"
+                (onCancel)="onAvanceCancel()">
+            </app-pdm-avance-dialog>
+        </div>
+    </div>
+</div>
+}

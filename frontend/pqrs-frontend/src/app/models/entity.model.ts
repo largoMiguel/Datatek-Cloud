@@ -19,6 +19,7 @@ export interface Entity {
     enable_ai_reports: boolean;
     enable_planes_institucionales: boolean;
     enable_contratacion: boolean;
+    enable_pdm?: boolean;
     created_at: string;
     updated_at?: string;
 }
@@ -46,6 +47,7 @@ export interface CreateEntityRequest {
     enable_ai_reports?: boolean;
     enable_planes_institucionales?: boolean;
     enable_contratacion?: boolean;
+    enable_pdm?: boolean;
 }
 
 export interface UpdateEntityRequest {
@@ -67,4 +69,5 @@ export interface UpdateEntityRequest {
     enable_ai_reports?: boolean;
     enable_planes_institucionales?: boolean;
     enable_contratacion?: boolean;
+    enable_pdm?: boolean;
 }

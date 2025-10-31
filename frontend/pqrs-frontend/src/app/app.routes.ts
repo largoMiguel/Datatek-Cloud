@@ -7,9 +7,11 @@ import { PortalCiudadanoComponent } from './components/portal-ciudadano/portal-c
 import { SoftAdminComponent } from './components/soft-admin/soft-admin';
 import { authGuard, loginGuard, adminPortalGuard, ciudadanoGuard } from './guards/auth.guard';
 import { superAdminGuard } from './guards/superadmin.guard';
-import { planesEnabledGuard, pqrsEnabledGuard, contratacionEnabledGuard } from './guards/feature.guard';
+import { planesEnabledGuard, pqrsEnabledGuard, contratacionEnabledGuard, pdmEnabledGuard } from './guards/feature.guard';
 import { ContratacionComponent } from './components/contratacion/contratacion';
 import { ShowcaseComponent } from './components/showcase/showcase';
+import { PdmUploadComponent } from './components/pdm/pdm-upload/pdm-upload.component';
+import { PdmDashboardComponent } from './components/pdm/pdm-dashboard/pdm-dashboard.component';
 import { ensureEntityGuard } from './guards/ensure-entity.guard';
 import { enforceUserEntityGuard } from './guards/enforce-user-entity.guard';
 import { entityResolver } from './resolvers/entity.resolver';
@@ -39,6 +41,8 @@ export const routes: Routes = [
             { path: 'dashboard', component: DashboardComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard] },
             { path: 'planes-institucionales', component: PlanesInstitucionalesComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard, planesEnabledGuard, moduleAccessGuard('planes_institucionales')] },
             { path: 'contratacion', component: ContratacionComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard, contratacionEnabledGuard, moduleAccessGuard('contratacion')] },
+            { path: 'pdm', component: PdmUploadComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard, pdmEnabledGuard, moduleAccessGuard('pdm')] },
+            { path: 'pdm-dashboard', component: PdmDashboardComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard, pdmEnabledGuard, moduleAccessGuard('pdm')] },
         ]
     },
     { path: '**', redirectTo: '' }
