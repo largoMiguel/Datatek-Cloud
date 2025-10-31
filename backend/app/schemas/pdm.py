@@ -51,8 +51,11 @@ class ActividadBase(BaseModel):
     responsable: Optional[str] = Field(None, max_length=256)
     fecha_inicio: Optional[str] = None  # ISO format string
     fecha_fin: Optional[str] = None  # ISO format string
-    porcentaje_avance: float = Field(default=0.0, ge=0.0, le=100.0)
     estado: str = Field(default='pendiente', max_length=64)  # pendiente, en_progreso, completada, cancelada
+    # Nuevos campos de ejecución por año
+    anio: int
+    meta_ejecutar: float = Field(default=0.0, ge=0.0)
+    valor_ejecutado: float = Field(default=0.0, ge=0.0)
 
 
 class ActividadCreateRequest(ActividadBase):
@@ -65,8 +68,10 @@ class ActividadUpdateRequest(BaseModel):
     responsable: Optional[str] = Field(None, max_length=256)
     fecha_inicio: Optional[str] = None
     fecha_fin: Optional[str] = None
-    porcentaje_avance: Optional[float] = Field(None, ge=0.0, le=100.0)
     estado: Optional[str] = Field(None, max_length=64)
+    anio: Optional[int] = None
+    meta_ejecutar: Optional[float] = Field(None, ge=0.0)
+    valor_ejecutado: Optional[float] = Field(None, ge=0.0)
 
 
 class ActividadResponse(ActividadBase):

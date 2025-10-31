@@ -208,6 +208,36 @@ def run_migrations(
         else:
             migrations_applied.append("ℹ️ Tabla 'pdm_actividades' ya existe")
 
+        # 4.2) Agregar columnas nuevas a pdm_actividades si faltan: anio, meta_ejecutar, valor_ejecutado
+        if inspector.has_table("pdm_actividades"):
+            act_cols = {c["name"] for c in inspector.get_columns("pdm_actividades")}
+            if "anio" not in act_cols:
+                if is_postgres:
+                    db.execute(text("ALTER TABLE pdm_actividades ADD COLUMN IF NOT EXISTS anio INTEGER"))
+                else:
+                    db.execute(text("ALTER TABLE pdm_actividades ADD COLUMN anio INTEGER"))
+                migrations_applied.append("🆕 Agregada columna 'anio' en pdm_actividades")
+            else:
+                migrations_applied.append("ℹ️ Columna 'anio' ya existe en pdm_actividades")
+
+            if "meta_ejecutar" not in act_cols:
+                if is_postgres:
+                    db.execute(text("ALTER TABLE pdm_actividades ADD COLUMN IF NOT EXISTS meta_ejecutar FLOAT NOT NULL DEFAULT 0.0"))
+                else:
+                    db.execute(text("ALTER TABLE pdm_actividades ADD COLUMN meta_ejecutar REAL NOT NULL DEFAULT 0.0"))
+                migrations_applied.append("🆕 Agregada columna 'meta_ejecutar' en pdm_actividades")
+            else:
+                migrations_applied.append("ℹ️ Columna 'meta_ejecutar' ya existe en pdm_actividades")
+
+            if "valor_ejecutado" not in act_cols:
+                if is_postgres:
+                    db.execute(text("ALTER TABLE pdm_actividades ADD COLUMN IF NOT EXISTS valor_ejecutado FLOAT NOT NULL DEFAULT 0.0"))
+                else:
+                    db.execute(text("ALTER TABLE pdm_actividades ADD COLUMN valor_ejecutado REAL NOT NULL DEFAULT 0.0"))
+                migrations_applied.append("🆕 Agregada columna 'valor_ejecutado' en pdm_actividades")
+            else:
+                migrations_applied.append("ℹ️ Columna 'valor_ejecutado' ya existe en pdm_actividades")
+
         # 5) Agregar flag 'enable_pdm' si falta en entities
         if "enable_pdm" not in existing_cols:
             default_true = "TRUE" if is_postgres else "1"

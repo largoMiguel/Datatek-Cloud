@@ -180,8 +180,10 @@ async def get_actividades(
                 responsable=row.responsable,
                 fecha_inicio=row.fecha_inicio.isoformat() if row.fecha_inicio else None,
                 fecha_fin=row.fecha_fin.isoformat() if row.fecha_fin else None,
-                porcentaje_avance=row.porcentaje_avance,
                 estado=row.estado,
+                anio=row.anio if row.anio is not None else 0,
+                meta_ejecutar=row.meta_ejecutar if row.meta_ejecutar is not None else 0.0,
+                valor_ejecutado=row.valor_ejecutado if row.valor_ejecutado is not None else 0.0,
                 created_at=row.created_at.isoformat() if row.created_at else '',
                 updated_at=row.updated_at.isoformat() if row.updated_at else '',
             )
@@ -221,6 +223,14 @@ async def create_actividad(
     if payload.estado and payload.estado not in estados_permitidos:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Estado inválido para actividad")
 
+    # Validaciones de anio/meta
+    if payload.anio < 2000 or payload.anio > 2100:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Año de ejecución inválido")
+    if payload.meta_ejecutar < 0:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="La meta a ejecutar debe ser >= 0")
+    if payload.valor_ejecutado < 0:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="El valor ejecutado debe ser >= 0")
+
     nueva_actividad = PdmActividad(
         entity_id=entity.id,
         codigo_indicador_producto=payload.codigo_indicador_producto,
@@ -229,8 +239,10 @@ async def create_actividad(
         responsable=(payload.responsable or None),
         fecha_inicio=dt.fromisoformat(payload.fecha_inicio) if payload.fecha_inicio else None,
         fecha_fin=dt.fromisoformat(payload.fecha_fin) if payload.fecha_fin else None,
-        porcentaje_avance=payload.porcentaje_avance,
         estado=payload.estado,
+        anio=payload.anio,
+        meta_ejecutar=payload.meta_ejecutar,
+        valor_ejecutado=payload.valor_ejecutado,
     )
 
     db.add(nueva_actividad)
@@ -246,8 +258,10 @@ async def create_actividad(
         responsable=nueva_actividad.responsable,
         fecha_inicio=nueva_actividad.fecha_inicio.isoformat() if nueva_actividad.fecha_inicio else None,
         fecha_fin=nueva_actividad.fecha_fin.isoformat() if nueva_actividad.fecha_fin else None,
-        porcentaje_avance=nueva_actividad.porcentaje_avance,
         estado=nueva_actividad.estado,
+        anio=nueva_actividad.anio if nueva_actividad.anio is not None else 0,
+        meta_ejecutar=nueva_actividad.meta_ejecutar,
+        valor_ejecutado=nueva_actividad.valor_ejecutado,
         created_at=nueva_actividad.created_at.isoformat() if nueva_actividad.created_at else '',
         updated_at=nueva_actividad.updated_at.isoformat() if nueva_actividad.updated_at else '',
     )
@@ -284,8 +298,12 @@ async def update_actividad(
         actividad.fecha_inicio = dt.fromisoformat(payload.fecha_inicio) if payload.fecha_inicio else None
     if payload.fecha_fin is not None:
         actividad.fecha_fin = dt.fromisoformat(payload.fecha_fin) if payload.fecha_fin else None
-    if payload.porcentaje_avance is not None:
-        actividad.porcentaje_avance = payload.porcentaje_avance
+    if payload.anio is not None:
+        actividad.anio = payload.anio
+    if payload.meta_ejecutar is not None:
+        actividad.meta_ejecutar = payload.meta_ejecutar
+    if payload.valor_ejecutado is not None:
+        actividad.valor_ejecutado = payload.valor_ejecutado
     if payload.estado is not None:
         estados_permitidos = {"pendiente", "en_progreso", "completada", "cancelada"}
         if payload.estado not in estados_permitidos:
@@ -308,8 +326,10 @@ async def update_actividad(
         responsable=actividad.responsable,
         fecha_inicio=actividad.fecha_inicio.isoformat() if actividad.fecha_inicio else None,
         fecha_fin=actividad.fecha_fin.isoformat() if actividad.fecha_fin else None,
-        porcentaje_avance=actividad.porcentaje_avance,
         estado=actividad.estado,
+        anio=actividad.anio if actividad.anio is not None else 0,
+        meta_ejecutar=actividad.meta_ejecutar,
+        valor_ejecutado=actividad.valor_ejecutado,
         created_at=actividad.created_at.isoformat() if actividad.created_at else '',
         updated_at=actividad.updated_at.isoformat() if actividad.updated_at else '',
     )

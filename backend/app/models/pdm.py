@@ -49,7 +49,12 @@ class PdmActividad(Base):
     responsable = Column(String(256), nullable=True)
     fecha_inicio = Column(DateTime, nullable=True)
     fecha_fin = Column(DateTime, nullable=True)
+    # Campos antiguos (compatibilidad)
     porcentaje_avance = Column(Float, nullable=False, default=0.0)
+    # Nuevos campos para ejecutar por año
+    anio = Column(Integer, nullable=True)
+    meta_ejecutar = Column(Float, nullable=False, default=0.0)
+    valor_ejecutado = Column(Float, nullable=False, default=0.0)
     estado = Column(String(64), nullable=False, default='pendiente')  # pendiente, en_progreso, completada, cancelada
 
     created_at = Column(DateTime, default=datetime.utcnow)

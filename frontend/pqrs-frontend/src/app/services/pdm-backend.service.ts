@@ -34,8 +34,10 @@ export interface ActividadCreateRequest {
     responsable?: string;
     fecha_inicio?: string;
     fecha_fin?: string;
-    porcentaje_avance: number;
     estado: string;
+    anio: number;
+    meta_ejecutar: number;
+    valor_ejecutado: number;
 }
 
 export interface ActividadUpdateRequest {
@@ -44,8 +46,10 @@ export interface ActividadUpdateRequest {
     responsable?: string;
     fecha_inicio?: string;
     fecha_fin?: string;
-    porcentaje_avance?: number;
     estado?: string;
+    anio?: number;
+    meta_ejecutar?: number;
+    valor_ejecutado?: number;
 }
 
 export interface ActividadResponse {
@@ -57,8 +61,10 @@ export interface ActividadResponse {
     responsable?: string;
     fecha_inicio?: string;
     fecha_fin?: string;
-    porcentaje_avance: number;
     estado: string;
+    anio: number;
+    meta_ejecutar: number;
+    valor_ejecutado: number;
     created_at: string;
     updated_at: string;
 }
