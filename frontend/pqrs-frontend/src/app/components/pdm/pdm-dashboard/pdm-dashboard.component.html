@@ -302,19 +302,19 @@
                                                 <div class="flex-grow-1">
                                                     <h6 class="text-muted mb-0 small">Recursos Ordinarios</h6>
                                                     <h5 class="mb-0">{{
-                                                        formatearMoneda(analisis?.analisisPresupuestoDetallado?.presupuestoOrdinarioTotal
+                                                        formatearMoneda(analisis.analisisPresupuestoDetallado.presupuestoOrdinarioTotal
                                                         || 0) }}</h5>
                                                 </div>
                                             </div>
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <small class="text-primary">
                                                     <i class="fas fa-percentage me-1"></i>
-                                                    {{formatearPorcentaje(analisis?.analisisPresupuestoDetallado?.porcentajeOrdinario
+                                                    {{formatearPorcentaje(analisis.analisisPresupuestoDetallado.porcentajeOrdinario
                                                     || 0) }}
                                                 </small>
                                                 <div class="progress flex-grow-1 ms-2" style="height: 6px;">
                                                     <div class="progress-bar bg-primary"
-                                                        [style.width.%]="analisis?.analisisPresupuestoDetallado?.porcentajeOrdinario || 0">
+                                                        [style.width.%]="analisis.analisisPresupuestoDetallado.porcentajeOrdinario || 0">
                                                     </div>
                                                 </div>
                                             </div>
@@ -331,7 +331,7 @@
                                                 <div class="flex-grow-1">
                                                     <h6 class="text-muted mb-0 small">Recursos SGR</h6>
                                                     <h5 class="mb-0">{{
-                                                        formatearMoneda(analisis?.analisisPresupuestoDetallado?.presupuestoSGRTotal
+                                                        formatearMoneda(analisis.analisisPresupuestoDetallado.presupuestoSGRTotal
                                                         || 0) }}</h5>
                                                 </div>
                                             </div>
@@ -339,12 +339,12 @@
                                                 <small class="text-warning">
                                                     <i class="fas fa-percentage me-1"></i>
                                                     {{
-                                                    formatearPorcentaje(analisis?.analisisPresupuestoDetallado?.porcentajeSGR
+                                                    formatearPorcentaje(analisis.analisisPresupuestoDetallado.porcentajeSGR
                                                     || 0) }}
                                                 </small>
                                                 <div class="progress flex-grow-1 ms-2" style="height: 6px;">
                                                     <div class="progress-bar bg-warning"
-                                                        [style.width.%]="analisis?.analisisPresupuestoDetallado?.porcentajeSGR || 0">
+                                                        [style.width.%]="analisis.analisisPresupuestoDetallado.porcentajeSGR || 0">
                                                     </div>
                                                 </div>
                                             </div>
@@ -361,9 +361,9 @@
                                                 <div class="flex-grow-1">
                                                     <h6 class="text-muted mb-0 small">Presupuesto Total</h6>
                                                     <h4 class="mb-0 text-success">{{
-                                                        formatearMoneda((analisis?.analisisPresupuestoDetallado?.presupuestoOrdinarioTotal
+                                                        formatearMoneda((analisis.analisisPresupuestoDetallado.presupuestoOrdinarioTotal
                                                         || 0) +
-                                                        (analisis?.analisisPresupuestoDetallado?.presupuestoSGRTotal ||
+                                                        (analisis.analisisPresupuestoDetallado.presupuestoSGRTotal ||
                                                         0)) }}</h4>
                                                 </div>
                                             </div>
@@ -383,9 +383,9 @@
                                                 <div class="flex-grow-1">
                                                     <h6 class="text-muted mb-0 small">Promedio Anual</h6>
                                                     <h5 class="mb-0">{{
-                                                        formatearMoneda(((analisis?.analisisPresupuestoDetallado?.presupuestoOrdinarioTotal
+                                                        formatearMoneda(((analisis.analisisPresupuestoDetallado.presupuestoOrdinarioTotal
                                                         || 0) +
-                                                        (analisis?.analisisPresupuestoDetallado?.presupuestoSGRTotal ||
+                                                        (analisis.analisisPresupuestoDetallado.presupuestoSGRTotal ||
                                                         0)) / 4) }}</h5>
                                                 </div>
                                             </div>
@@ -437,7 +437,7 @@
                                             </thead>
                                             <tbody>
                                                 @for (anio of
-                                                analisis?.analisisPresupuestoDetallado?.presupuestoPorAnio; track
+                                                analisis.analisisPresupuestoDetallado.presupuestoPorAnio; track
                                                 anio.anio) {
                                                 <tr class="table-row-clickeable" (click)="filtrarPorAnio(anio.anio)"
                                                     role="button">
@@ -489,7 +489,7 @@
                                             </thead>
                                             <tbody>
                                                 @for (sector of
-                                                analisis?.analisisPresupuestoDetallado?.presupuestoPorSector?.slice(0,
+                                                analisis.analisisPresupuestoDetallado.presupuestoPorSector.slice(0,
                                                 10); track sector.sector) {
                                                 <tr>
                                                     <td>
@@ -505,9 +505,9 @@
                                                     <td>
                                                         <div class="d-flex align-items-center justify-content-center">
                                                             <small class="me-1">{{ formatearPorcentaje(sector.total /
-                                                                ((analisis?.analisisPresupuestoDetallado?.presupuestoOrdinarioTotal
+                                                                ((analisis.analisisPresupuestoDetallado.presupuestoOrdinarioTotal
                                                                 || 0) +
-                                                                (analisis?.analisisPresupuestoDetallado?.presupuestoSGRTotal
+                                                                (analisis.analisisPresupuestoDetallado.presupuestoSGRTotal
                                                                 || 0)) * 100) }}</small>
                                                         </div>
                                                     </td>
@@ -561,7 +561,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @for (ods of analisis?.analisisPorODS; track ods.codigoODS) {
+                                                @for (ods of analisis.analisisPorODS; track ods.codigoODS) {
                                                 <tr class="table-row-clickeable" (click)="filtrarPorODS(ods.codigoODS)"
                                                     role="button">
                                                     <td>
@@ -594,7 +594,7 @@
                                                     </td>
                                                 </tr>
                                                 }
-                                                @if (!analisis?.analisisPorODS || analisis.analisisPorODS.length === 0)
+                                                @if (!analisis.analisisPorODS || analisis.analisisPorODS.length === 0)
                                                 {
                                                 <tr>
                                                     <td colspan="5" class="text-center text-muted py-4">
@@ -628,7 +628,7 @@
                                                 </div>
                                                 <div>
                                                     <h6 class="text-muted mb-0 small">Total Iniciativas</h6>
-                                                    <h2 class="mb-0">{{ analisis?.analisisSGR?.totalIniciativas || 0 }}
+                                                    <h2 class="mb-0">{{ analisis.analisisSGR.totalIniciativas || 0 }}
                                                     </h2>
                                                 </div>
                                             </div>
@@ -645,7 +645,7 @@
                                                 <div>
                                                     <h6 class="text-muted mb-0 small">Recursos SGR</h6>
                                                     <h5 class="mb-0">{{
-                                                        formatearMoneda(analisis?.analisisSGR?.recursosSGRTotales || 0)
+                                                        formatearMoneda(analisis.analisisSGR.recursosSGRTotales || 0)
                                                         }}</h5>
                                                 </div>
                                             </div>
@@ -661,7 +661,7 @@
                                                 </div>
                                                 <div>
                                                     <h6 class="text-muted mb-0 small">Con BPIN</h6>
-                                                    <h2 class="mb-0">{{ analisis?.analisisSGR?.iniciativasConBPIN || 0
+                                                    <h2 class="mb-0">{{ analisis.analisisSGR.iniciativasConBPIN || 0
                                                         }}
                                                     </h2>
                                                 </div>
@@ -678,7 +678,7 @@
                                                 </div>
                                                 <div>
                                                     <h6 class="text-muted mb-0 small">Sin BPIN</h6>
-                                                    <h2 class="mb-0">{{ analisis?.analisisSGR?.iniciativasSinBPIN || 0
+                                                    <h2 class="mb-0">{{ analisis.analisisSGR.iniciativasSinBPIN || 0
                                                         }}
                                                     </h2>
                                                 </div>
@@ -710,7 +710,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @for (sector of analisis?.analisisSGR?.recursosSGRPorSector; track
+                                                @for (sector of analisis.analisisSGR.recursosSGRPorSector; track
                                                 sector.sector) {
                                                 <tr>
                                                     <td><strong>{{ sector.sector }}</strong></td>
@@ -723,8 +723,8 @@
                                                     </td>
                                                 </tr>
                                                 }
-                                                @if (!analisis?.analisisSGR?.recursosSGRPorSector ||
-                                                analisis?.analisisSGR?.recursosSGRPorSector?.length === 0) {
+                                                @if (!analisis.analisisSGR.recursosSGRPorSector ||
+                                                analisis.analisisSGR.recursosSGRPorSector.length === 0) {
                                                 <tr>
                                                     <td colspan="3" class="text-center text-muted py-3">
                                                         No hay iniciativas SGR registradas
@@ -757,7 +757,7 @@
                                                 <div>
                                                     <h6 class="text-muted mb-0 small">Total Indicadores</h6>
                                                     <h2 class="mb-0">{{
-                                                        analisis?.analisisIndicadoresResultado?.totalIndicadores || 0 }}
+                                                        analisis.analisisIndicadoresResultado.totalIndicadores || 0 }}
                                                     </h2>
                                                 </div>
                                             </div>
@@ -777,7 +777,7 @@
                                                 <div>
                                                     <h6 class="text-muted mb-0 small">En PND</h6>
                                                     <h2 class="mb-0">{{
-                                                        analisis?.analisisIndicadoresResultado?.indicadoresEnPND || 0 }}
+                                                        analisis.analisisIndicadoresResultado.indicadoresEnPND || 0 }}
                                                     </h2>
                                                 </div>
                                             </div>
@@ -797,7 +797,7 @@
                                                 <div>
                                                     <h6 class="text-muted mb-0 small">Fuera de PND</h6>
                                                     <h2 class="mb-0">{{
-                                                        analisis?.analisisIndicadoresResultado?.indicadoresFueraPND || 0
+                                                        analisis.analisisIndicadoresResultado.indicadoresFueraPND || 0
                                                         }}</h2>
                                                 </div>
                                             </div>
@@ -817,13 +817,13 @@
                                                 <div>
                                                     <h6 class="text-muted mb-0 small">% Alineación PND</h6>
                                                     <h2 class="mb-0 text-info">{{
-                                                        formatearPorcentaje(analisis?.analisisIndicadoresResultado?.porcentajeAlineacionPND
+                                                        formatearPorcentaje(analisis.analisisIndicadoresResultado.porcentajeAlineacionPND
                                                         || 0) }}</h2>
                                                 </div>
                                             </div>
-                                            <div class="progress mt-2" style="height: 6px;">
+                                                <div class="progress mt-2" style="height: 6px;">
                                                 <div class="progress-bar bg-info"
-                                                    [style.width.%]="analisis?.analisisIndicadoresResultado?.porcentajeAlineacionPND || 0">
+                                                    [style.width.%]="analisis.analisisIndicadoresResultado.porcentajeAlineacionPND || 0">
                                                 </div>
                                             </div>
                                         </div>
@@ -870,7 +870,7 @@
                                             </thead>
                                             <tbody>
                                                 @for (linea of
-                                                analisis?.analisisIndicadoresResultado?.indicadoresPorLinea; track
+                                                analisis.analisisIndicadoresResultado.indicadoresPorLinea; track
                                                 linea.lineaEstrategica) {
                                                 <tr class="table-row-clickeable"
                                                     (click)="filtrarPorLinea(linea.lineaEstrategica)" role="button">
@@ -902,8 +902,8 @@
                                                     </td>
                                                 </tr>
                                                 }
-                                                @if (!analisis?.analisisIndicadoresResultado?.indicadoresPorLinea ||
-                                                analisis?.analisisIndicadoresResultado?.indicadoresPorLinea?.length ===
+                                                @if (!analisis.analisisIndicadoresResultado.indicadoresPorLinea ||
+                                                analisis.analisisIndicadoresResultado.indicadoresPorLinea.length ===
                                                 0) {
                                                 <tr>
                                                     <td colspan="5" class="text-center text-muted py-3">
@@ -918,7 +918,7 @@
                             </div>
 
                             <!-- Transformaciones PND -->
-                            @if (analisis?.analisisIndicadoresResultado?.transformacionesPND &&
+                            @if (analisis.analisisIndicadoresResultado.transformacionesPND &&
                             analisis.analisisIndicadoresResultado.transformacionesPND.length > 0) {
                             <div class="row mt-4">
                                 <div class="col-12">
@@ -931,7 +931,8 @@
                                         trans.transformacion) {
                                         <div class="col-md-6 col-lg-4">
                                             <div class="card h-100 border-info border-opacity-25">
-                                                <div class="card-body d-flex align-items-center justify-content-between p-3">
+                                                <div
+                                                    class="card-body d-flex align-items-center justify-content-between p-3">
                                                     <div class="flex-grow-1 me-2">
                                                         <i class="fas fa-bookmark text-info me-2"></i>
                                                         <strong class="text-info">{{ trans.transformacion }}</strong>
