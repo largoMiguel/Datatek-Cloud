@@ -219,6 +219,18 @@
                                 <i class="fas fa-dollar-sign me-2"></i>Presupuesto
                             </button>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="ods-tab" data-bs-toggle="tab" data-bs-target="#ods"
+                                type="button" role="tab">
+                                <i class="fas fa-globe me-2"></i>ODS
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="sgr-tab" data-bs-toggle="tab" data-bs-target="#sgr"
+                                type="button" role="tab">
+                                <i class="fas fa-coins me-2"></i>Iniciativas SGR
+                            </button>
+                        </li>
                     </ul>
                     <div class="tab-content pt-4" id="chartsTabContent">
                         <!-- Cumplimiento Tab -->
@@ -300,6 +312,224 @@
                                             </div>
                                         </div>
                                         }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ODS Tab -->
+                        <div class="tab-pane fade" id="ods" role="tabpanel">
+                            <h5 class="mb-4">
+                                <i class="fas fa-globe me-2 text-primary"></i>
+                                Análisis por Objetivos de Desarrollo Sostenible (ODS)
+                            </h5>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="mb-3">Distribución de Metas por ODS</h6>
+                                    @if (chartODS) {
+                                    <div class="chart-container" style="height: 400px;">
+                                        <canvas baseChart [data]="chartODS" [type]="'doughnut'"
+                                            [options]="doughnutOptions"></canvas>
+                                    </div>
+                                    }
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="mb-3">Top 5 ODS por Presupuesto Asignado</h6>
+                                    @if (chartODSPresupuesto) {
+                                    <div class="chart-container" style="height: 400px;">
+                                        <canvas baseChart [data]="chartODSPresupuesto" [type]="'bar'"
+                                            [options]="chartOptions"></canvas>
+                                    </div>
+                                    }
+                                </div>
+                            </div>
+                            <div class="row mt-4">
+                                <div class="col-12">
+                                    <h6 class="mb-3">Detalle por ODS</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>ODS</th>
+                                                    <th class="text-center">Total Metas</th>
+                                                    <th class="text-center">Metas Cumplidas</th>
+                                                    <th class="text-center">% Cumplimiento</th>
+                                                    <th class="text-end">Presupuesto Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @for (ods of analisis?.analisisPorODS; track ods.codigoODS) {
+                                                <tr class="table-row-clickeable" (click)="filtrarPorODS(ods.codigoODS)"
+                                                    role="button">
+                                                    <td>
+                                                        <strong>{{ ods.codigoODS }}.</strong> {{ ods.nombreODS }}
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-secondary">{{ ods.totalMetas }}</span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-success">{{ ods.metasCumplidas }}</span>
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div
+                                                            class="d-flex align-items-center justify-content-center gap-2">
+                                                            <div class="progress" style="width: 80px; height: 8px;">
+                                                                <div class="progress-bar"
+                                                                    [class.bg-success]="ods.porcentajeCumplimiento >= 70"
+                                                                    [class.bg-warning]="ods.porcentajeCumplimiento >= 40 && ods.porcentajeCumplimiento < 70"
+                                                                    [class.bg-danger]="ods.porcentajeCumplimiento < 40"
+                                                                    [style.width.%]="ods.porcentajeCumplimiento">
+                                                                </div>
+                                                            </div>
+                                                            <small class="fw-bold">{{
+                                                                formatearPorcentaje(ods.porcentajeCumplimiento)
+                                                                }}</small>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <strong>{{ formatearMoneda(ods.presupuestoTotal) }}</strong>
+                                                    </td>
+                                                </tr>
+                                                }
+                                                @if (!analisis?.analisisPorODS || analisis.analisisPorODS.length === 0)
+                                                {
+                                                <tr>
+                                                    <td colspan="5" class="text-center text-muted py-4">
+                                                        <i class="fas fa-info-circle me-2"></i>
+                                                        No hay datos de ODS disponibles
+                                                    </td>
+                                                </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SGR Tab -->
+                        <div class="tab-pane fade" id="sgr" role="tabpanel">
+                            <h5 class="mb-4">
+                                <i class="fas fa-coins me-2 text-primary"></i>
+                                Iniciativas del Sistema General de Regalías (SGR)
+                            </h5>
+
+                            <!-- KPIs SGR -->
+                            <div class="row mb-4 g-3">
+                                <div class="col-md-3">
+                                    <div class="card shadow-sm border-0 h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                                                    <i class="fas fa-list-check fa-2x text-info"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="text-muted mb-0 small">Total Iniciativas</h6>
+                                                    <h2 class="mb-0">{{ analisis?.analisisSGR?.totalIniciativas || 0 }}
+                                                    </h2>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card shadow-sm border-0 h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                                                    <i class="fas fa-money-bill-wave fa-2x text-success"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="text-muted mb-0 small">Recursos SGR</h6>
+                                                    <h5 class="mb-0">{{
+                                                        formatearMoneda(analisis?.analisisSGR?.recursosSGRTotales || 0)
+                                                        }}</h5>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card shadow-sm border-0 h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                                                    <i class="fas fa-check-circle fa-2x text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="text-muted mb-0 small">Con BPIN</h6>
+                                                    <h2 class="mb-0">{{ analisis?.analisisSGR?.iniciativasConBPIN || 0
+                                                        }}
+                                                    </h2>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card shadow-sm border-0 h-100">
+                                        <div class="card-body">
+                                            <div class="d-flex align-items-center">
+                                                <div class="bg-warning bg-opacity-10 rounded-circle p-3 me-3">
+                                                    <i class="fas fa-exclamation-triangle fa-2x text-warning"></i>
+                                                </div>
+                                                <div>
+                                                    <h6 class="text-muted mb-0 small">Sin BPIN</h6>
+                                                    <h2 class="mb-0">{{ analisis?.analisisSGR?.iniciativasSinBPIN || 0
+                                                        }}
+                                                    </h2>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6 class="mb-3">Recursos SGR por Sector</h6>
+                                    @if (chartSGRPorSector) {
+                                    <div class="chart-container" style="height: 400px;">
+                                        <canvas baseChart [data]="chartSGRPorSector" [type]="'bar'"
+                                            [options]="barHorizontalOptions"></canvas>
+                                    </div>
+                                    }
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="mb-3">Detalle por Sector</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-hover">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Sector</th>
+                                                    <th class="text-center">Iniciativas</th>
+                                                    <th class="text-end">Recursos SGR</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @for (sector of analisis?.analisisSGR?.recursosSGRPorSector; track
+                                                sector.sector) {
+                                                <tr>
+                                                    <td><strong>{{ sector.sector }}</strong></td>
+                                                    <td class="text-center">
+                                                        <span class="badge bg-info">{{ sector.numeroIniciativas
+                                                            }}</span>
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <strong>{{ formatearMoneda(sector.totalRecursosSGR) }}</strong>
+                                                    </td>
+                                                </tr>
+                                                }
+                                                @if (!analisis?.analisisSGR?.recursosSGRPorSector ||
+                                                analisis?.analisisSGR?.recursosSGRPorSector?.length === 0) {
+                                                <tr>
+                                                    <td colspan="3" class="text-center text-muted py-3">
+                                                        No hay iniciativas SGR registradas
+                                                    </td>
+                                                </tr>
+                                                }
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
                             </div>

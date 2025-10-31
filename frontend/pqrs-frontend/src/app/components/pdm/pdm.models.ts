@@ -182,6 +182,25 @@ export interface AnalisisPDM {
         metasCumplidas: number;
         porcentajeCumplimiento: number;
     }[];
+    analisisPorODS: {
+        codigoODS: string;
+        nombreODS: string;
+        totalMetas: number;
+        metasCumplidas: number;
+        porcentajeCumplimiento: number;
+        presupuestoTotal: number;
+    }[];
+    analisisSGR: {
+        totalIniciativas: number;
+        recursosSGRTotales: number;
+        recursosSGRPorSector: {
+            sector: string;
+            totalRecursosSGR: number;
+            numeroIniciativas: number;
+        }[];
+        iniciativasConBPIN: number;
+        iniciativasSinBPIN: number;
+    };
     tendencias: {
         descripcion: string;
         tipo: 'positivo' | 'neutro' | 'negativo';
@@ -201,4 +220,6 @@ export interface FiltrosPDM {
     lineaEstrategica?: string;
     estado?: EstadoMeta;
     secretaria?: string;
+    ods?: string;
+    bpin?: string;
 }

@@ -62,6 +62,9 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
     chartPorSector: ChartData<'bar'> | null = null;
     chartCumplimiento: ChartData<'doughnut'> | null = null;
     chartPresupuesto: ChartData<'line'> | null = null;
+    chartODS: ChartData<'doughnut'> | null = null;
+    chartODSPresupuesto: ChartData<'bar'> | null = null;
+    chartSGRPorSector: ChartData<'bar'> | null = null;
 
     chartOptions: ChartConfiguration<'bar'>['options'] = {
         responsive: true,
@@ -743,6 +746,60 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
                 borderWidth: 3
             }]
         };
+
+        // Gráfico ODS - Distribución de metas
+        if (analisis.analisisPorODS && analisis.analisisPorODS.length > 0) {
+            this.chartODS = {
+                labels: analisis.analisisPorODS.map(o => `ODS ${o.codigoODS}`),
+                datasets: [{
+                    data: analisis.analisisPorODS.map(o => o.totalMetas),
+                    backgroundColor: [
+                        '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6',
+                        '#1abc9c', '#34495e', '#e67e22', '#95a5a6', '#d35400',
+                        '#c0392b', '#2980b9', '#27ae60', '#f1c40f', '#8e44ad',
+                        '#16a085', '#2c3e50'
+                    ],
+                    borderWidth: 3,
+                    borderColor: '#ffffff',
+                    hoverOffset: 8
+                }]
+            };
+
+            // Gráfico ODS - Top 5 por presupuesto
+            const top5ODS = [...analisis.analisisPorODS]
+                .sort((a, b) => b.presupuestoTotal - a.presupuestoTotal)
+                .slice(0, 5);
+
+            this.chartODSPresupuesto = {
+                labels: top5ODS.map(o => `ODS ${o.codigoODS}`),
+                datasets: [{
+                    label: 'Presupuesto',
+                    data: top5ODS.map(o => o.presupuestoTotal),
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                    borderColor: '#10b981',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    hoverBackgroundColor: '#10b981'
+                }]
+            };
+        }
+
+        // Gráfico SGR - Recursos por sector
+        if (analisis.analisisSGR && analisis.analisisSGR.recursosSGRPorSector.length > 0) {
+            const topSGR = analisis.analisisSGR.recursosSGRPorSector.slice(0, 8);
+            this.chartSGRPorSector = {
+                labels: topSGR.map(s => this.truncarTexto(s.sector, 30)),
+                datasets: [{
+                    label: 'Recursos SGR',
+                    data: topSGR.map(s => s.totalRecursosSGR),
+                    backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                    borderColor: '#f59e0b',
+                    borderWidth: 1,
+                    borderRadius: 8,
+                    hoverBackgroundColor: '#f59e0b'
+                }]
+            };
+        }
     }
 
     private truncarTexto(texto: string, maxLength: number): string {
@@ -868,6 +925,13 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
 
     filtrarPorLinea(linea: string): void {
         this.filtros.lineaEstrategica = linea;
+        this.aplicarFiltros();
+        const tableElement = document.querySelector('.table-responsive');
+        if (tableElement) tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    filtrarPorODS(codigoODS: string): void {
+        this.filtros.ods = codigoODS;
         this.aplicarFiltros();
         const tableElement = document.querySelector('.table-responsive');
         if (tableElement) tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });

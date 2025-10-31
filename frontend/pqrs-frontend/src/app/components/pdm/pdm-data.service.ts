@@ -451,6 +451,64 @@ export class PdmDataService {
             };
         }).sort((a, b) => b.porcentajeCumplimiento - a.porcentajeCumplimiento);
 
+        // Análisis por ODS (Objetivos de Desarrollo Sostenible)
+        const odsMap = new Map<string, { nombre: string; metas: typeof productos }>();
+        productos.forEach(p => {
+            if (p.codigoODS && p.ods) {
+                const key = `${p.codigoODS}`;
+                if (!odsMap.has(key)) {
+                    odsMap.set(key, { nombre: p.ods, metas: [] });
+                }
+                odsMap.get(key)!.metas.push(p);
+            }
+        });
+
+        const analisisPorODS = Array.from(odsMap.entries()).map(([codigo, data]) => {
+            const cumplidas = data.metas.filter(p => p.estado === EstadoMeta.CUMPLIDA).length;
+            const presupuestoTotal = data.metas.reduce((sum, p) =>
+                sum + p.total2024 + p.total2025 + p.total2026 + p.total2027, 0);
+
+            return {
+                codigoODS: codigo,
+                nombreODS: data.nombre,
+                totalMetas: data.metas.length,
+                metasCumplidas: cumplidas,
+                porcentajeCumplimiento: data.metas.length > 0 ? (cumplidas / data.metas.length) * 100 : 0,
+                presupuestoTotal
+            };
+        }).sort((a, b) => b.totalMetas - a.totalMetas);
+
+        // Análisis de Iniciativas SGR
+        const iniciativasSGR = pdmData.iniciativasSGR || [];
+        const recursosSGRTotales = iniciativasSGR.reduce((sum, i) => sum + (i.recursosSGR || 0), 0);
+
+        const sgrPorSector = new Map<string, { total: number; count: number }>();
+        iniciativasSGR.forEach(i => {
+            const sector = i.sector || 'Sin sector';
+            if (!sgrPorSector.has(sector)) {
+                sgrPorSector.set(sector, { total: 0, count: 0 });
+            }
+            const data = sgrPorSector.get(sector)!;
+            data.total += i.recursosSGR || 0;
+            data.count += 1;
+        });
+
+        const recursosSGRPorSector = Array.from(sgrPorSector.entries())
+            .map(([sector, data]) => ({
+                sector,
+                totalRecursosSGR: data.total,
+                numeroIniciativas: data.count
+            }))
+            .sort((a, b) => b.totalRecursosSGR - a.totalRecursosSGR);
+
+        const analisisSGR = {
+            totalIniciativas: iniciativasSGR.length,
+            recursosSGRTotales,
+            recursosSGRPorSector,
+            iniciativasConBPIN: iniciativasSGR.filter(i => i.bpin && i.bpin.trim() !== '').length,
+            iniciativasSinBPIN: iniciativasSGR.filter(i => !i.bpin || i.bpin.trim() === '').length
+        };
+
         // Generar tendencias
         const tendencias = this.generarTendencias(analisisPorAnio, analisisPorSector);
 
@@ -479,6 +537,8 @@ export class PdmDataService {
             analisisPorAnio,
             analisisPorSector,
             analisisPorLineaEstrategica,
+            analisisPorODS,
+            analisisSGR,
             tendencias,
             recomendaciones,
             alertas,
@@ -710,6 +770,14 @@ export class PdmDataService {
 
         if (filtros.secretaria) {
             productos = productos.filter(p => (p.secretariaAsignada || '') === filtros.secretaria);
+        }
+
+        if (filtros.ods) {
+            productos = productos.filter(p => p.codigoODS === filtros.ods);
+        }
+
+        if (filtros.bpin) {
+            productos = productos.filter(p => p.bpin && p.bpin.trim() !== '');
         }
 
         return productos;
