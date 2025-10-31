@@ -62,6 +62,8 @@ export interface PlanIndicativoProducto {
             comentario?: string;
         }
     };
+    // Actividades para cumplimiento de la meta
+    actividades?: Actividad[];
 }
 
 export interface IniciativaSGR {
@@ -114,6 +116,28 @@ export enum EstadoMeta {
     POR_CUMPLIR = 'por_cumplir',
     PENDIENTE = 'pendiente',
     SIN_DEFINIR = 'sin_definir'
+}
+
+export enum EstadoActividad {
+    PENDIENTE = 'pendiente',
+    EN_PROGRESO = 'en_progreso',
+    COMPLETADA = 'completada',
+    CANCELADA = 'cancelada'
+}
+
+export interface Actividad {
+    id?: number;
+    entity_id?: number;
+    codigo_indicador_producto: string;
+    nombre: string;
+    descripcion?: string;
+    responsable?: string;
+    fecha_inicio?: string;  // ISO string
+    fecha_fin?: string;  // ISO string
+    porcentaje_avance: number;
+    estado: string;
+    created_at?: string;
+    updated_at?: string;
 }
 
 export interface PDMData {

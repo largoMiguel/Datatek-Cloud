@@ -43,3 +43,43 @@ class AssignmentsMapResponse(BaseModel):
 class AvancesListResponse(BaseModel):
     codigo_indicador_producto: str
     avances: List[AvanceResponse]
+
+
+class ActividadBase(BaseModel):
+    nombre: str = Field(..., min_length=1, max_length=512)
+    descripcion: Optional[str] = Field(None, max_length=1024)
+    responsable: Optional[str] = Field(None, max_length=256)
+    fecha_inicio: Optional[str] = None  # ISO format string
+    fecha_fin: Optional[str] = None  # ISO format string
+    porcentaje_avance: float = Field(default=0.0, ge=0.0, le=100.0)
+    estado: str = Field(default='pendiente', max_length=64)  # pendiente, en_progreso, completada, cancelada
+
+
+class ActividadCreateRequest(ActividadBase):
+    codigo_indicador_producto: str = Field(..., min_length=1)
+
+
+class ActividadUpdateRequest(BaseModel):
+    nombre: Optional[str] = Field(None, min_length=1, max_length=512)
+    descripcion: Optional[str] = Field(None, max_length=1024)
+    responsable: Optional[str] = Field(None, max_length=256)
+    fecha_inicio: Optional[str] = None
+    fecha_fin: Optional[str] = None
+    porcentaje_avance: Optional[float] = Field(None, ge=0.0, le=100.0)
+    estado: Optional[str] = Field(None, max_length=64)
+
+
+class ActividadResponse(ActividadBase):
+    id: int
+    entity_id: int
+    codigo_indicador_producto: str
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class ActividadesListResponse(BaseModel):
+    codigo_indicador_producto: str
+    actividades: List[ActividadResponse]

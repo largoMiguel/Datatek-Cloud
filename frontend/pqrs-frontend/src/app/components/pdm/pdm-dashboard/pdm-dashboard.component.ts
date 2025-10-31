@@ -344,6 +344,22 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
     productoSeleccionado: PlanIndicativoProducto | null = null;
     Object = Object; // Para usar Object.keys en el template
 
+    // Gestión de actividades
+    actividadesProducto: any[] = [];
+    cargandoActividades = false;
+    mostrandoFormActividad = false;
+    guardandoActividad = false;
+    actividadEditando: any = null;
+    formActividad: any = {
+        nombre: '',
+        descripcion: '',
+        responsable: '',
+        fecha_inicio: '',
+        fecha_fin: '',
+        porcentaje_avance: 0,
+        estado: 'pendiente'
+    };
+
     // Estadísticas avanzadas
     estadisticasPorSecretaria: {
         secretaria: string;
@@ -832,10 +848,12 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
 
     verDetalleProducto(producto: PlanIndicativoProducto): void {
         this.productoSeleccionado = producto;
+        this.cargarActividades();
     }
 
     cerrarDetalle(): void {
         this.productoSeleccionado = null;
+        this.actividadesProducto = [];
     }
 
     abrirDialogoAvanceDesdeDetalle(): void {
@@ -843,5 +861,128 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
             this.cerrarDetalle();
             this.abrirDialogoAvance(this.productoSeleccionado);
         }
+    }
+
+    // Gestión de actividades
+    cargarActividades(): void {
+        if (!this.productoSeleccionado) return;
+
+        const slug = this.entityContext.currentEntity?.slug;
+        if (!slug) return;
+
+        this.cargandoActividades = true;
+        this.pdmBackend.getActividades(slug, this.productoSeleccionado.codigoIndicadorProducto).subscribe({
+            next: (response) => {
+                this.actividadesProducto = response.actividades;
+                this.cargandoActividades = false;
+            },
+            error: (error) => {
+                console.error('Error al cargar actividades:', error);
+                this.cargandoActividades = false;
+                this.showToast('Error al cargar las actividades', 'error');
+            }
+        });
+    }
+
+    mostrarFormularioActividad(): void {
+        this.actividadEditando = null;
+        this.formActividad = {
+            nombre: '',
+            descripcion: '',
+            responsable: '',
+            fecha_inicio: '',
+            fecha_fin: '',
+            porcentaje_avance: 0,
+            estado: 'pendiente'
+        };
+        this.mostrandoFormActividad = true;
+    }
+
+    editarActividad(actividad: any): void {
+        this.actividadEditando = actividad;
+        this.formActividad = {
+            nombre: actividad.nombre,
+            descripcion: actividad.descripcion || '',
+            responsable: actividad.responsable || '',
+            fecha_inicio: actividad.fecha_inicio ? actividad.fecha_inicio.split('T')[0] : '',
+            fecha_fin: actividad.fecha_fin ? actividad.fecha_fin.split('T')[0] : '',
+            porcentaje_avance: actividad.porcentaje_avance,
+            estado: actividad.estado
+        };
+        this.mostrandoFormActividad = true;
+    }
+
+    cerrarFormularioActividad(): void {
+        this.mostrandoFormActividad = false;
+        this.actividadEditando = null;
+    }
+
+    guardarActividad(): void {
+        if (!this.formActividad.nombre || !this.productoSeleccionado) return;
+
+        const slug = this.entityContext.currentEntity?.slug;
+        if (!slug) return;
+
+        this.guardandoActividad = true;
+
+        const payload = {
+            ...this.formActividad,
+            codigo_indicador_producto: this.productoSeleccionado.codigoIndicadorProducto
+        };
+
+        const request = this.actividadEditando
+            ? this.pdmBackend.updateActividad(slug, this.actividadEditando.id, payload)
+            : this.pdmBackend.createActividad(slug, payload);
+
+        request.subscribe({
+            next: () => {
+                this.showToast(
+                    this.actividadEditando ? 'Actividad actualizada exitosamente' : 'Actividad creada exitosamente',
+                    'success'
+                );
+                this.cerrarFormularioActividad();
+                this.cargarActividades();
+                this.guardandoActividad = false;
+            },
+            error: (error) => {
+                console.error('Error al guardar actividad:', error);
+                this.showToast('Error al guardar la actividad', 'error');
+                this.guardandoActividad = false;
+            }
+        });
+    }
+
+    eliminarActividad(actividad: any): void {
+        if (!confirm(`¿Está seguro de eliminar la actividad "${actividad.nombre}"?`)) return;
+
+        const slug = this.entityContext.currentEntity?.slug;
+        if (!slug) return;
+
+        this.pdmBackend.deleteActividad(slug, actividad.id).subscribe({
+            next: () => {
+                this.showToast('Actividad eliminada exitosamente', 'success');
+                this.cargarActividades();
+            },
+            error: (error) => {
+                console.error('Error al eliminar actividad:', error);
+                this.showToast('Error al eliminar la actividad', 'error');
+            }
+        });
+    }
+
+    obtenerEtiquetaEstadoActividad(estado: string): string {
+        const etiquetas: Record<string, string> = {
+            'pendiente': 'Pendiente',
+            'en_progreso': 'En Progreso',
+            'completada': 'Completada',
+            'cancelada': 'Cancelada'
+        };
+        return etiquetas[estado] || estado;
+    }
+
+    formatearFecha(fecha: string): string {
+        if (!fecha) return '';
+        const date = new Date(fecha);
+        return date.toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
     }
 }
