@@ -201,13 +201,32 @@ async def create_actividad(
     ensure_user_can_manage_entity(current_user, entity)
 
     from datetime import datetime as dt
+    from datetime import datetime
+
+    # Validaciones de negocio
+    if payload.fecha_inicio and not payload.fecha_fin:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Si diligencias fecha_inicio debes diligenciar fecha_fin")
+    if payload.fecha_fin and not payload.fecha_inicio:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Si diligencias fecha_fin debes diligenciar fecha_inicio")
+    if payload.fecha_inicio and payload.fecha_fin:
+        try:
+            d1 = datetime.fromisoformat(payload.fecha_inicio)
+            d2 = datetime.fromisoformat(payload.fecha_fin)
+            if d1 > d2:
+                raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="La fecha de inicio no puede ser mayor a la fecha de fin")
+        except ValueError:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Formato de fecha inválido. Use ISO 8601 (YYYY-MM-DD)")
+    # Validar estado permitido
+    estados_permitidos = {"pendiente", "en_progreso", "completada", "cancelada"}
+    if payload.estado and payload.estado not in estados_permitidos:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Estado inválido para actividad")
 
     nueva_actividad = PdmActividad(
         entity_id=entity.id,
         codigo_indicador_producto=payload.codigo_indicador_producto,
         nombre=payload.nombre,
         descripcion=payload.descripcion,
-        responsable=payload.responsable,
+        responsable=(payload.responsable or None),
         fecha_inicio=dt.fromisoformat(payload.fecha_inicio) if payload.fecha_inicio else None,
         fecha_fin=dt.fromisoformat(payload.fecha_fin) if payload.fecha_fin else None,
         porcentaje_avance=payload.porcentaje_avance,
@@ -260,7 +279,7 @@ async def update_actividad(
     if payload.descripcion is not None:
         actividad.descripcion = payload.descripcion
     if payload.responsable is not None:
-        actividad.responsable = payload.responsable
+        actividad.responsable = (payload.responsable or None)
     if payload.fecha_inicio is not None:
         actividad.fecha_inicio = dt.fromisoformat(payload.fecha_inicio) if payload.fecha_inicio else None
     if payload.fecha_fin is not None:
@@ -268,7 +287,14 @@ async def update_actividad(
     if payload.porcentaje_avance is not None:
         actividad.porcentaje_avance = payload.porcentaje_avance
     if payload.estado is not None:
+        estados_permitidos = {"pendiente", "en_progreso", "completada", "cancelada"}
+        if payload.estado not in estados_permitidos:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Estado inválido para actividad")
         actividad.estado = payload.estado
+
+    # Validar consistencia de fechas cuando ambas presentes
+    if actividad.fecha_inicio and actividad.fecha_fin and actividad.fecha_inicio > actividad.fecha_fin:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="La fecha de inicio no puede ser mayor a la fecha de fin")
 
     db.commit()
     db.refresh(actividad)
