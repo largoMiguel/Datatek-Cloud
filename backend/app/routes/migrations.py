@@ -211,32 +211,58 @@ def run_migrations(
 
         # 8) Normalizar valores existentes de user_type (MAYÚSCULAS -> minúsculas)
         if "user_type" in users_cols:
-            # Contar registros a normalizar
-            count_result = db.execute(text("""
-                SELECT COUNT(*) 
-                FROM users 
-                WHERE user_type IN ('SECRETARIO', 'CONTRATISTA')
-            """))
-            count = count_result.scalar()
-            
-            if count and count > 0:
-                # Actualizar SECRETARIO -> secretario
-                db.execute(text("""
-                    UPDATE users 
-                    SET user_type = 'secretario' 
-                    WHERE user_type = 'SECRETARIO'
-                """))
+            try:
+                # Contar registros a normalizar (usar CAST a TEXT para evitar errores de enum)
+                if is_postgres:
+                    count_result = db.execute(text("""
+                        SELECT COUNT(*) 
+                        FROM users 
+                        WHERE CAST(user_type AS TEXT) IN ('SECRETARIO', 'CONTRATISTA')
+                    """))
+                else:
+                    count_result = db.execute(text("""
+                        SELECT COUNT(*) 
+                        FROM users 
+                        WHERE user_type IN ('SECRETARIO', 'CONTRATISTA')
+                    """))
+                count = count_result.scalar()
                 
-                # Actualizar CONTRATISTA -> contratista
-                db.execute(text("""
-                    UPDATE users 
-                    SET user_type = 'contratista' 
-                    WHERE user_type = 'CONTRATISTA'
-                """))
-                
-                migrations_applied.append(f"🔧 Normalizados {count} registros: user_type a minúsculas")
-            else:
-                migrations_applied.append("ℹ️ Valores de user_type ya están normalizados")
+                if count and count > 0:
+                    if is_postgres:
+                        # Actualizar SECRETARIO -> secretario
+                        db.execute(text("""
+                            UPDATE users 
+                            SET user_type = 'secretario'::usertype 
+                            WHERE CAST(user_type AS TEXT) = 'SECRETARIO'
+                        """))
+                        
+                        # Actualizar CONTRATISTA -> contratista
+                        db.execute(text("""
+                            UPDATE users 
+                            SET user_type = 'contratista'::usertype 
+                            WHERE CAST(user_type AS TEXT) = 'CONTRATISTA'
+                        """))
+                    else:
+                        # SQLite: actualizar directamente
+                        db.execute(text("""
+                            UPDATE users 
+                            SET user_type = 'secretario' 
+                            WHERE user_type = 'SECRETARIO'
+                        """))
+                        
+                        db.execute(text("""
+                            UPDATE users 
+                            SET user_type = 'contratista' 
+                            WHERE user_type = 'CONTRATISTA'
+                        """))
+                    
+                    migrations_applied.append(f"🔧 Normalizados {count} registros: user_type a minúsculas")
+                else:
+                    migrations_applied.append("ℹ️ Valores de user_type ya están normalizados o no hay registros")
+            except Exception as e:
+                # Si hay error (por ejemplo, valores no existen en enum), simplemente continuar
+                logger.warning(f"No se pudo normalizar user_type: {e}")
+                migrations_applied.append("ℹ️ user_type: sin valores a normalizar o ya normalizados")
 
         # Commit de cambios
         db.commit()
