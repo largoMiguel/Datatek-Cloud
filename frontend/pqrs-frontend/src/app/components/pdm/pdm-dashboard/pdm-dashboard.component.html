@@ -295,18 +295,27 @@
                                 <div class="col-md-3">
                                     <div class="card shadow-sm border-0 h-100">
                                         <div class="card-body">
-                                            <div class="d-flex align-items-center">
+                                            <div class="d-flex align-items-center mb-2">
                                                 <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
                                                     <i class="fas fa-coins fa-2x text-primary"></i>
                                                 </div>
-                                                <div>
+                                                <div class="flex-grow-1">
                                                     <h6 class="text-muted mb-0 small">Recursos Ordinarios</h6>
                                                     <h5 class="mb-0">{{
                                                         formatearMoneda(analisis?.analisisPresupuestoDetallado?.presupuestoOrdinarioTotal
                                                         || 0) }}</h5>
-                                                    <small class="text-muted">{{
-                                                        formatearPorcentaje(analisis?.analisisPresupuestoDetallado?.porcentajeOrdinario
-                                                        || 0) }}</small>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-primary">
+                                                    <i class="fas fa-percentage me-1"></i>
+                                                    {{formatearPorcentaje(analisis?.analisisPresupuestoDetallado?.porcentajeOrdinario
+                                                    || 0) }}
+                                                </small>
+                                                <div class="progress flex-grow-1 ms-2" style="height: 6px;">
+                                                    <div class="progress-bar bg-primary"
+                                                        [style.width.%]="analisis?.analisisPresupuestoDetallado?.porcentajeOrdinario || 0">
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -315,60 +324,74 @@
                                 <div class="col-md-3">
                                     <div class="card shadow-sm border-0 h-100">
                                         <div class="card-body">
-                                            <div class="d-flex align-items-center">
+                                            <div class="d-flex align-items-center mb-2">
                                                 <div class="bg-warning bg-opacity-10 rounded-circle p-3 me-3">
                                                     <i class="fas fa-hand-holding-usd fa-2x text-warning"></i>
                                                 </div>
-                                                <div>
+                                                <div class="flex-grow-1">
                                                     <h6 class="text-muted mb-0 small">Recursos SGR</h6>
                                                     <h5 class="mb-0">{{
                                                         formatearMoneda(analisis?.analisisPresupuestoDetallado?.presupuestoSGRTotal
                                                         || 0) }}</h5>
-                                                    <small class="text-muted">{{
-                                                        formatearPorcentaje(analisis?.analisisPresupuestoDetallado?.porcentajeSGR
-                                                        || 0) }}</small>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <small class="text-warning">
+                                                    <i class="fas fa-percentage me-1"></i>
+                                                    {{
+                                                    formatearPorcentaje(analisis?.analisisPresupuestoDetallado?.porcentajeSGR
+                                                    || 0) }}
+                                                </small>
+                                                <div class="progress flex-grow-1 ms-2" style="height: 6px;">
+                                                    <div class="progress-bar bg-warning"
+                                                        [style.width.%]="analisis?.analisisPresupuestoDetallado?.porcentajeSGR || 0">
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
-                                    <div class="card shadow-sm border-0 h-100">
+                                    <div class="card shadow-sm border-0 h-100 bg-success bg-opacity-10">
                                         <div class="card-body">
-                                            <div class="d-flex align-items-center">
-                                                <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <div class="bg-success bg-opacity-25 rounded-circle p-3 me-3">
                                                     <i class="fas fa-calculator fa-2x text-success"></i>
                                                 </div>
-                                                <div>
+                                                <div class="flex-grow-1">
                                                     <h6 class="text-muted mb-0 small">Presupuesto Total</h6>
-                                                    <h5 class="mb-0">{{
+                                                    <h4 class="mb-0 text-success">{{
                                                         formatearMoneda((analisis?.analisisPresupuestoDetallado?.presupuestoOrdinarioTotal
                                                         || 0) +
                                                         (analisis?.analisisPresupuestoDetallado?.presupuestoSGRTotal ||
-                                                        0)) }}</h5>
-                                                    <small class="text-muted">Cuatrienio 2024-2027</small>
+                                                        0)) }}</h4>
                                                 </div>
                                             </div>
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar-alt me-1"></i>Cuatrienio 2024-2027
+                                            </small>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
                                     <div class="card shadow-sm border-0 h-100">
                                         <div class="card-body">
-                                            <div class="d-flex align-items-center">
+                                            <div class="d-flex align-items-center mb-2">
                                                 <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
                                                     <i class="fas fa-chart-line fa-2x text-info"></i>
                                                 </div>
-                                                <div>
+                                                <div class="flex-grow-1">
                                                     <h6 class="text-muted mb-0 small">Promedio Anual</h6>
                                                     <h5 class="mb-0">{{
                                                         formatearMoneda(((analisis?.analisisPresupuestoDetallado?.presupuestoOrdinarioTotal
                                                         || 0) +
                                                         (analisis?.analisisPresupuestoDetallado?.presupuestoSGRTotal ||
                                                         0)) / 4) }}</h5>
-                                                    <small class="text-muted">Por año</small>
                                                 </div>
                                             </div>
+                                            <small class="text-muted">
+                                                <i class="fas fa-divide me-1"></i>Distribución por 4 años
+                                            </small>
                                         </div>
                                     </div>
                                 </div>
@@ -418,7 +441,10 @@
                                                 anio.anio) {
                                                 <tr class="table-row-clickeable" (click)="filtrarPorAnio(anio.anio)"
                                                     role="button">
-                                                    <td><strong>{{ anio.anio }}</strong></td>
+                                                    <td>
+                                                        <i class="fas fa-filter me-2 text-muted small"></i>
+                                                        <strong>{{ anio.anio }}</strong>
+                                                    </td>
                                                     <td class="text-end">{{ formatearMoneda(anio.ordinario) }}</td>
                                                     <td class="text-end">{{ formatearMoneda(anio.sgr) }}</td>
                                                     <td class="text-end"><strong>{{ formatearMoneda(anio.total)
@@ -451,13 +477,14 @@
                                     }
                                 </div>
                                 <div class="col-md-5">
-                                    <h6 class="mb-3">Detalle por Sector</h6>
-                                    <div class="table-responsive">
-                                        <table class="table table-sm table-hover">
-                                            <thead class="table-light">
+                                    <h6 class="mb-3">Detalle por Sector (Top 10)</h6>
+                                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                        <table class="table table-sm table-hover mb-0">
+                                            <thead class="table-light sticky-top">
                                                 <tr>
                                                     <th>Sector</th>
                                                     <th class="text-end">Total</th>
+                                                    <th class="text-center" style="width: 80px;">% del Total</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -465,8 +492,25 @@
                                                 analisis?.analisisPresupuestoDetallado?.presupuestoPorSector?.slice(0,
                                                 10); track sector.sector) {
                                                 <tr>
-                                                    <td><strong>{{ truncarTexto(sector.sector, 30) }}</strong></td>
-                                                    <td class="text-end">{{ formatearMoneda(sector.total) }}</td>
+                                                    <td>
+                                                        <div class="text-truncate" style="max-width: 200px;"
+                                                            [title]="sector.sector">
+                                                            <strong>{{ truncarTexto(sector.sector, 25) }}</strong>
+                                                        </div>
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <span class="badge bg-secondary">{{
+                                                            formatearMoneda(sector.total) }}</span>
+                                                    </td>
+                                                    <td>
+                                                        <div class="d-flex align-items-center justify-content-center">
+                                                            <small class="me-1">{{ formatearPorcentaje(sector.total /
+                                                                ((analisis?.analisisPresupuestoDetallado?.presupuestoOrdinarioTotal
+                                                                || 0) +
+                                                                (analisis?.analisisPresupuestoDetallado?.presupuestoSGRTotal
+                                                                || 0)) * 100) }}</small>
+                                                        </div>
+                                                    </td>
                                                 </tr>
                                                 }
                                             </tbody>
@@ -717,6 +761,9 @@
                                                     </h2>
                                                 </div>
                                             </div>
+                                            <small class="text-muted d-block mt-2">
+                                                <i class="fas fa-info-circle me-1"></i>Indicadores de resultado del PDM
+                                            </small>
                                         </div>
                                     </div>
                                 </div>
@@ -734,6 +781,9 @@
                                                     </h2>
                                                 </div>
                                             </div>
+                                            <small class="text-success d-block mt-2">
+                                                <i class="fas fa-check me-1"></i>Alineados con Plan Nacional
+                                            </small>
                                         </div>
                                     </div>
                                 </div>
@@ -751,21 +801,29 @@
                                                         }}</h2>
                                                 </div>
                                             </div>
+                                            <small class="text-warning d-block mt-2">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>Sin alineación nacional
+                                            </small>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="col-md-3">
-                                    <div class="card shadow-sm border-0 h-100">
+                                    <div class="card shadow-sm border-0 h-100 bg-info bg-opacity-10">
                                         <div class="card-body">
                                             <div class="d-flex align-items-center">
-                                                <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                                                <div class="bg-info bg-opacity-25 rounded-circle p-3 me-3">
                                                     <i class="fas fa-percentage fa-2x text-info"></i>
                                                 </div>
                                                 <div>
                                                     <h6 class="text-muted mb-0 small">% Alineación PND</h6>
-                                                    <h2 class="mb-0">{{
+                                                    <h2 class="mb-0 text-info">{{
                                                         formatearPorcentaje(analisis?.analisisIndicadoresResultado?.porcentajeAlineacionPND
                                                         || 0) }}</h2>
+                                                </div>
+                                            </div>
+                                            <div class="progress mt-2" style="height: 6px;">
+                                                <div class="progress-bar bg-info"
+                                                    [style.width.%]="analisis?.analisisIndicadoresResultado?.porcentajeAlineacionPND || 0">
                                                 </div>
                                             </div>
                                         </div>
@@ -814,8 +872,12 @@
                                                 @for (linea of
                                                 analisis?.analisisIndicadoresResultado?.indicadoresPorLinea; track
                                                 linea.lineaEstrategica) {
-                                                <tr>
-                                                    <td><strong>{{ linea.lineaEstrategica }}</strong></td>
+                                                <tr class="table-row-clickeable"
+                                                    (click)="filtrarPorLinea(linea.lineaEstrategica)" role="button">
+                                                    <td>
+                                                        <i class="fas fa-filter me-2 text-muted small"></i>
+                                                        <strong>{{ linea.lineaEstrategica }}</strong>
+                                                    </td>
                                                     <td class="text-center">
                                                         <span class="badge bg-primary">{{ linea.totalIndicadores
                                                             }}</span>
