@@ -1014,4 +1014,26 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         const date = new Date(fecha);
         return date.toLocaleDateString('es-CO', { year: 'numeric', month: 'short', day: 'numeric' });
     }
+
+    // Validaciones de formulario de actividad
+    validFechaRango(): boolean {
+        const inicio = this.formActividad.fecha_inicio;
+        const fin = this.formActividad.fecha_fin;
+        if (!inicio || !fin) return true; // si falta una, no invalida
+        try {
+            const d1 = new Date(inicio + 'T00:00:00');
+            const d2 = new Date(fin + 'T00:00:00');
+            return d1.getTime() <= d2.getTime();
+        } catch {
+            return true;
+        }
+    }
+
+    validActividadForm(): boolean {
+        const nombreOk = !!(this.formActividad.nombre && this.formActividad.nombre.trim());
+        const avance = Number(this.formActividad.porcentaje_avance ?? 0);
+        const avanceOk = avance >= 0 && avance <= 100;
+        const fechasOk = this.validFechaRango();
+        return nombreOk && avanceOk && fechasOk;
+    }
 }
