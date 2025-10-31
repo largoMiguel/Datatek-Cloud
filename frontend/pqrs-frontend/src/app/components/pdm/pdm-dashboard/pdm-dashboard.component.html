@@ -1315,31 +1315,39 @@
                                         <span class="badge bg-secondary">{{ row.metaCuatrienio || 'N/A' }}</span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge" [class.bg-success]="(row.avances?.[2024]?.valor || 0) >= 70"
-                                            [class.bg-warning]="(row.avances?.[2024]?.valor || 0) >= 40 && (row.avances?.[2024]?.valor || 0) < 70"
-                                            [class.bg-secondary]="(row.avances?.[2024]?.valor || 0) < 40">
-                                            {{ row.avances?.[2024]?.valor || 0 }}%
+                                        <span class="badge"
+                                            [class.bg-success]="(row.programacion2024||0) > 0 && (row.total2024||0) > 0"
+                                            [class.bg-danger]="(row.programacion2024||0) > 0 && (row.total2024||0) === 0"
+                                            [class.bg-secondary]="(row.programacion2024||0) === 0">
+                                            {{ (row.programacion2024||0) === 0 ? 'Sin programación' :
+                                            ((row.total2024||0) > 0 ? 'Cumple' : 'No cumple') }}
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge" [class.bg-success]="(row.avances?.[2025]?.valor || 0) >= 70"
-                                            [class.bg-warning]="(row.avances?.[2025]?.valor || 0) >= 40 && (row.avances?.[2025]?.valor || 0) < 70"
-                                            [class.bg-secondary]="(row.avances?.[2025]?.valor || 0) < 40">
-                                            {{ row.avances?.[2025]?.valor || 0 }}%
+                                        <span class="badge"
+                                            [class.bg-success]="(row.programacion2025||0) > 0 && (row.total2025||0) > 0"
+                                            [class.bg-danger]="(row.programacion2025||0) > 0 && (row.total2025||0) === 0"
+                                            [class.bg-secondary]="(row.programacion2025||0) === 0">
+                                            {{ (row.programacion2025||0) === 0 ? 'Sin programación' :
+                                            ((row.total2025||0) > 0 ? 'Cumple' : 'No cumple') }}
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge" [class.bg-success]="(row.avances?.[2026]?.valor || 0) >= 70"
-                                            [class.bg-warning]="(row.avances?.[2026]?.valor || 0) >= 40 && (row.avances?.[2026]?.valor || 0) < 70"
-                                            [class.bg-secondary]="(row.avances?.[2026]?.valor || 0) < 40">
-                                            {{ row.avances?.[2026]?.valor || 0 }}%
+                                        <span class="badge"
+                                            [class.bg-success]="(row.programacion2026||0) > 0 && (row.total2026||0) > 0"
+                                            [class.bg-danger]="(row.programacion2026||0) > 0 && (row.total2026||0) === 0"
+                                            [class.bg-secondary]="(row.programacion2026||0) === 0">
+                                            {{ (row.programacion2026||0) === 0 ? 'Sin programación' :
+                                            ((row.total2026||0) > 0 ? 'Cumple' : 'No cumple') }}
                                         </span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge" [class.bg-success]="(row.avances?.[2027]?.valor || 0) >= 70"
-                                            [class.bg-warning]="(row.avances?.[2027]?.valor || 0) >= 40 && (row.avances?.[2027]?.valor || 0) < 70"
-                                            [class.bg-secondary]="(row.avances?.[2027]?.valor || 0) < 40">
-                                            {{ row.avances?.[2027]?.valor || 0 }}%
+                                        <span class="badge"
+                                            [class.bg-success]="(row.programacion2027||0) > 0 && (row.total2027||0) > 0"
+                                            [class.bg-danger]="(row.programacion2027||0) > 0 && (row.total2027||0) === 0"
+                                            [class.bg-secondary]="(row.programacion2027||0) === 0">
+                                            {{ (row.programacion2027||0) === 0 ? 'Sin programación' :
+                                            ((row.total2027||0) > 0 ? 'Cumple' : 'No cumple') }}
                                         </span>
                                     </td>
                                     <td class="text-center">
