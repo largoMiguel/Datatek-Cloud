@@ -347,13 +347,10 @@ export class PdmDataService {
     }
 
     private calcularEstadosYAvances(pdmData: PDMData): void {
-        // Nueva lógica: una meta anual se considera cumplida si tiene presupuesto (> 0) asignado ese año.
-        // El avance del producto = (# de años programados con presupuesto) / (# de años programados) * 100
-        // Estado del producto:
-        //  - CUMPLIDA: todos los años programados tienen presupuesto
-        //  - EN_PROGRESO: >= 50% de años programados con presupuesto (y no todos)
-        //  - PENDIENTE: > 0% y < 50%
-        //  - POR_CUMPLIR: 0% de años programados con presupuesto
+        // Actualización: considerar solo años hasta el año actual al calcular avance/estado.
+        // Así evitamos marcar 100% o "Cumplida" cuando la única meta programada es de un año futuro.
+
+        const anioActual = new Date().getFullYear();
 
         pdmData.planIndicativoProductos.forEach(producto => {
             const anios = [2024, 2025, 2026, 2027] as const;
@@ -370,19 +367,19 @@ export class PdmDataService {
                 2027: producto.total2027
             } as any;
 
-            const aniosProgramados = anios.filter(a => (programadoPorAnio[a] || 0) > 0);
-            const aniosConPresupuesto = aniosProgramados.filter(a => (presupuestoPorAnio[a] || 0) > 0);
+            const aniosProgramadosHastaHoy = anios.filter(a => a <= anioActual && (programadoPorAnio[a] || 0) > 0);
+            const aniosConPresupuestoHastaHoy = aniosProgramadosHastaHoy.filter(a => (presupuestoPorAnio[a] || 0) > 0);
 
-            const totalProgramados = aniosProgramados.length;
-            const totalConPresupuesto = aniosConPresupuesto.length;
+            const totalProgramadosHastaHoy = aniosProgramadosHastaHoy.length;
+            const totalConPresupuestoHastaHoy = aniosConPresupuestoHastaHoy.length;
 
-            const ratio = totalProgramados > 0 ? totalConPresupuesto / totalProgramados : 0;
+            const ratio = totalProgramadosHastaHoy > 0 ? totalConPresupuestoHastaHoy / totalProgramadosHastaHoy : 0;
             producto.avance = ratio * 100;
 
-            if (totalProgramados === 0) {
-                // Sin programación: se considera por cumplir
+            if (totalProgramadosHastaHoy === 0) {
+                // No hay metas programadas aún (todo es futuro) o no aplican años pasados/actuales
                 producto.estado = EstadoMeta.POR_CUMPLIR;
-            } else if (totalConPresupuesto === totalProgramados) {
+            } else if (totalConPresupuestoHastaHoy === totalProgramadosHastaHoy) {
                 producto.estado = EstadoMeta.CUMPLIDA;
             } else if (ratio >= 0.5) {
                 producto.estado = EstadoMeta.EN_PROGRESO;
