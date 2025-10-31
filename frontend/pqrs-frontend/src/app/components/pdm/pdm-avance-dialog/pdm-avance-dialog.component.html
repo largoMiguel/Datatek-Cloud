@@ -22,10 +22,10 @@
             </div>
             <div class="card-body">
                 <div class="d-flex flex-wrap gap-2">
-                    <span class="badge bg-secondary fs-6 py-2 px-3" *ngFor="let a of anios">
+                    <span class="badge bg-secondary fs-6 py-2 px-3" *ngFor="let a of [2024,2025,2026,2027]">
                         <strong>{{ a }}:</strong>
                         <ng-container *ngIf="data.avances[a]; else sinDato">
-                            {{ data.avances[a].valor }}%
+                            {{ data.avances[a].valor }}
                         </ng-container>
                         <ng-template #sinDato>—</ng-template>
                     </span>
@@ -35,21 +35,24 @@
 
         <!-- Formulario -->
         <div class="mb-3">
-            <label for="anio" class="form-label fw-bold">
-                <i class="fas fa-calendar me-2"></i>Año
+            <label for="actividad" class="form-label fw-bold">
+                <i class="fas fa-tasks me-2"></i>Actividad
             </label>
-            <select class="form-select form-select-lg" id="anio" [(ngModel)]="anio" (change)="onAnioChange()">
-                <option *ngFor="let a of anios" [value]="a">{{ a }}</option>
+            <select class="form-select form-select-lg" id="actividad" [(ngModel)]="actividadId"
+                (change)="onActividadChange()">
+                <option [ngValue]="null" disabled>Seleccione una actividad</option>
+                <option *ngFor="let act of actividades" [ngValue]="act.id">{{ act.nombre }} ({{ act.anio }}) - Meta: {{
+                    act.meta_ejecutar }}</option>
             </select>
         </div>
 
-        <div class="mb-3">
-            <label for="valor" class="form-label fw-bold">
-                <i class="fas fa-percentage me-2"></i>Valor Ejecutado (%)
-            </label>
-            <input type="number" class="form-control form-control-lg" id="valor" [(ngModel)]="valor_ejecutado" min="0"
-                max="100" placeholder="Ingrese un valor entre 0 y 100">
-            <div class="form-text">Valor entre 0 y 100</div>
+        <div class="alert alert-info" *ngIf="actividadId as aid">
+            <ng-container *ngFor="let act of actividades">
+                <ng-container *ngIf="act.id === aid">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Año: <strong>{{ act.anio }}</strong> | Meta a ejecutar: <strong>{{ act.meta_ejecutar }}</strong>
+                </ng-container>
+            </ng-container>
         </div>
 
         <div class="mb-3">
@@ -58,6 +61,14 @@
             </label>
             <textarea class="form-control" id="comentario" rows="3" [(ngModel)]="comentario"
                 placeholder="Notas, fuente, aclaraciones..."></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label for="evidencia" class="form-label fw-bold">
+                <i class="fas fa-paperclip me-2"></i>Evidencia (opcional)
+            </label>
+            <input type="file" id="evidencia" class="form-control" (change)="onFileChange($event)">
+            <div class="form-text">Puedes adjuntar un archivo de evidencia.</div>
         </div>
 
         <!-- Error Alert -->

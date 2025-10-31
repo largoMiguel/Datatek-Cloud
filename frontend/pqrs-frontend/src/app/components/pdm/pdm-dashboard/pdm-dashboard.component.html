@@ -1687,17 +1687,7 @@
                                             }">
                                                 {{ obtenerEtiquetaEstadoActividad(actividad.estado) }}
                                             </span>
-                                            <div class="flex-grow-1">
-                                                <div class="progress" style="height: 20px;">
-                                                    <div class="progress-bar"
-                                                        [class.bg-success]="actividad.porcentaje_avance >= 70"
-                                                        [class.bg-info]="actividad.porcentaje_avance >= 40 && actividad.porcentaje_avance < 70"
-                                                        [class.bg-warning]="actividad.porcentaje_avance < 40"
-                                                        [style.width.%]="actividad.porcentaje_avance">
-                                                        {{ actividad.porcentaje_avance }}%
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            <!-- Progreso por porcentaje eliminado; se calcula por metas a ejecutar -->
                                         </div>
                                     </div>
                                     <div class="btn-group btn-group-sm ms-2">
@@ -1860,27 +1850,7 @@
                 | <strong>Presupuesto:</strong> {{ formatearMoneda(obtenerPresupuestoAnio(formActividad.anio)) }}
             </div>
 
-            <div class="mb-3">
-                <label for="actAvance" class="form-label">Porcentaje de Avance ({{
-                    formActividad.porcentaje_avance
-                    }}%)</label>
-                <input type="range" class="form-range" id="actAvance" [(ngModel)]="formActividad.porcentaje_avance"
-                    name="porcentaje_avance" min="0" max="100" step="5">
-                <div class="progress mt-2" style="height: 25px;">
-                    <div class="progress-bar" [class.bg-success]="formActividad.porcentaje_avance >= 70"
-                        [class.bg-info]="formActividad.porcentaje_avance >= 40 && formActividad.porcentaje_avance < 70"
-                        [class.bg-warning]="formActividad.porcentaje_avance < 40"
-                        [style.width.%]="formActividad.porcentaje_avance">
-                        {{ formActividad.porcentaje_avance }}%
-                    </div>
-                </div>
-                <small class="text-muted d-block mt-2">
-                    <i class="fas fa-calculator me-1"></i>
-                    Valor ejecutado: {{ (formActividad.meta_ejecutar * formActividad.porcentaje_avance / 100).toFixed(2)
-                    }}
-                    de {{ formActividad.meta_ejecutar }}
-                </small>
-            </div>
+            <!-- Se elimina el control de porcentaje de avance; valor ejecutado = meta a ejecutar -->
             </form>
         </div>
         <div class="modal-footer">

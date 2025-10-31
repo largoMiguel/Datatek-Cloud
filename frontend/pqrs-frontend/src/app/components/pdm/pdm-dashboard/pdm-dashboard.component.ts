@@ -364,7 +364,6 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         responsable: '',
         fecha_inicio: '',
         fecha_fin: '',
-        porcentaje_avance: 0,
         estado: 'pendiente',
         anio: new Date().getFullYear(), // Año actual por defecto
         meta_ejecutar: 0, // Cantidad de la meta anual a ejecutar
@@ -399,22 +398,37 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
             return;
         }
 
-        this.avanceDialogData = {
-            codigo: row.codigoIndicadorProducto,
-            avances: row.avances
-        };
+        const slug = this.entityContext.currentEntity?.slug;
+        if (!slug) return;
 
-        // Esperar a que el DOM se actualice
-        setTimeout(() => {
-            const modalElement = document.getElementById('avanceModal');
-            if (modalElement && bootstrap) {
-                this.avanceModalInstance = new bootstrap.Modal(modalElement);
-                this.avanceModalInstance.show();
-            }
-        }, 0);
+        this.pdmBackend.getActividades(slug, row.codigoIndicadorProducto).subscribe({
+            next: (response) => {
+                const actividades = response.actividades || [];
+                if (!actividades.length) {
+                    this.showToast('Primero debe crear una actividad para este producto.', 'error');
+                    return;
+                }
+
+                this.avanceDialogData = {
+                    codigo: row.codigoIndicadorProducto,
+                    avances: row.avances,
+                    actividades
+                } as any;
+
+                // Esperar a que el DOM se actualice
+                setTimeout(() => {
+                    const modalElement = document.getElementById('avanceModal');
+                    if (modalElement && bootstrap) {
+                        this.avanceModalInstance = new bootstrap.Modal(modalElement);
+                        this.avanceModalInstance.show();
+                    }
+                }, 0);
+            },
+            error: () => this.showToast('No se pudieron cargar las actividades del producto.', 'error')
+        });
     }
 
-    onAvanceSave(result: { anio: number; valor_ejecutado: number; comentario: string }) {
+    onAvanceSave(result: { actividadId: number; comentario: string; evidencia?: File | null }) {
         if (!this.avanceDialogData) return;
         const slug = this.entityContext.currentEntity?.slug;
         if (!slug) return;
@@ -422,17 +436,29 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         const row = this.productos.find(p => p.codigoIndicadorProducto === this.avanceDialogData!.codigo);
         if (!row) return;
 
+        // Buscar actividad seleccionada
+        const actividades = (this.avanceDialogData as any).actividades || [];
+        const actividad = actividades.find((a: any) => a.id === result.actividadId);
+        if (!actividad) {
+            this.showToast('Seleccione una actividad válida para registrar el avance.', 'error');
+            return;
+        }
+
+        // Calcular parámetros desde la actividad
+        const anio = actividad.anio;
+        const valor_ejecutado = Number(actividad.meta_ejecutar || 0);
+
         this.pdmBackend.upsertAvance(slug, {
             codigo_indicador_producto: row.codigoIndicadorProducto,
-            anio: result.anio,
-            valor_ejecutado: result.valor_ejecutado,
+            anio,
+            valor_ejecutado,
             comentario: result.comentario,
         }).subscribe({
             next: () => {
                 // Actualizar avances por año en la fila
                 if (!row.avances) row.avances = {};
-                row.avances[result.anio] = {
-                    valor: result.valor_ejecutado,
+                row.avances[anio] = {
+                    valor: valor_ejecutado,
                     comentario: result.comentario
                 };
                 // Mantener la métrica general de avance como promedio simple de avances cargados
@@ -1076,6 +1102,10 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         // Evita null: conserva la referencia antes de cerrar el modal
         const prod = this.productoSeleccionado;
         if (prod) {
+            if (!this.actividadesProducto || this.actividadesProducto.length === 0) {
+                this.showToast('Primero debe crear una actividad para este producto.', 'error');
+                return;
+            }
             this.cerrarDetalle();
             this.abrirDialogoAvance(prod);
         }
@@ -1111,7 +1141,6 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
             responsable: '',
             fecha_inicio: '',
             fecha_fin: '',
-            porcentaje_avance: 0,
             estado: 'pendiente',
             anio: añoActual,
             meta_ejecutar: 0,
@@ -1128,7 +1157,6 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
             responsable: actividad.responsable || '',
             fecha_inicio: actividad.fecha_inicio ? actividad.fecha_inicio.split('T')[0] : '',
             fecha_fin: actividad.fecha_fin ? actividad.fecha_fin.split('T')[0] : '',
-            porcentaje_avance: actividad.porcentaje_avance,
             estado: actividad.estado,
             anio: actividad.anio || new Date().getFullYear(),
             meta_ejecutar: actividad.meta_ejecutar || 0,
@@ -1150,8 +1178,8 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
 
         this.guardandoActividad = true;
 
-        // Calcular valor_ejecutado basado en meta_ejecutar y porcentaje_avance
-        const valorEjecutado = (this.formActividad.meta_ejecutar * this.formActividad.porcentaje_avance) / 100;
+        // El valor ejecutado se calcula con la meta a ejecutar (sin porcentaje)
+        const valorEjecutado = Number(this.formActividad.meta_ejecutar || 0);
 
         const payload = {
             ...this.formActividad,
@@ -1238,8 +1266,6 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
 
     validActividadForm(): boolean {
         const nombreOk = !!(this.formActividad.nombre && this.formActividad.nombre.trim());
-        const avance = Number(this.formActividad.porcentaje_avance ?? 0);
-        const avanceOk = avance >= 0 && avance <= 100;
         const fechasOk = this.validFechaRango() && this.fechasCompletas();
         const responsableOk = !!(this.formActividad.responsable && this.formActividad.responsable.trim());
 
@@ -1248,7 +1274,7 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         const disponible = this.obtenerMetaDisponibleAnio(this.formActividad.anio);
         const metaOk = metaEjecutar > 0 && metaEjecutar <= disponible;
 
-        return nombreOk && responsableOk && avanceOk && fechasOk && metaOk;
+        return nombreOk && responsableOk && fechasOk && metaOk;
     }
 
     /**
