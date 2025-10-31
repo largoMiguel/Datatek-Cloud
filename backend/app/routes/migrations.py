@@ -161,6 +161,53 @@ def run_migrations(
         else:
             migrations_applied.append("ℹ️ Tabla 'pdm_avances' ya existe")
 
+        # 4.1) Crear tabla pdm_actividades si no existe
+        if not inspector.has_table("pdm_actividades"):
+            if is_postgres:
+                db.execute(text("""
+                    CREATE TABLE pdm_actividades (
+                        id SERIAL PRIMARY KEY,
+                        entity_id INTEGER NOT NULL REFERENCES entities(id),
+                        codigo_indicador_producto VARCHAR(128) NOT NULL,
+                        nombre VARCHAR(512) NOT NULL,
+                        descripcion VARCHAR(1024),
+                        responsable VARCHAR(256),
+                        fecha_inicio TIMESTAMP NULL,
+                        fecha_fin TIMESTAMP NULL,
+                        porcentaje_avance FLOAT NOT NULL DEFAULT 0.0,
+                        estado VARCHAR(64) NOT NULL DEFAULT 'pendiente',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        CONSTRAINT uq_actividad_entity_codigo_nombre UNIQUE (entity_id, codigo_indicador_producto, nombre)
+                    )
+                """))
+                db.execute(text("CREATE INDEX ix_pdm_actividades_entity_id ON pdm_actividades(entity_id)"))
+                db.execute(text("CREATE INDEX ix_pdm_actividades_codigo ON pdm_actividades(codigo_indicador_producto)"))
+            else:
+                db.execute(text("""
+                    CREATE TABLE pdm_actividades (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        entity_id INTEGER NOT NULL,
+                        codigo_indicador_producto VARCHAR(128) NOT NULL,
+                        nombre VARCHAR(512) NOT NULL,
+                        descripcion VARCHAR(1024),
+                        responsable VARCHAR(256),
+                        fecha_inicio TIMESTAMP NULL,
+                        fecha_fin TIMESTAMP NULL,
+                        porcentaje_avance REAL NOT NULL DEFAULT 0.0,
+                        estado VARCHAR(64) NOT NULL DEFAULT 'pendiente',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (entity_id) REFERENCES entities(id),
+                        UNIQUE(entity_id, codigo_indicador_producto, nombre)
+                    )
+                """))
+                db.execute(text("CREATE INDEX ix_pdm_actividades_entity_id ON pdm_actividades(entity_id)"))
+                db.execute(text("CREATE INDEX ix_pdm_actividades_codigo ON pdm_actividades(codigo_indicador_producto)"))
+            migrations_applied.append("🆕 Tabla 'pdm_actividades' creada para gestionar actividades por producto")
+        else:
+            migrations_applied.append("ℹ️ Tabla 'pdm_actividades' ya existe")
+
         # 5) Agregar flag 'enable_pdm' si falta en entities
         if "enable_pdm" not in existing_cols:
             default_true = "TRUE" if is_postgres else "1"
@@ -334,6 +381,13 @@ def migration_status(
         else:
             status_info["pdm_avances_table"] = "⚠️ Tabla 'pdm_avances' no encontrada - se requiere migración"
             status_info["pending_migrations"].append("create_pdm_avances_table")
+
+        # Comprobar tabla PDM Actividades
+        if inspector.has_table("pdm_actividades"):
+            status_info["pdm_actividades_table"] = "✅ Tabla 'pdm_actividades' existe"
+        else:
+            status_info["pdm_actividades_table"] = "⚠️ Tabla 'pdm_actividades' no encontrada - se requiere migración"
+            status_info["pending_migrations"].append("create_pdm_actividades_table")
 
         # Comprobar tabla users
         if inspector.has_table("users"):
