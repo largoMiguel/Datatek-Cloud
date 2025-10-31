@@ -51,6 +51,7 @@ export class SoftAdminComponent implements OnInit {
         enable_reports_pdf: true,
         enable_ai_reports: true,
         enable_planes_institucionales: true,
+        enable_pdm: true,
         enable_contratacion: true
     };
 
@@ -144,6 +145,7 @@ export class SoftAdminComponent implements OnInit {
             enable_reports_pdf: (entity as any).enable_reports_pdf ?? true,
             enable_ai_reports: (entity as any).enable_ai_reports ?? true,
             enable_planes_institucionales: (entity as any).enable_planes_institucionales ?? true,
+            enable_pdm: (entity as any).enable_pdm ?? true,
             enable_contratacion: (entity as any).enable_contratacion ?? true
         };
         this.currentView = 'edit-entity';
@@ -392,7 +394,14 @@ export class SoftAdminComponent implements OnInit {
             email: '',
             logo_url: '',
             horario_atencion: '',
-            tiempo_respuesta: ''
+            tiempo_respuesta: '',
+            enable_pqrs: true,
+            enable_users_admin: true,
+            enable_reports_pdf: true,
+            enable_ai_reports: true,
+            enable_planes_institucionales: true,
+            enable_pdm: true,
+            enable_contratacion: true
         };
         this.editingEntity = null;
     }
