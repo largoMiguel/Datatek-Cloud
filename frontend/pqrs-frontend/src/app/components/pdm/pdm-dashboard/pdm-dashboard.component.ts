@@ -340,6 +340,10 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
     avanceDialogData: AvanceDialogData | null = null;
     avanceModalInstance: any = null;
 
+    // Detalle de producto
+    productoSeleccionado: PlanIndicativoProducto | null = null;
+    Object = Object; // Para usar Object.keys en el template
+
     // Estadísticas avanzadas
     estadisticasPorSecretaria: {
         secretaria: string;
@@ -799,5 +803,45 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
     exportarDatos(): void {
         // TODO: Implementar exportación a PDF o Excel
         console.log('Exportar datos');
+    }
+
+    // Nuevas funciones para interactividad
+
+    volverAlDashboard(): void {
+        const slug = this.entityContext.currentEntity?.slug;
+        if (slug) {
+            this.router.navigate([`/${slug}/dashboard`]);
+        } else {
+            this.router.navigate(['/dashboard']);
+        }
+    }
+
+    filtrarPorEstado(estado: string | undefined): void {
+        if (estado === undefined) {
+            this.filtros.estado = undefined;
+        } else {
+            this.filtros.estado = estado as EstadoMeta;
+        }
+        this.aplicarFiltros();
+        // Scroll a la tabla
+        const tableElement = document.querySelector('.table-responsive');
+        if (tableElement) {
+            tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    verDetalleProducto(producto: PlanIndicativoProducto): void {
+        this.productoSeleccionado = producto;
+    }
+
+    cerrarDetalle(): void {
+        this.productoSeleccionado = null;
+    }
+
+    abrirDialogoAvanceDesdeDetalle(): void {
+        if (this.productoSeleccionado) {
+            this.cerrarDetalle();
+            this.abrirDialogoAvance(this.productoSeleccionado);
+        }
     }
 }

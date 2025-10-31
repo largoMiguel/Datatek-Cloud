@@ -2,6 +2,24 @@
 // PDM Dashboard - Bootstrap Based Styles
 // ===================================================================
 
+// Barra de navegación global
+.navbar {
+    margin-bottom: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+    .navbar-brand {
+        font-size: 1.25rem;
+        font-weight: 600;
+    }
+
+    .btn-outline-light {
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+    }
+}
+
 // Container principal
 .container-fluid {
     background: #f8f9fa;
@@ -16,6 +34,36 @@
     &:hover:not(.bg-gradient) {
         transform: translateY(-4px);
         box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
+    }
+}
+
+// Cards clickeables
+.card-clickeable {
+    cursor: pointer;
+
+    &:hover {
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important;
+        border: 2px solid #0d6efd !important;
+    }
+
+    &:active {
+        transform: translateY(-2px) scale(1.01);
+    }
+}
+
+// Filas de tabla clickeables
+.table-row-clickeable {
+    transition: all 0.2s ease;
+
+    &:hover {
+        background-color: rgba(13, 110, 253, 0.1) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transform: scale(1.005);
+    }
+
+    &:active {
+        background-color: rgba(13, 110, 253, 0.2) !important;
     }
 }
 

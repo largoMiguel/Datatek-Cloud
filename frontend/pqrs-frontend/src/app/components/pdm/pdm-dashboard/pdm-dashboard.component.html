@@ -1,6 +1,19 @@
 <!-- Toast Container -->
 <div id="toast-container" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 9999;"></div>
 
+<!-- Barra de navegación global -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center" href="#">
+            <i class="fas fa-chart-line me-2"></i>
+            <span>Plan de Desarrollo Municipal</span>
+        </a>
+        <button class="btn btn-outline-light" (click)="volverAlDashboard()">
+            <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+        </button>
+    </div>
+</nav>
+
 <div class="container-fluid py-4">
     <!-- Loading State -->
     @if (cargando) {
@@ -64,7 +77,7 @@
     <div class="row mb-4 g-3">
         <!-- Total Metas -->
         <div class="col-md-3">
-            <div class="card shadow-sm border-0 h-100">
+            <div class="card shadow-sm border-0 h-100 card-clickeable" (click)="filtrarPorEstado(undefined)">
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-3">
                         <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
@@ -84,7 +97,7 @@
 
         <!-- Cumplidas -->
         <div class="col-md-3">
-            <div class="card shadow-sm border-0 h-100">
+            <div class="card shadow-sm border-0 h-100 card-clickeable" (click)="filtrarPorEstado('cumplida')">
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-3">
                         <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
@@ -111,7 +124,7 @@
 
         <!-- En Progreso -->
         <div class="col-md-3">
-            <div class="card shadow-sm border-0 h-100">
+            <div class="card shadow-sm border-0 h-100 card-clickeable" (click)="filtrarPorEstado('en_progreso')">
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-3">
                         <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
@@ -133,7 +146,7 @@
 
         <!-- Pendientes -->
         <div class="col-md-3">
-            <div class="card shadow-sm border-0 h-100">
+            <div class="card shadow-sm border-0 h-100 card-clickeable" (click)="filtrarPorEstado('pendiente')">
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-3">
                         <div class="bg-danger bg-opacity-10 rounded-circle p-3 me-3">
@@ -628,7 +641,8 @@
                             </thead>
                             <tbody>
                                 @for (row of paginatedData; track row.codigoIndicadorProducto) {
-                                <tr>
+                                <tr class="table-row-clickeable" (click)="verDetalleProducto(row)"
+                                    style="cursor: pointer;">
                                     <td><code>{{ row.codigoIndicadorProducto }}</code></td>
                                     <td><small>{{ row.sector }}</small></td>
                                     <td>
@@ -636,7 +650,7 @@
                                             {{ row.personalizacion || row.indicadorProducto }}
                                         </div>
                                     </td>
-                                    <td>
+                                    <td (click)="$event.stopPropagation()">
                                         <select class="form-select form-select-sm"
                                             [value]="row.secretariaAsignada || ''"
                                             (change)="onCambiarSecretaria(row, $any($event.target).value || undefined)">
@@ -703,7 +717,7 @@
                                     <td class="text-end">
                                         <small>{{ formatearMoneda(row.total2027 || 0) }}</small>
                                     </td>
-                                    <td class="text-center">
+                                    <td class="text-center" (click)="$event.stopPropagation()">
                                         <button class="btn btn-sm btn-primary" (click)="abrirDialogoAvance(row)">
                                             <i class="fas fa-plus-circle"></i>
                                         </button>
@@ -771,10 +785,192 @@
 @if (avanceDialogData) {
 <div class="modal fade" id="avanceModal" tabindex="-1">
     <div class="modal-dialog">
+        <app-pdm-avance-dialog [data]="avanceDialogData" (onSave)="onAvanceSave($event)" (onCancel)="onAvanceCancel()">
+        </app-pdm-avance-dialog>
+    </div>
+</div>
+}
+
+<!-- Modal de Detalle del Producto -->
+@if (productoSeleccionado) {
+<div class="modal fade show" id="detalleModal" tabindex="-1" style="display: block; background: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content">
-            <app-pdm-avance-dialog [data]="avanceDialogData" (onSave)="onAvanceSave($event)"
-                (onCancel)="onAvanceCancel()">
-            </app-pdm-avance-dialog>
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Detalle del Producto
+                </h5>
+                <button type="button" class="btn-close btn-close-white" (click)="cerrarDetalle()"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Información General -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-tag me-2"></i>Información General</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Código</label>
+                                <p class="mb-0"><code
+                                        class="fs-6">{{ productoSeleccionado.codigoIndicadorProducto }}</code></p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Sector</label>
+                                <p class="mb-0"><span class="badge bg-primary">{{ productoSeleccionado.sector }}</span>
+                                </p>
+                            </div>
+                            <div class="col-12 mb-3">
+                                <label class="text-muted small">Producto / Indicador</label>
+                                <p class="mb-0">{{ productoSeleccionado.personalizacion ||
+                                    productoSeleccionado.indicadorProducto }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Línea Estratégica</label>
+                                <p class="mb-0">{{ productoSeleccionado.lineaEstrategica }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="text-muted small">Programa</label>
+                                <p class="mb-0">{{ productoSeleccionado.programa }}</p>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="text-muted small">Unidad de Medida</label>
+                                <p class="mb-0">{{ productoSeleccionado.unidadMedida }}</p>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="text-muted small">Meta Cuatrienio</label>
+                                <p class="mb-0"><span class="badge bg-success fs-6">{{
+                                        productoSeleccionado.metaCuatrienio }}</span></p>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="text-muted small">ODS</label>
+                                <p class="mb-0">{{ productoSeleccionado.ods }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Programación Anual -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Programación Anual</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-3">
+                                <label class="text-muted small d-block">2024</label>
+                                <h4 class="mb-0">{{ productoSeleccionado.programacion2024 }}</h4>
+                                <small class="text-muted">{{ formatearMoneda(productoSeleccionado.total2024) }}</small>
+                            </div>
+                            <div class="col-3">
+                                <label class="text-muted small d-block">2025</label>
+                                <h4 class="mb-0">{{ productoSeleccionado.programacion2025 }}</h4>
+                                <small class="text-muted">{{ formatearMoneda(productoSeleccionado.total2025) }}</small>
+                            </div>
+                            <div class="col-3">
+                                <label class="text-muted small d-block">2026</label>
+                                <h4 class="mb-0">{{ productoSeleccionado.programacion2026 }}</h4>
+                                <small class="text-muted">{{ formatearMoneda(productoSeleccionado.total2026) }}</small>
+                            </div>
+                            <div class="col-3">
+                                <label class="text-muted small d-block">2027</label>
+                                <h4 class="mb-0">{{ productoSeleccionado.programacion2027 }}</h4>
+                                <small class="text-muted">{{ formatearMoneda(productoSeleccionado.total2027) }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Avances Registrados -->
+                <div class="card mb-3">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Avances Registrados</h6>
+                    </div>
+                    <div class="card-body">
+                        @if (productoSeleccionado.avances && Object.keys(productoSeleccionado.avances).length > 0) {
+                        <div class="row">
+                            @for (anio of [2024, 2025, 2026, 2027]; track anio) {
+                            @if (productoSeleccionado.avances![anio]) {
+                            <div class="col-md-6 mb-3">
+                                <div class="card border-start border-4"
+                                    [class.border-success]="productoSeleccionado.avances![anio].valor >= 70"
+                                    [class.border-warning]="productoSeleccionado.avances![anio].valor >= 40 && productoSeleccionado.avances![anio].valor < 70"
+                                    [class.border-danger]="productoSeleccionado.avances![anio].valor < 40">
+                                    <div class="card-body">
+                                        <h6 class="card-title">Año {{ anio }}</h6>
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <span>Valor Ejecutado:</span>
+                                            <span class="badge fs-6"
+                                                [class.bg-success]="productoSeleccionado.avances![anio].valor >= 70"
+                                                [class.bg-warning]="productoSeleccionado.avances![anio].valor >= 40 && productoSeleccionado.avances![anio].valor < 70"
+                                                [class.bg-danger]="productoSeleccionado.avances![anio].valor < 40">
+                                                {{ productoSeleccionado.avances![anio].valor }}%
+                                            </span>
+                                        </div>
+                                        @if (productoSeleccionado.avances![anio].comentario) {
+                                        <div class="alert alert-info py-2 mb-0">
+                                            <small><strong>Comentario:</strong> {{
+                                                productoSeleccionado.avances![anio].comentario }}</small>
+                                        </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            }
+                            }
+                        </div>
+                        } @else {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            No hay avances registrados para este producto
+                        </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Estado Actual -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-flag me-2"></i>Estado Actual</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <label class="text-muted small d-block">Avance General</label>
+                                <div class="progress" style="height: 30px;">
+                                    <div class="progress-bar"
+                                        [class.bg-success]="(productoSeleccionado.avance || 0) >= 70"
+                                        [class.bg-warning]="(productoSeleccionado.avance || 0) >= 40 && (productoSeleccionado.avance || 0) < 70"
+                                        [class.bg-danger]="(productoSeleccionado.avance || 0) < 40"
+                                        [style.width.%]="productoSeleccionado.avance || 0">
+                                        <strong>{{ formatearPorcentaje(productoSeleccionado.avance || 0) }}</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 text-center">
+                                <label class="text-muted small d-block">Estado</label>
+                                <span class="badge fs-5 px-4 py-2" [ngClass]="{
+                                    'bg-success': obtenerColorEstado(productoSeleccionado.estado) === 'success',
+                                    'bg-info': obtenerColorEstado(productoSeleccionado.estado) === 'primary',
+                                    'bg-warning': obtenerColorEstado(productoSeleccionado.estado) === 'warn',
+                                    'bg-danger': obtenerColorEstado(productoSeleccionado.estado) === 'accent'
+                                }">
+                                    {{ obtenerEtiquetaEstado(productoSeleccionado.estado) }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="cerrarDetalle()">
+                    <i class="fas fa-times me-2"></i>Cerrar
+                </button>
+                <button type="button" class="btn btn-primary" (click)="abrirDialogoAvanceDesdeDetalle()">
+                    <i class="fas fa-plus-circle me-2"></i>Registrar Avance
+                </button>
+            </div>
         </div>
     </div>
 </div>
