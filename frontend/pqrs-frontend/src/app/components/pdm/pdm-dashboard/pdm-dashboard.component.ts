@@ -398,7 +398,13 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
 
         this.avanceDialogData = {
             codigo: row.codigoIndicadorProducto,
-            avances: row.avances
+            avances: row.avances,
+            programacion: {
+                2024: row.programacion2024 || 0,
+                2025: row.programacion2025 || 0,
+                2026: row.programacion2026 || 0,
+                2027: row.programacion2027 || 0,
+            }
         };
 
         // Esperar a que el DOM se actualice
@@ -419,17 +425,28 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         const row = this.productos.find(p => p.codigoIndicadorProducto === this.avanceDialogData!.codigo);
         if (!row) return;
 
+        // Calcular tope del año (meta anual limitada a 100 por seguridad)
+        const metaAnio = (
+            result.anio === 2024 ? row.programacion2024 :
+                result.anio === 2025 ? row.programacion2025 :
+                    result.anio === 2026 ? row.programacion2026 :
+                        row.programacion2027
+        ) || 0;
+        const tope = Math.min(metaAnio, 100);
+        const ejecutadoActual = row.avances?.[result.anio]?.valor || 0;
+        const nuevoTotal = Math.min(tope, ejecutadoActual + (result.valor_ejecutado || 0));
+
         this.pdmBackend.upsertAvance(slug, {
             codigo_indicador_producto: row.codigoIndicadorProducto,
             anio: result.anio,
-            valor_ejecutado: result.valor_ejecutado,
+            valor_ejecutado: nuevoTotal,
             comentario: result.comentario,
         }).subscribe({
             next: () => {
-                // Actualizar avances por año en la fila
+                // Actualizar avances por año en la fila (acumulado)
                 if (!row.avances) row.avances = {};
                 row.avances[result.anio] = {
-                    valor: result.valor_ejecutado,
+                    valor: nuevoTotal,
                     comentario: result.comentario
                 };
                 // Mantener la métrica general de avance como promedio simple de avances cargados
