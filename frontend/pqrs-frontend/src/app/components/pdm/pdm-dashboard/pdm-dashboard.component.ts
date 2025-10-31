@@ -1029,11 +1029,19 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         }
     }
 
+    fechasCompletas(): boolean {
+        const inicio = this.formActividad.fecha_inicio;
+        const fin = this.formActividad.fecha_fin;
+        // ambas vacías o ambas con valor
+        return (!inicio && !fin) || (!!inicio && !!fin);
+    }
+
     validActividadForm(): boolean {
         const nombreOk = !!(this.formActividad.nombre && this.formActividad.nombre.trim());
         const avance = Number(this.formActividad.porcentaje_avance ?? 0);
         const avanceOk = avance >= 0 && avance <= 100;
-        const fechasOk = this.validFechaRango();
-        return nombreOk && avanceOk && fechasOk;
+        const fechasOk = this.validFechaRango() && this.fechasCompletas();
+        const responsableOk = !!(this.formActividad.responsable && this.formActividad.responsable.trim());
+        return nombreOk && responsableOk && avanceOk && fechasOk;
     }
 }

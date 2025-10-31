@@ -1097,9 +1097,16 @@
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="actResponsable" class="form-label">Responsable</label>
+                            <label for="actResponsable" class="form-label">Responsable <span
+                                    class="text-danger">*</span></label>
                             <input type="text" class="form-control" id="actResponsable"
-                                [(ngModel)]="formActividad.responsable" name="responsable" placeholder="Ej: Juan Pérez">
+                                [(ngModel)]="formActividad.responsable" name="responsable" placeholder="Ej: Juan Pérez"
+                                required>
+                            @if (!(formActividad.responsable && formActividad.responsable.trim())) {
+                            <div class="text-danger small mt-1">
+                                El responsable es requerido.
+                            </div>
+                            }
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="actEstado" class="form-label">Estado</label>
@@ -1122,6 +1129,11 @@
                                 La fecha de inicio debe ser menor o igual a la fecha de fin.
                             </div>
                             }
+                            @if (!fechasCompletas()) {
+                            <div class="text-danger small mt-1">
+                                Si diligencias una fecha, completa también la otra.
+                            </div>
+                            }
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="actFechaFin" class="form-label">Fecha de Fin</label>
@@ -1130,6 +1142,11 @@
                             @if (!validFechaRango()) {
                             <div class="text-danger small mt-1">
                                 La fecha de fin debe ser mayor o igual a la fecha de inicio.
+                            </div>
+                            }
+                            @if (!fechasCompletas()) {
+                            <div class="text-danger small mt-1">
+                                Si diligencias una fecha, completa también la otra.
                             </div>
                             }
                         </div>
