@@ -98,6 +98,23 @@ export class ShowcaseComponent implements OnInit {
             color: '#216ba8'
         },
         {
+            name: 'Plan de Desarrollo Municipal (PDM)',
+            icon: 'fas fa-chart-line',
+            description: 'Carga, análisis y seguimiento del PDM con KPIs, actividades por producto, avances anuales y reportes profesionales.',
+            features: [
+                'Carga de Excel oficial (Plan Indicativo y SGR)',
+                'Dashboard con KPIs, filtros y tarjetas clickeables',
+                'Resumen de avances por Año, Secretaría y Línea Estratégica',
+                'Actividades por producto con responsable, fechas y progreso',
+                'Registro de avances por año (2024-2027) con comentarios',
+                'Asignación de metas a Secretarías por indicador',
+                'Exportación y análisis con IA (resumen ejecutivo)',
+                'UI moderna con Bootstrap 5 y ng2-charts'
+            ],
+            image: 'fas fa-chart-pie',
+            color: '#0d6efd'
+        },
+        {
             name: 'Planes Institucionales',
             icon: 'fas fa-tasks',
             description: 'Gestión estratégica de planes con seguimiento de objetivos, metas e indicadores. Reportes profesionales en PDF con análisis de cumplimiento.',
@@ -153,7 +170,7 @@ export class ShowcaseComponent implements OnInit {
     stats: Stat[] = [
         { value: '99.9%', label: 'Uptime', icon: 'fas fa-server' },
         { value: '<100ms', label: 'Tiempo de respuesta', icon: 'fas fa-bolt' },
-        { value: '4+', label: 'Módulos integrados', icon: 'fas fa-cubes' },
+        { value: '5+', label: 'Módulos integrados', icon: 'fas fa-cubes' },
         { value: '∞', label: 'Entidades soportadas', icon: 'fas fa-building' }
     ];
 
