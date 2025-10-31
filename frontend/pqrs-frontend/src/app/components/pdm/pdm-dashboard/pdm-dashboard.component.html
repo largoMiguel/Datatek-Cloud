@@ -1637,6 +1637,28 @@
                                         <p class="mb-2 text-muted small">{{ actividad.descripcion }}</p>
                                         }
                                         <div class="row g-2 mb-2">
+                                            @if (actividad.anio) {
+                                            <div class="col-auto">
+                                                <span class="badge bg-primary"><i class="fas fa-calendar me-1"></i>{{
+                                                    actividad.anio }}</span>
+                                            </div>
+                                            }
+                                            @if (actividad.meta_ejecutar) {
+                                            <div class="col-auto">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-bullseye me-1"></i>
+                                                    Meta: {{ actividad.meta_ejecutar }}
+                                                </small>
+                                            </div>
+                                            }
+                                            @if (actividad.valor_ejecutado !== undefined) {
+                                            <div class="col-auto">
+                                                <small class="text-success">
+                                                    <i class="fas fa-check-circle me-1"></i>
+                                                    Ejecutado: {{ actividad.valor_ejecutado?.toFixed(2) || 0 }}
+                                                </small>
+                                            </div>
+                                            }
                                             @if (actividad.responsable) {
                                             <div class="col-auto">
                                                 <small class="text-muted"><i class="fas fa-user me-1"></i>{{
@@ -1797,35 +1819,81 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="actAvance" class="form-label">Porcentaje de Avance ({{
-                            formActividad.porcentaje_avance
-                            }}%)</label>
-                        <input type="range" class="form-range" id="actAvance"
-                            [(ngModel)]="formActividad.porcentaje_avance" name="porcentaje_avance" min="0" max="100"
-                            step="5">
-                        <div class="progress mt-2" style="height: 25px;">
-                            <div class="progress-bar" [class.bg-success]="formActividad.porcentaje_avance >= 70"
-                                [class.bg-info]="formActividad.porcentaje_avance >= 40 && formActividad.porcentaje_avance < 70"
-                                [class.bg-warning]="formActividad.porcentaje_avance < 40"
-                                [style.width.%]="formActividad.porcentaje_avance">
-                                {{ formActividad.porcentaje_avance }}%
-                            </div>
+                    <!-- Año y Meta a Ejecutar -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="actAnio" class="form-label">Año de Ejecución <span
+                                    class="text-danger">*</span></label>
+                            <select class="form-select" id="actAnio" [(ngModel)]="formActividad.anio" name="anio"
+                                [disabled]="!!actividadEditando">
+                                @for (anio of obtenerAniosDisponibles(); track anio) {
+                                <option [value]="anio">{{ anio }}</option>
+                                }
+                            </select>
+                            <small class="text-muted">Solo años con presupuesto asignado</small>
                         </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="actMetaEjecutar" class="form-label">
+                                Meta a Ejecutar <span class="text-danger">*</span>
+                                <small class="text-muted">(Disponible: {{ obtenerMetaDisponibleAnio(formActividad.anio)
+                                    }})</small>
+                            </label>
+                            <input type="number" class="form-control" id="actMetaEjecutar"
+                                [(ngModel)]="formActividad.meta_ejecutar" name="meta_ejecutar" [min]="1"
+                                [max]="obtenerMetaDisponibleAnio(formActividad.anio)" placeholder="Ej: 50">
+                            @if (formActividad.meta_ejecutar > obtenerMetaDisponibleAnio(formActividad.anio)) {
+                            <div class="text-danger small mt-1">
+                                Supera el disponible ({{ obtenerMetaDisponibleAnio(formActividad.anio) }})
+                            </div>
+                            }
+                            @if (formActividad.meta_ejecutar <= 0) { <div class="text-danger small mt-1">
+                                Debe ser mayor a 0
+                        </div>
+                        }
                     </div>
-                </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" (click)="cerrarFormularioActividad()">
-                    <i class="fas fa-times me-2"></i>Cancelar
-                </button>
-                <button type="button" class="btn btn-primary" (click)="guardarActividad()"
-                    [disabled]="!validActividadForm() || guardandoActividad">
-                    <i class="fas fa-save me-2"></i>
-                    {{ guardandoActividad ? 'Guardando...' : 'Guardar Actividad' }}
-                </button>
+
+            <!-- Info de Meta Anual -->
+            <div class="alert alert-info mb-3">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Meta del año {{ formActividad.anio }}:</strong> {{ obtenerMetaAnio(formActividad.anio) }}
+                | <strong>Presupuesto:</strong> {{ formatearMoneda(obtenerPresupuestoAnio(formActividad.anio)) }}
             </div>
+
+            <div class="mb-3">
+                <label for="actAvance" class="form-label">Porcentaje de Avance ({{
+                    formActividad.porcentaje_avance
+                    }}%)</label>
+                <input type="range" class="form-range" id="actAvance" [(ngModel)]="formActividad.porcentaje_avance"
+                    name="porcentaje_avance" min="0" max="100" step="5">
+                <div class="progress mt-2" style="height: 25px;">
+                    <div class="progress-bar" [class.bg-success]="formActividad.porcentaje_avance >= 70"
+                        [class.bg-info]="formActividad.porcentaje_avance >= 40 && formActividad.porcentaje_avance < 70"
+                        [class.bg-warning]="formActividad.porcentaje_avance < 40"
+                        [style.width.%]="formActividad.porcentaje_avance">
+                        {{ formActividad.porcentaje_avance }}%
+                    </div>
+                </div>
+                <small class="text-muted d-block mt-2">
+                    <i class="fas fa-calculator me-1"></i>
+                    Valor ejecutado: {{ (formActividad.meta_ejecutar * formActividad.porcentaje_avance / 100).toFixed(2)
+                    }}
+                    de {{ formActividad.meta_ejecutar }}
+                </small>
+            </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" (click)="cerrarFormularioActividad()">
+                <i class="fas fa-times me-2"></i>Cancelar
+            </button>
+            <button type="button" class="btn btn-primary" (click)="guardarActividad()"
+                [disabled]="!validActividadForm() || guardandoActividad">
+                <i class="fas fa-save me-2"></i>
+                {{ guardandoActividad ? 'Guardando...' : 'Guardar Actividad' }}
+            </button>
         </div>
     </div>
+</div>
 </div>
 }

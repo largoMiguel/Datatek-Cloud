@@ -138,6 +138,10 @@ export interface Actividad {
     estado: string;
     created_at?: string;
     updated_at?: string;
+    // Nuevos campos para ejecución por año
+    anio: number;  // Año al que pertenece la actividad (2024-2027)
+    meta_ejecutar: number;  // Cantidad de la meta anual que se ejecutará (del 1 al disponible)
+    valor_ejecutado: number;  // Cantidad real ejecutada hasta el momento
 }
 
 export interface PDMData {

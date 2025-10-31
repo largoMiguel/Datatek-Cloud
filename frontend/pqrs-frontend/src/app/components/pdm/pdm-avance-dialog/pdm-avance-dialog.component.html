@@ -35,23 +35,21 @@
 
         <!-- Formulario -->
         <div class="mb-3">
-            <label class="form-label fw-bold">
+            <label for="anio" class="form-label fw-bold">
                 <i class="fas fa-calendar me-2"></i>Año
             </label>
-            <div class="form-control form-control-lg bg-light">{{ anio }}</div>
-            <div class="form-text">El avance se registra para el año en curso.</div>
+            <select class="form-select form-select-lg" id="anio" [(ngModel)]="anio" (change)="onAnioChange()">
+                <option *ngFor="let a of anios" [value]="a">{{ a }}</option>
+            </select>
         </div>
 
         <div class="mb-3">
             <label for="valor" class="form-label fw-bold">
-                <i class="fas fa-percentage me-2"></i>Valor Ejecutado (incremento del año)
+                <i class="fas fa-percentage me-2"></i>Valor Ejecutado (%)
             </label>
-            <input type="number" class="form-control form-control-lg" id="valor" [(ngModel)]="valor_ejecutado" [min]="1"
-                [max]="maxPermitido" placeholder="Entre 1 y {{ maxPermitido }}" [disabled]="maxPermitido <= 0">
-            <div class="form-text">
-                Meta del año: {{ metaAnio || 0 }}. Ejecutado actual: {{ ejecutadoActual || 0 }}. Restante: {{
-                maxPermitido }}.
-            </div>
+            <input type="number" class="form-control form-control-lg" id="valor" [(ngModel)]="valor_ejecutado" min="0"
+                max="100" placeholder="Ingrese un valor entre 0 y 100">
+            <div class="form-text">Valor entre 0 y 100</div>
         </div>
 
         <div class="mb-3">

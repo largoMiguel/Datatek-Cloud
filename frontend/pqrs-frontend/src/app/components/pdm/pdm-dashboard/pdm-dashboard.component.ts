@@ -365,7 +365,10 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         fecha_inicio: '',
         fecha_fin: '',
         porcentaje_avance: 0,
-        estado: 'pendiente'
+        estado: 'pendiente',
+        anio: new Date().getFullYear(), // Año actual por defecto
+        meta_ejecutar: 0, // Cantidad de la meta anual a ejecutar
+        valor_ejecutado: 0 // Inicia en 0
     };
 
     // Estadísticas avanzadas
@@ -398,13 +401,7 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
 
         this.avanceDialogData = {
             codigo: row.codigoIndicadorProducto,
-            avances: row.avances,
-            programacion: {
-                2024: row.programacion2024 || 0,
-                2025: row.programacion2025 || 0,
-                2026: row.programacion2026 || 0,
-                2027: row.programacion2027 || 0,
-            }
+            avances: row.avances
         };
 
         // Esperar a que el DOM se actualice
@@ -425,28 +422,17 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         const row = this.productos.find(p => p.codigoIndicadorProducto === this.avanceDialogData!.codigo);
         if (!row) return;
 
-        // Calcular tope del año (meta anual limitada a 100 por seguridad)
-        const metaAnio = (
-            result.anio === 2024 ? row.programacion2024 :
-                result.anio === 2025 ? row.programacion2025 :
-                    result.anio === 2026 ? row.programacion2026 :
-                        row.programacion2027
-        ) || 0;
-        const tope = Math.min(metaAnio, 100);
-        const ejecutadoActual = row.avances?.[result.anio]?.valor || 0;
-        const nuevoTotal = Math.min(tope, ejecutadoActual + (result.valor_ejecutado || 0));
-
         this.pdmBackend.upsertAvance(slug, {
             codigo_indicador_producto: row.codigoIndicadorProducto,
             anio: result.anio,
-            valor_ejecutado: nuevoTotal,
+            valor_ejecutado: result.valor_ejecutado,
             comentario: result.comentario,
         }).subscribe({
             next: () => {
-                // Actualizar avances por año en la fila (acumulado)
+                // Actualizar avances por año en la fila
                 if (!row.avances) row.avances = {};
                 row.avances[result.anio] = {
-                    valor: nuevoTotal,
+                    valor: result.valor_ejecutado,
                     comentario: result.comentario
                 };
                 // Mantener la métrica general de avance como promedio simple de avances cargados
@@ -1118,6 +1104,7 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
 
     mostrarFormularioActividad(): void {
         this.actividadEditando = null;
+        const añoActual = new Date().getFullYear();
         this.formActividad = {
             nombre: '',
             descripcion: '',
@@ -1125,7 +1112,10 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
             fecha_inicio: '',
             fecha_fin: '',
             porcentaje_avance: 0,
-            estado: 'pendiente'
+            estado: 'pendiente',
+            anio: añoActual,
+            meta_ejecutar: 0,
+            valor_ejecutado: 0
         };
         this.mostrandoFormActividad = true;
     }
@@ -1139,7 +1129,10 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
             fecha_inicio: actividad.fecha_inicio ? actividad.fecha_inicio.split('T')[0] : '',
             fecha_fin: actividad.fecha_fin ? actividad.fecha_fin.split('T')[0] : '',
             porcentaje_avance: actividad.porcentaje_avance,
-            estado: actividad.estado
+            estado: actividad.estado,
+            anio: actividad.anio || new Date().getFullYear(),
+            meta_ejecutar: actividad.meta_ejecutar || 0,
+            valor_ejecutado: actividad.valor_ejecutado || 0
         };
         this.mostrandoFormActividad = true;
     }
@@ -1157,9 +1150,13 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
 
         this.guardandoActividad = true;
 
+        // Calcular valor_ejecutado basado en meta_ejecutar y porcentaje_avance
+        const valorEjecutado = (this.formActividad.meta_ejecutar * this.formActividad.porcentaje_avance) / 100;
+
         const payload = {
             ...this.formActividad,
-            codigo_indicador_producto: this.productoSeleccionado.codigoIndicadorProducto
+            codigo_indicador_producto: this.productoSeleccionado.codigoIndicadorProducto,
+            valor_ejecutado: valorEjecutado
         };
 
         const request = this.actividadEditando
@@ -1245,6 +1242,77 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         const avanceOk = avance >= 0 && avance <= 100;
         const fechasOk = this.validFechaRango() && this.fechasCompletas();
         const responsableOk = !!(this.formActividad.responsable && this.formActividad.responsable.trim());
-        return nombreOk && responsableOk && avanceOk && fechasOk;
+
+        // Validar meta_ejecutar
+        const metaEjecutar = Number(this.formActividad.meta_ejecutar ?? 0);
+        const disponible = this.obtenerMetaDisponibleAnio(this.formActividad.anio);
+        const metaOk = metaEjecutar > 0 && metaEjecutar <= disponible;
+
+        return nombreOk && responsableOk && avanceOk && fechasOk && metaOk;
+    }
+
+    /**
+     * Obtiene la meta programada del año seleccionado
+     */
+    obtenerMetaAnio(anio: number): number {
+        if (!this.productoSeleccionado) return 0;
+        switch (anio) {
+            case 2024: return this.productoSeleccionado.programacion2024 || 0;
+            case 2025: return this.productoSeleccionado.programacion2025 || 0;
+            case 2026: return this.productoSeleccionado.programacion2026 || 0;
+            case 2027: return this.productoSeleccionado.programacion2027 || 0;
+            default: return 0;
+        }
+    }
+
+    /**
+     * Calcula la meta disponible del año (meta anual - suma de meta_ejecutar de actividades del año)
+     */
+    obtenerMetaDisponibleAnio(anio: number): number {
+        const metaAnio = this.obtenerMetaAnio(anio);
+        if (metaAnio <= 0) return 0;
+
+        // Sumar meta_ejecutar de todas las actividades del año (excepto la que se está editando)
+        const actividadesDelAnio = this.actividadesProducto.filter(a =>
+            a.anio === anio && (!this.actividadEditando || a.id !== this.actividadEditando.id)
+        );
+        const totalAsignado = actividadesDelAnio.reduce((sum, a) => sum + (a.meta_ejecutar || 0), 0);
+
+        return Math.max(0, metaAnio - totalAsignado);
+    }
+
+    /**
+     * Verifica si el año tiene presupuesto > 0
+     */
+    anioTienePresupuesto(anio: number): boolean {
+        if (!this.productoSeleccionado) return false;
+        switch (anio) {
+            case 2024: return (this.productoSeleccionado.total2024 || 0) > 0;
+            case 2025: return (this.productoSeleccionado.total2025 || 0) > 0;
+            case 2026: return (this.productoSeleccionado.total2026 || 0) > 0;
+            case 2027: return (this.productoSeleccionado.total2027 || 0) > 0;
+            default: return false;
+        }
+    }
+
+    /**
+     * Obtiene los años disponibles (con presupuesto > 0)
+     */
+    obtenerAniosDisponibles(): number[] {
+        return [2024, 2025, 2026, 2027].filter(anio => this.anioTienePresupuesto(anio));
+    }
+
+    /**
+     * Obtiene el presupuesto del año seleccionado
+     */
+    obtenerPresupuestoAnio(anio: number): number {
+        if (!this.productoSeleccionado) return 0;
+        switch (anio) {
+            case 2024: return this.productoSeleccionado.total2024 || 0;
+            case 2025: return this.productoSeleccionado.total2025 || 0;
+            case 2026: return this.productoSeleccionado.total2026 || 0;
+            case 2027: return this.productoSeleccionado.total2027 || 0;
+            default: return 0;
+        }
     }
 }
