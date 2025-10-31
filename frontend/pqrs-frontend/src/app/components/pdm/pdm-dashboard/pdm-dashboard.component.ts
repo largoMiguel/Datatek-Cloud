@@ -65,6 +65,11 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
     chartODS: ChartData<'doughnut'> | null = null;
     chartODSPresupuesto: ChartData<'bar'> | null = null;
     chartSGRPorSector: ChartData<'bar'> | null = null;
+    chartIndicadoresPND: ChartData<'doughnut'> | null = null;
+    chartIndicadoresPorLinea: ChartData<'bar'> | null = null;
+    chartPresupuestoOrdinarioVsSGR: ChartData<'doughnut'> | null = null;
+    chartPresupuestoPorAnioDetallado: ChartData<'bar'> | null = null;
+    chartPresupuestoPorSectorDetallado: ChartData<'bar'> | null = null;
 
     chartOptions: ChartConfiguration<'bar'>['options'] = {
         responsive: true,
@@ -800,9 +805,126 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
                 }]
             };
         }
+
+        // Gráfico Indicadores de Resultado - Alineación con PND
+        if (analisis.analisisIndicadoresResultado) {
+            this.chartIndicadoresPND = {
+                labels: ['En PND', 'Fuera de PND'],
+                datasets: [{
+                    data: [
+                        analisis.analisisIndicadoresResultado.indicadoresEnPND,
+                        analisis.analisisIndicadoresResultado.indicadoresFueraPND
+                    ],
+                    backgroundColor: [
+                        'rgba(16, 185, 129, 0.8)',
+                        'rgba(156, 163, 175, 0.8)'
+                    ],
+                    borderColor: ['#10b981', '#9ca3af'],
+                    borderWidth: 3,
+                    hoverOffset: 8
+                }]
+            };
+
+            // Gráfico Indicadores por Línea Estratégica
+            if (analisis.analisisIndicadoresResultado.indicadoresPorLinea.length > 0) {
+                const topLineas = analisis.analisisIndicadoresResultado.indicadoresPorLinea.slice(0, 8);
+                this.chartIndicadoresPorLinea = {
+                    labels: topLineas.map(l => this.truncarTexto(l.lineaEstrategica, 30)),
+                    datasets: [
+                        {
+                            label: 'Total Indicadores',
+                            data: topLineas.map(l => l.totalIndicadores),
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                            borderColor: '#3b82f6',
+                            borderWidth: 1,
+                            borderRadius: 8,
+                            hoverBackgroundColor: '#3b82f6'
+                        },
+                        {
+                            label: 'Indicadores en PND',
+                            data: topLineas.map(l => l.indicadoresEnPND),
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                            borderColor: '#10b981',
+                            borderWidth: 1,
+                            borderRadius: 8,
+                            hoverBackgroundColor: '#10b981'
+                        }
+                    ]
+                };
+            }
+        }
+
+        // Gráfico Presupuesto - Ordinario vs SGR
+        if (analisis.analisisPresupuestoDetallado) {
+            this.chartPresupuestoOrdinarioVsSGR = {
+                labels: ['Recursos Ordinarios', 'Recursos SGR'],
+                datasets: [{
+                    data: [
+                        analisis.analisisPresupuestoDetallado.presupuestoOrdinarioTotal,
+                        analisis.analisisPresupuestoDetallado.presupuestoSGRTotal
+                    ],
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(245, 158, 11, 0.8)'
+                    ],
+                    borderColor: ['#3b82f6', '#f59e0b'],
+                    borderWidth: 3,
+                    hoverOffset: 8
+                }]
+            };
+
+            // Gráfico Presupuesto por Año Detallado (Ordinario + SGR)
+            this.chartPresupuestoPorAnioDetallado = {
+                labels: analisis.analisisPresupuestoDetallado.presupuestoPorAnio.map(p => p.anio.toString()),
+                datasets: [
+                    {
+                        label: 'Ordinario',
+                        data: analisis.analisisPresupuestoDetallado.presupuestoPorAnio.map(p => p.ordinario),
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        stack: 'stack0'
+                    },
+                    {
+                        label: 'SGR',
+                        data: analisis.analisisPresupuestoDetallado.presupuestoPorAnio.map(p => p.sgr),
+                        backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                        borderColor: '#f59e0b',
+                        borderWidth: 1,
+                        borderRadius: 8,
+                        stack: 'stack0'
+                    }
+                ]
+            };
+
+            // Gráfico Presupuesto por Sector Detallado (Top 8)
+            const topSectoresPresupuesto = analisis.analisisPresupuestoDetallado.presupuestoPorSector.slice(0, 8);
+            this.chartPresupuestoPorSectorDetallado = {
+                labels: topSectoresPresupuesto.map(s => this.truncarTexto(s.sector, 30)),
+                datasets: [
+                    {
+                        label: 'Ordinario',
+                        data: topSectoresPresupuesto.map(s => s.ordinario),
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                        borderColor: '#3b82f6',
+                        borderWidth: 1,
+                        borderRadius: 8
+                    },
+                    {
+                        label: 'SGR',
+                        data: topSectoresPresupuesto.map(s => s.sgr),
+                        backgroundColor: 'rgba(245, 158, 11, 0.8)',
+                        borderColor: '#f59e0b',
+                        borderWidth: 1,
+                        borderRadius: 8
+                    }
+                ]
+            };
+        }
     }
 
-    private truncarTexto(texto: string, maxLength: number): string {
+    truncarTexto(texto: string, maxLength: number): string {
         if (!texto) return '';
         return texto.length > maxLength ? texto.substring(0, maxLength) + '...' : texto;
     }

@@ -509,6 +509,160 @@ export class PdmDataService {
             iniciativasSinBPIN: iniciativasSGR.filter(i => !i.bpin || i.bpin.trim() === '').length
         };
 
+        // Análisis de Indicadores de Resultado
+        const indicadoresResultado = pdmData.indicadoresResultado || [];
+        const totalIndicadores = indicadoresResultado.length;
+        const indicadoresEnPND = indicadoresResultado.filter(i =>
+            i.estaEnPND && i.estaEnPND.toLowerCase() === 'si'
+        ).length;
+        const indicadoresFueraPND = totalIndicadores - indicadoresEnPND;
+        const porcentajeAlineacionPND = totalIndicadores > 0
+            ? (indicadoresEnPND / totalIndicadores) * 100
+            : 0;
+
+        // Agrupar indicadores por línea estratégica
+        const indicadoresPorLineaMap = new Map<string, {
+            total: number;
+            enPND: number;
+            metaTotal: number;
+        }>();
+
+        indicadoresResultado.forEach(ind => {
+            const linea = ind.lineaEstrategica || 'Sin línea';
+            if (!indicadoresPorLineaMap.has(linea)) {
+                indicadoresPorLineaMap.set(linea, { total: 0, enPND: 0, metaTotal: 0 });
+            }
+            const data = indicadoresPorLineaMap.get(linea)!;
+            data.total += 1;
+            if (ind.estaEnPND && ind.estaEnPND.toLowerCase() === 'si') {
+                data.enPND += 1;
+            }
+            data.metaTotal += ind.metaCuatrienio || 0;
+        });
+
+        const indicadoresPorLinea = Array.from(indicadoresPorLineaMap.entries())
+            .map(([linea, data]) => ({
+                lineaEstrategica: linea,
+                totalIndicadores: data.total,
+                indicadoresEnPND: data.enPND,
+                metaCuatrienioTotal: data.metaTotal
+            }))
+            .sort((a, b) => b.totalIndicadores - a.totalIndicadores);
+
+        // Agrupar por transformaciones PND
+        const transformacionesMap = new Map<string, number>();
+        indicadoresResultado.forEach(ind => {
+            if (ind.transformacionPND && ind.transformacionPND.trim() !== '') {
+                const transformacion = ind.transformacionPND;
+                transformacionesMap.set(
+                    transformacion,
+                    (transformacionesMap.get(transformacion) || 0) + 1
+                );
+            }
+        });
+
+        const transformacionesPND = Array.from(transformacionesMap.entries())
+            .map(([transformacion, count]) => ({
+                transformacion,
+                numeroIndicadores: count
+            }))
+            .sort((a, b) => b.numeroIndicadores - a.numeroIndicadores);
+
+        const analisisIndicadoresResultado = {
+            totalIndicadores,
+            indicadoresEnPND,
+            indicadoresFueraPND,
+            porcentajeAlineacionPND,
+            indicadoresPorLinea,
+            transformacionesPND
+        };
+
+        // Análisis de Presupuesto Detallado (Ordinario vs SGR)
+        // Calcular presupuesto ordinario (de planIndicativoProductos)
+        const presupuestoOrdinarioTotal = productos.reduce((sum, p) =>
+            sum + p.total2024 + p.total2025 + p.total2026 + p.total2027, 0);
+
+        // Calcular presupuesto SGR (de planIndicativoSGR)
+        const productosSGR = pdmData.planIndicativoSGR || [];
+        const presupuestoSGRTotal = productosSGR.reduce((sum, p) =>
+            sum + (p.recursosSGR20232024 || 0) + (p.recursosSGR20252026 || 0) + (p.recursosSGR20272028 || 0), 0);
+
+        const presupuestoGrandTotal = presupuestoOrdinarioTotal + presupuestoSGRTotal;
+        const porcentajeOrdinario = presupuestoGrandTotal > 0
+            ? (presupuestoOrdinarioTotal / presupuestoGrandTotal) * 100
+            : 0;
+        const porcentajeSGR = presupuestoGrandTotal > 0
+            ? (presupuestoSGRTotal / presupuestoGrandTotal) * 100
+            : 0;
+
+        // Presupuesto por año (combinando ordinario y SGR)
+        const presupuestoPorAnio = [
+            {
+                anio: 2024,
+                ordinario: productos.reduce((sum, p) => sum + p.total2024, 0),
+                sgr: productosSGR.reduce((sum, p) => sum + (p.recursosSGR20232024 || 0) / 2, 0), // Aproximado
+                total: 0
+            },
+            {
+                anio: 2025,
+                ordinario: productos.reduce((sum, p) => sum + p.total2025, 0),
+                sgr: productosSGR.reduce((sum, p) => sum + (p.recursosSGR20252026 || 0) / 2, 0),
+                total: 0
+            },
+            {
+                anio: 2026,
+                ordinario: productos.reduce((sum, p) => sum + p.total2026, 0),
+                sgr: productosSGR.reduce((sum, p) => sum + (p.recursosSGR20252026 || 0) / 2, 0),
+                total: 0
+            },
+            {
+                anio: 2027,
+                ordinario: productos.reduce((sum, p) => sum + p.total2027, 0),
+                sgr: productosSGR.reduce((sum, p) => sum + (p.recursosSGR20272028 || 0) / 2, 0),
+                total: 0
+            }
+        ];
+        presupuestoPorAnio.forEach(p => p.total = p.ordinario + p.sgr);
+
+        // Presupuesto por sector (combinando ordinario y SGR)
+        const presupuestoPorSectorMap = new Map<string, { ordinario: number; sgr: number }>();
+
+        productos.forEach(p => {
+            const sector = p.sector || 'Sin sector';
+            if (!presupuestoPorSectorMap.has(sector)) {
+                presupuestoPorSectorMap.set(sector, { ordinario: 0, sgr: 0 });
+            }
+            const data = presupuestoPorSectorMap.get(sector)!;
+            data.ordinario += p.total2024 + p.total2025 + p.total2026 + p.total2027;
+        });
+
+        productosSGR.forEach(p => {
+            const sector = p.sector || 'Sin sector';
+            if (!presupuestoPorSectorMap.has(sector)) {
+                presupuestoPorSectorMap.set(sector, { ordinario: 0, sgr: 0 });
+            }
+            const data = presupuestoPorSectorMap.get(sector)!;
+            data.sgr += (p.recursosSGR20232024 || 0) + (p.recursosSGR20252026 || 0) + (p.recursosSGR20272028 || 0);
+        });
+
+        const presupuestoPorSector = Array.from(presupuestoPorSectorMap.entries())
+            .map(([sector, data]) => ({
+                sector,
+                ordinario: data.ordinario,
+                sgr: data.sgr,
+                total: data.ordinario + data.sgr
+            }))
+            .sort((a, b) => b.total - a.total);
+
+        const analisisPresupuestoDetallado = {
+            presupuestoOrdinarioTotal,
+            presupuestoSGRTotal,
+            porcentajeOrdinario,
+            porcentajeSGR,
+            presupuestoPorAnio,
+            presupuestoPorSector
+        };
+
         // Generar tendencias
         const tendencias = this.generarTendencias(analisisPorAnio, analisisPorSector);
 
@@ -539,6 +693,8 @@ export class PdmDataService {
             analisisPorLineaEstrategica,
             analisisPorODS,
             analisisSGR,
+            analisisIndicadoresResultado,
+            analisisPresupuestoDetallado,
             tendencias,
             recomendaciones,
             alertas,

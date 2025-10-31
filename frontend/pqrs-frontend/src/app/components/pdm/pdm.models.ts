@@ -201,6 +201,40 @@ export interface AnalisisPDM {
         iniciativasConBPIN: number;
         iniciativasSinBPIN: number;
     };
+    analisisIndicadoresResultado: {
+        totalIndicadores: number;
+        indicadoresEnPND: number;
+        indicadoresFueraPND: number;
+        porcentajeAlineacionPND: number;
+        indicadoresPorLinea: {
+            lineaEstrategica: string;
+            totalIndicadores: number;
+            indicadoresEnPND: number;
+            metaCuatrienioTotal: number;
+        }[];
+        transformacionesPND: {
+            transformacion: string;
+            numeroIndicadores: number;
+        }[];
+    };
+    analisisPresupuestoDetallado: {
+        presupuestoOrdinarioTotal: number;
+        presupuestoSGRTotal: number;
+        porcentajeOrdinario: number;
+        porcentajeSGR: number;
+        presupuestoPorAnio: {
+            anio: number;
+            ordinario: number;
+            sgr: number;
+            total: number;
+        }[];
+        presupuestoPorSector: {
+            sector: string;
+            ordinario: number;
+            sgr: number;
+            total: number;
+        }[];
+    };
     tendencias: {
         descripcion: string;
         tipo: 'positivo' | 'neutro' | 'negativo';
