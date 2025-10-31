@@ -287,7 +287,8 @@
                                     </h5>
                                     <div class="list-group">
                                         @for (a of analisis.analisisPorAnio; track a.anio) {
-                                        <div class="list-group-item">
+                                        <div class="list-group-item table-row-clickeable" role="button"
+                                            (click)="filtrarPorAnio(a.anio)">
                                             <div class="d-flex justify-content-between align-items-center">
                                                 <div>
                                                     <h6 class="mb-1">{{ a.anio }}</h6>
@@ -352,7 +353,8 @@
                                     </thead>
                                     <tbody>
                                         @for (stat of estadisticasPorSecretaria; track stat.secretaria) {
-                                        <tr>
+                                        <tr class="table-row-clickeable" (click)="filtrarPorSecretaria(stat.secretaria)"
+                                            role="button">
                                             <td>
                                                 <strong>{{ stat.secretaria }}</strong>
                                             </td>
@@ -454,7 +456,8 @@
                                     </thead>
                                     <tbody>
                                         @for (stat of estadisticasPorLinea; track stat.lineaEstrategica) {
-                                        <tr>
+                                        <tr class="table-row-clickeable"
+                                            (click)="filtrarPorLinea(stat.lineaEstrategica)" role="button">
                                             <td>
                                                 <strong>{{ stat.lineaEstrategica }}</strong>
                                             </td>

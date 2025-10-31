@@ -381,7 +381,13 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         avancePromedio: number;
     }[] = [];
 
-    abrirDialogoAvance(row: PlanIndicativoProducto) {
+    abrirDialogoAvance(row: PlanIndicativoProducto | null | undefined) {
+        // Validaciones de campos vacíos / nulos
+        if (!row || !row.codigoIndicadorProducto) {
+            this.showToast('No se puede registrar avance: producto inválido.', 'error');
+            return;
+        }
+
         this.avanceDialogData = {
             codigo: row.codigoIndicadorProducto,
             avances: row.avances
@@ -846,6 +852,27 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         }
     }
 
+    filtrarPorAnio(anio: number): void {
+        this.filtros.anio = anio;
+        this.aplicarFiltros();
+        const tableElement = document.querySelector('.table-responsive');
+        if (tableElement) tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    filtrarPorSecretaria(secretaria: string): void {
+        this.filtros.secretaria = secretaria;
+        this.aplicarFiltros();
+        const tableElement = document.querySelector('.table-responsive');
+        if (tableElement) tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    filtrarPorLinea(linea: string): void {
+        this.filtros.lineaEstrategica = linea;
+        this.aplicarFiltros();
+        const tableElement = document.querySelector('.table-responsive');
+        if (tableElement) tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     verDetalleProducto(producto: PlanIndicativoProducto): void {
         this.productoSeleccionado = producto;
         this.cargarActividades();
@@ -857,9 +884,11 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
     }
 
     abrirDialogoAvanceDesdeDetalle(): void {
-        if (this.productoSeleccionado) {
+        // Evita null: conserva la referencia antes de cerrar el modal
+        const prod = this.productoSeleccionado;
+        if (prod) {
             this.cerrarDetalle();
-            this.abrirDialogoAvance(this.productoSeleccionado);
+            this.abrirDialogoAvance(prod);
         }
     }
 
