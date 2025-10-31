@@ -347,43 +347,41 @@ export class PdmDataService {
     }
 
     private calcularEstadosYAvances(pdmData: PDMData): void {
-        // Actualización: considerar solo años hasta el año actual al calcular avance/estado.
-        // Así evitamos marcar 100% o "Cumplida" cuando la única meta programada es de un año futuro.
-
-        const anioActual = new Date().getFullYear();
+        const añoActual = new Date().getFullYear();
 
         pdmData.planIndicativoProductos.forEach(producto => {
-            const anios = [2024, 2025, 2026, 2027] as const;
-            const programadoPorAnio: Record<typeof anios[number], number> = {
-                2024: producto.programacion2024,
-                2025: producto.programacion2025,
-                2026: producto.programacion2026,
-                2027: producto.programacion2027
-            } as any;
-            const presupuestoPorAnio: Record<typeof anios[number], number> = {
-                2024: producto.total2024,
-                2025: producto.total2025,
-                2026: producto.total2026,
-                2027: producto.total2027
-            } as any;
+            const presupuestoTotalProducto = (producto.total2024 || 0) + (producto.total2025 || 0) + (producto.total2026 || 0) + (producto.total2027 || 0);
 
-            const aniosProgramadosHastaHoy = anios.filter(a => a <= anioActual && (programadoPorAnio[a] || 0) > 0);
-            const aniosConPresupuestoHastaHoy = aniosProgramadosHastaHoy.filter(a => (presupuestoPorAnio[a] || 0) > 0);
+            // Si no tiene presupuesto, marcamos como Sin Definir y avance 0
+            if (presupuestoTotalProducto <= 0) {
+                producto.avance = 0;
+                producto.estado = EstadoMeta.SIN_DEFINIR;
+                return;
+            }
 
-            const totalProgramadosHastaHoy = aniosProgramadosHastaHoy.length;
-            const totalConPresupuestoHastaHoy = aniosConPresupuestoHastaHoy.length;
+            const totalProgramado =
+                producto.programacion2024 +
+                producto.programacion2025 +
+                producto.programacion2026 +
+                producto.programacion2027;
 
-            const ratio = totalProgramadosHastaHoy > 0 ? totalConPresupuestoHastaHoy / totalProgramadosHastaHoy : 0;
-            producto.avance = ratio * 100;
+            let totalEjecutado = 0;
 
-            if (totalProgramadosHastaHoy === 0) {
-                // No hay metas programadas aún (todo es futuro) o no aplican años pasados/actuales
-                producto.estado = EstadoMeta.POR_CUMPLIR;
-            } else if (totalConPresupuestoHastaHoy === totalProgramadosHastaHoy) {
+            // Calcular ejecutado basado en el año actual
+            if (añoActual >= 2024) totalEjecutado += producto.programacion2024;
+            if (añoActual >= 2025) totalEjecutado += producto.programacion2025;
+            if (añoActual >= 2026) totalEjecutado += producto.programacion2026;
+            if (añoActual >= 2027) totalEjecutado += producto.programacion2027;
+
+            // Calcular avance
+            producto.avance = totalProgramado > 0 ? (totalEjecutado / totalProgramado) * 100 : 0;
+
+            // Determinar estado
+            if (producto.avance >= 100) {
                 producto.estado = EstadoMeta.CUMPLIDA;
-            } else if (ratio >= 0.5) {
+            } else if (producto.avance >= 50) {
                 producto.estado = EstadoMeta.EN_PROGRESO;
-            } else if (ratio > 0) {
+            } else if (producto.avance > 0) {
                 producto.estado = EstadoMeta.PENDIENTE;
             } else {
                 producto.estado = EstadoMeta.POR_CUMPLIR;
@@ -393,19 +391,21 @@ export class PdmDataService {
 
     private generarAnalisis(pdmData: PDMData): AnalisisPDM {
         const productos = pdmData.planIndicativoProductos;
+        const productosConPresupuesto = productos.filter(p =>
+            (p.total2024 || 0) + (p.total2025 || 0) + (p.total2026 || 0) + (p.total2027 || 0) > 0
+        );
 
         // Indicadores generales
-        const totalMetas = productos.length;
-        const metasCumplidas = productos.filter(p => p.estado === EstadoMeta.CUMPLIDA).length;
-        const metasEnProgreso = productos.filter(p => p.estado === EstadoMeta.EN_PROGRESO).length;
-        const metasPorCumplir = productos.filter(p => p.estado === EstadoMeta.POR_CUMPLIR).length;
-        const metasPendientes = productos.filter(p => p.estado === EstadoMeta.PENDIENTE).length;
+        const totalMetas = productosConPresupuesto.length;
+        const metasCumplidas = productosConPresupuesto.filter(p => p.estado === EstadoMeta.CUMPLIDA).length;
+        const metasEnProgreso = productosConPresupuesto.filter(p => p.estado === EstadoMeta.EN_PROGRESO).length;
+        const metasPorCumplir = productosConPresupuesto.filter(p => p.estado === EstadoMeta.POR_CUMPLIR).length;
+        const metasPendientes = productosConPresupuesto.filter(p => p.estado === EstadoMeta.PENDIENTE).length;
         const porcentajeCumplimiento = totalMetas > 0 ? (metasCumplidas / totalMetas) * 100 : 0;
 
         // Análisis por año
         const analisisPorAnio = [2024, 2025, 2026, 2027].map(anio => {
-            // Total de metas programadas ese año
-            const metasAnio = productos.filter(p => {
+            const metasAnio = productosConPresupuesto.filter(p => {
                 const prog = anio === 2024 ? p.programacion2024 :
                     anio === 2025 ? p.programacion2025 :
                         anio === 2026 ? p.programacion2026 :
@@ -413,38 +413,29 @@ export class PdmDataService {
                 return prog > 0;
             });
 
-            // Metas cumplidas del año: aquellas con presupuesto > 0 en ese año
-            const metasCumplidasAnio = metasAnio.filter(p => {
-                const total = anio === 2024 ? p.total2024 :
-                    anio === 2025 ? p.total2025 :
-                        anio === 2026 ? p.total2026 :
-                            p.total2027;
-                return (total || 0) > 0;
-            });
-
             const presupuestoTotal = productos.reduce((sum, p) => {
                 const total = anio === 2024 ? p.total2024 :
                     anio === 2025 ? p.total2025 :
                         anio === 2026 ? p.total2026 :
                             p.total2027;
-                return sum + (total || 0);
+                return sum + total;
             }, 0);
 
             return {
                 anio,
                 totalMetas: metasAnio.length,
-                metasCumplidas: metasCumplidasAnio.length,
+                metasCumplidas: metasAnio.filter(p => p.estado === EstadoMeta.CUMPLIDA).length,
                 porcentajeCumplimiento: metasAnio.length > 0
-                    ? (metasCumplidasAnio.length / metasAnio.length) * 100
+                    ? (metasAnio.filter(p => p.estado === EstadoMeta.CUMPLIDA).length / metasAnio.length) * 100
                     : 0,
                 presupuestoTotal
             };
         });
 
         // Análisis por sector
-        const sectoresUnicos = [...new Set(productos.map(p => p.sector))].filter(s => s);
+        const sectoresUnicos = [...new Set(productosConPresupuesto.map(p => p.sector))].filter(s => s);
         const analisisPorSector = sectoresUnicos.map(sector => {
-            const metasSector = productos.filter(p => p.sector === sector);
+            const metasSector = productosConPresupuesto.filter(p => p.sector === sector);
             const cumplidas = metasSector.filter(p => p.estado === EstadoMeta.CUMPLIDA).length;
             const presupuestoTotal = metasSector.reduce((sum, p) =>
                 sum + p.total2024 + p.total2025 + p.total2026 + p.total2027, 0);
@@ -459,9 +450,9 @@ export class PdmDataService {
         }).sort((a, b) => b.porcentajeCumplimiento - a.porcentajeCumplimiento);
 
         // Análisis por línea estratégica
-        const lineasUnicas = [...new Set(productos.map(p => p.lineaEstrategica))].filter(l => l);
+        const lineasUnicas = [...new Set(productosConPresupuesto.map(p => p.lineaEstrategica))].filter(l => l);
         const analisisPorLineaEstrategica = lineasUnicas.map(linea => {
-            const metasLinea = productos.filter(p => p.lineaEstrategica === linea);
+            const metasLinea = productosConPresupuesto.filter(p => p.lineaEstrategica === linea);
             const cumplidas = metasLinea.filter(p => p.estado === EstadoMeta.CUMPLIDA).length;
 
             return {
@@ -474,7 +465,7 @@ export class PdmDataService {
 
         // Análisis por ODS (Objetivos de Desarrollo Sostenible)
         const odsMap = new Map<string, { nombre: string; metas: typeof productos }>();
-        productos.forEach(p => {
+        productosConPresupuesto.forEach(p => {
             if (p.codigoODS && p.ods) {
                 const key = `${p.codigoODS}`;
                 if (!odsMap.has(key)) {
