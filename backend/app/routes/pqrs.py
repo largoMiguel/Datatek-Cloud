@@ -263,6 +263,7 @@ async def update_pqrs(
     
     # Actualizar campos
     update_data = pqrs_update.dict(exclude_unset=True)
+    original_assigned_to_id = pqrs.assigned_to_id
     
     # Manejar cambios de estado
     if "estado" in update_data:
@@ -282,6 +283,23 @@ async def update_pqrs(
     
     db.commit()
     db.refresh(pqrs)
+
+    # Si se cambió la asignación, crear alerta para el nuevo asignado
+    try:
+        if "assigned_to_id" in update_data:
+            new_assigned = update_data.get("assigned_to_id")
+            if new_assigned and new_assigned != original_assigned_to_id:
+                db.add(Alert(
+                    entity_id=pqrs.entity_id,
+                    recipient_user_id=new_assigned,
+                    type="PQRS_ASSIGNED",
+                    title=f"Te asignaron la PQRS {pqrs.numero_radicado}",
+                    message=f"Asunto: {pqrs.asunto}",
+                    data=json.dumps({"pqrs_id": pqrs.id}),
+                ))
+                db.commit()
+    except Exception:
+        db.rollback()
     
     return pqrs
 
