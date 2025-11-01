@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ViewChild, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { PqrsService } from '../../services/pqrs.service';
 import { UserService } from '../../services/user.service';
@@ -15,6 +15,7 @@ import { BaseChartDirective } from 'ng2-charts';
 import { Chart, ChartConfiguration, ChartData, ChartType, registerables } from 'chart.js';
 import { Subscription, combineLatest, filter } from 'rxjs';
 import { NotificationsService, AlertItem } from '../../services/notifications.service';
+import { AlertsEventsService } from '../../services/alerts-events.service';
 
 // Registrar todos los componentes de Chart.js
 Chart.register(...registerables);
@@ -22,7 +23,7 @@ Chart.register(...registerables);
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, BaseChartDirective, RouterLink],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, BaseChartDirective],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss'
 })
@@ -110,12 +111,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private pqrsService: PqrsService,
     private userService: UserService,
     private router: Router,
+    private route: ActivatedRoute,
     private fb: FormBuilder,
     private alertService: AlertService,
     private aiService: AiService,
     private reportService: ReportService,
     public entityContext: EntityContextService,
-    private notificationsService: NotificationsService
+    private notificationsService: NotificationsService,
+    private alertsEvents: AlertsEventsService
   ) {
     // Inicializar streams de alertas con el servicio inyectado
     this.alerts$ = this.notificationsService.alertsStream;
@@ -218,6 +221,27 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // Sincronizar la vista activa con el query param ?v de la URL (controlado por la barra global)
+    const qpSub = this.route.queryParamMap.subscribe(params => {
+      const v = (params.get('v') || 'dashboard') as string;
+      const allowed: Record<string, true> = {
+        'dashboard': true,
+        'mis-pqrs': true,
+        'nueva-pqrs': true,
+        'usuarios': true
+      };
+      if (allowed[v]) {
+        this.activeView = v;
+      } else if (!params.has('v')) {
+        this.activeView = 'dashboard';
+      }
+    });
+    this.subscriptions.add(qpSub);
+
+    // Suscribirse a solicitudes de apertura desde la barra global
+    const alertsOpenSub = this.alertsEvents.openRequested$.subscribe((a) => this.abrirAlerta(a));
+    this.subscriptions.add(alertsOpenSub);
+
     // Combinar usuario y entidad para cargar datos solo cuando ambos estén listos
     // y recargar cuando cualquiera cambie
     const combined = combineLatest([
@@ -244,6 +268,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
       }
     });
     this.subscriptions.add(authErrorCheck);
+
+    // Escuchar solicitud de apertura del formulario de informe desde la barra global
+    const openReportSub = this.alertsEvents.openReportFormRequested$.subscribe(() => {
+      // Asegurar que estamos en el dashboard principal
+      this.setActiveView('dashboard');
+      this.mostrarFormularioInforme();
+    });
+    this.subscriptions.add(openReportSub);
   }
 
   ngOnDestroy() {
@@ -363,11 +395,26 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.secretariosList = [];
     this.selectedPqrs = null;
     this.pqrsEditando = null;
-    this.activeView = 'dashboard';
+    // Mantener la vista activa (sin forzar 'dashboard') para no pisar el query param v
   }
 
   setActiveView(view: string) {
     this.activeView = view;
+    // Actualizar ?v= en la URL para mantener sincronizada la pestaña global
+    const topViews = new Set(['dashboard', 'mis-pqrs', 'nueva-pqrs', 'usuarios']);
+    if (topViews.has(view)) {
+      this.updateQueryParamV(view);
+    }
+  }
+
+  private updateQueryParamV(view?: string) {
+    const qp: any = { ...this.route.snapshot.queryParams };
+    if (!view || view === 'dashboard') {
+      delete qp['v'];
+    } else {
+      qp['v'] = view;
+    }
+    this.router.navigate([], { relativeTo: this.route, queryParams: qp, replaceUrl: true });
   }
 
   loadPqrs() {
