@@ -8,7 +8,8 @@
     "build": "ng build",
     "build:prod": "ng build --configuration production && cp static.json dist/pqrs-frontend/browser/static.json",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "clean": "bash -lc 'rm -rf dist .angular **/.DS_Store'"
   },
   "prettier": {
     "printWidth": 100,
