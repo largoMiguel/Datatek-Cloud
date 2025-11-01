@@ -282,6 +282,56 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
   }
 
+  private parseAlertData(alert: AlertItem): { pqrs_id?: number } {
+    if (!alert.data) return {};
+    try {
+      return JSON.parse(alert.data);
+    } catch {
+      try {
+        // Intento tolerante: reemplazar comillas simples por dobles (por datos antiguos no-JSON)
+        const safe = alert.data.replace(/'/g, '"');
+        return JSON.parse(safe);
+      } catch {
+        return {};
+      }
+    }
+  }
+
+  async abrirAlerta(alert: AlertItem, event?: MouseEvent) {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+
+    // Marcar como leída si aplica
+    if (!alert.read_at) {
+      this.notificationsService.markRead(alert.id).subscribe();
+    }
+
+    // Intentar abrir detalle de PQRS
+    const { pqrs_id } = this.parseAlertData(alert);
+    if (!pqrs_id) return;
+
+    // Si ya está en memoria
+    const local = this.pqrsList.find(p => p.id === pqrs_id);
+    if (local) {
+      this.verDetallesPqrs(local);
+      this.showAlertsPanel = false;
+      return;
+    }
+
+    // Buscar por API y abrir
+    try {
+      const pqrs = await this.pqrsService.getPqrsById(pqrs_id).toPromise();
+      if (pqrs) {
+        this.verDetallesPqrs(pqrs);
+        this.showAlertsPanel = false;
+      }
+    } catch {
+      // Silencioso si no tiene permisos o no existe
+    }
+  }
+
   marcarTodasLeidas(event?: MouseEvent) {
     if (event) event.stopPropagation();
     this.notificationsService.markAllRead().subscribe();

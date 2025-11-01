@@ -82,7 +82,7 @@
                                     </div>
                                     <a *ngFor="let a of alerts"
                                         class="list-group-item list-group-item-action d-flex justify-content-between align-items-start"
-                                        [class.unread]="!a.read_at" (click)="marcarLeida(a, $event)">
+                                        [class.unread]="!a.read_at" (click)="abrirAlerta(a, $event)">
                                         <div class="me-2">
                                             <div class="fw-semibold">
                                                 <i class="fas fa-info-circle me-2 text-primary"

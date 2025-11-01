@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+import json
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import datetime
@@ -105,7 +106,7 @@ async def create_pqrs(
                     type="NEW_PQRS",
                     title=f"Nueva PQRS {db_pqrs.numero_radicado}",
                     message=f"Asunto: {db_pqrs.asunto}",
-                    data=str({"pqrs_id": db_pqrs.id}),
+                    data=json.dumps({"pqrs_id": db_pqrs.id}),
                 ))
             # Si se auto-asignó al secretario creador
             if assigned_to_id:
@@ -115,7 +116,7 @@ async def create_pqrs(
                     type="PQRS_ASSIGNED",
                     title=f"Te asignaron la PQRS {db_pqrs.numero_radicado}",
                     message=f"Asunto: {db_pqrs.asunto}",
-                    data=str({"pqrs_id": db_pqrs.id}),
+                    data=json.dumps({"pqrs_id": db_pqrs.id}),
                 ))
             db.commit()
         except Exception as _:
@@ -322,7 +323,7 @@ async def assign_pqrs(
             type="PQRS_ASSIGNED",
             title=f"Te asignaron la PQRS {pqrs.numero_radicado}",
             message=f"Asunto: {pqrs.asunto}",
-            data=str({"pqrs_id": pqrs.id}),
+            data=json.dumps({"pqrs_id": pqrs.id}),
         ))
         db.commit()
     except Exception as _:
