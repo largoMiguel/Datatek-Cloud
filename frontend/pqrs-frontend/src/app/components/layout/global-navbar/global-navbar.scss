@@ -1,3 +1,11 @@
+.app-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1030; // por encima del contenido
+    background: linear-gradient(90deg, var(--bs-primary), #0a58ca);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
 .entity-logo {
     height: 36px;
     width: auto;
@@ -55,4 +63,45 @@
     display: flex;
     flex-direction: column;
     line-height: 1.1;
+}
+
+// Responsivo: simplificar branding en pantallas pequeñas
+@media (max-width: 576px) {
+    .software-name {
+        display: none;
+    }
+
+    .navbar-divider {
+        display: none;
+    }
+}
+
+// Tabs estilo moderno
+.app-tabs {
+    border-bottom: 1px solid #e9ecef;
+    background: #fff;
+    padding: 0 8px;
+
+    .nav-link {
+        border: none;
+        color: #6c757d;
+        font-weight: 600;
+        border-bottom: 3px solid transparent;
+        margin-right: 4px;
+        border-radius: 6px 6px 0 0;
+        padding: 10px 14px;
+
+        &:hover {
+            color: #0d6efd;
+            background-color: rgba(13, 110, 253, 0.06);
+        }
+
+        &.active,
+        &.active:hover {
+            color: #0d6efd;
+            background: #fff;
+            border-bottom-color: #0d6efd;
+            box-shadow: 0 -2px 0 #0d6efd inset;
+        }
+    }
 }

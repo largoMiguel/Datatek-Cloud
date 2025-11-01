@@ -1,4 +1,4 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary app-navbar shadow-sm">
     <div class="container-fluid">
         <!-- Marca / Entidad -->
         <div class="navbar-brand-section d-flex align-items-center">
@@ -121,7 +121,7 @@
 </nav>
 <!-- Pestañas globales (solo portal administrativo) -->
 <div class="container-fluid mb-3">
-    <ul class="nav nav-tabs">
+    <ul class="nav nav-tabs app-tabs">
         <li class="nav-item">
             <a class="nav-link" [class.active]="isActiveView('dashboard')" (click)="goDashboard('dashboard')">
                 <i class="fas fa-tachometer-alt me-2"></i>Dashboard
