@@ -52,6 +52,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   showAlertsPanel = false;
   alerts$!: import('rxjs').Observable<AlertItem[]>;
   unreadCount$!: import('rxjs').Observable<number>;
+  // Realce visual al abrir detalle desde alerta
+  highlightDetalle = false;
 
   // Fechas para el informe
   fechaInicio: string = '';
@@ -316,6 +318,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     const local = this.pqrsList.find(p => p.id === pqrs_id);
     if (local) {
       this.verDetallesPqrs(local);
+      this.resaltarDetalle();
       this.showAlertsPanel = false;
       return;
     }
@@ -325,11 +328,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
       const pqrs = await this.pqrsService.getPqrsById(pqrs_id).toPromise();
       if (pqrs) {
         this.verDetallesPqrs(pqrs);
+        this.resaltarDetalle();
         this.showAlertsPanel = false;
       }
     } catch {
       // Silencioso si no tiene permisos o no existe
     }
+  }
+
+  private resaltarDetalle() {
+    // Realzar visualmente el encabezado del detalle y desplazar a la vista
+    this.highlightDetalle = true;
+    setTimeout(() => (this.highlightDetalle = false), 1800);
+    // Desplazar el contenedor del detalle a la vista si existe
+    setTimeout(() => {
+      const el = document.querySelector('.detalle-pqrs-view');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
   }
 
   marcarTodasLeidas(event?: MouseEvent) {

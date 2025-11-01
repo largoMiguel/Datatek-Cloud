@@ -560,6 +560,27 @@
     }
 }
 
+// Realce del header al abrir desde alerta
+.card-header.highlight {
+    animation: pulseHighlight 1.2s ease-in-out 1;
+    box-shadow: 0 0 0 0.25rem rgba(255, 255, 255, 0.25) inset;
+}
+
+@keyframes pulseHighlight {
+    0% {
+        filter: brightness(1);
+    }
+
+    50% {
+        filter: brightness(1.2);
+    }
+
+    100% {
+        filter: brightness(1);
+    }
+}
+
+
 @keyframes fadeIn {
     from {
         opacity: 0;
