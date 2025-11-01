@@ -778,6 +778,28 @@ form {
     }
 }
 
+// Alertas en navbar
+.alerts-bell {
+    .alerts-panel {
+        position: absolute;
+        top: 120%;
+        right: 0;
+        width: 360px;
+        max-height: 420px;
+        overflow: hidden;
+        z-index: 1050;
+
+        .alerts-list {
+            max-height: 360px;
+            overflow-y: auto;
+
+            .list-group-item.unread {
+                background-color: rgba(33, 107, 168, 0.06);
+            }
+        }
+    }
+}
+
 // Responsive Navbar
 @media (max-width: 992px) {
     .navbar-divider {

@@ -1,0 +1,33 @@
+<header class="topbar">
+    <div class="topbar__left">
+        <div class="brand">PQRS</div>
+    </div>
+    <div class="topbar__right">
+        <div class="topbar__bell" (click)="togglePanel()" title="Alertas">
+            <span class="bell">🔔</span>
+            <span class="badge" *ngIf="unreadCount > 0">{{ unreadCount }}</span>
+        </div>
+        <div class="alerts-panel" *ngIf="isOpen">
+            <div class="panel__header">
+                <div class="title">Alertas</div>
+                <div class="actions">
+                    <button class="btn" (click)="refresh($event)">Actualizar</button>
+                    <button class="btn" [disabled]="unreadCount === 0" (click)="markAll($event)">Marcar todas</button>
+                </div>
+            </div>
+            <ul class="list">
+                <li *ngFor="let a of alerts" [class.unread]="!a.read_at" (click)="markRead(a, $event)">
+                    <div class="icon">{{ a.type === 'NEW_PQRS' ? '📬' : (a.type === 'PQRS_ASSIGNED' ? '📌' : '🔔') }}
+                    </div>
+                    <div class="content">
+                        <div class="title">{{ a.title }}</div>
+                        <div class="message" *ngIf="a.message">{{ a.message }}</div>
+                        <div class="meta">{{ a.created_at | date:'short' }}</div>
+                    </div>
+                    <button class="link" [disabled]="!!a.read_at">Marcar leída</button>
+                </li>
+            </ul>
+            <div class="empty" *ngIf="alerts.length === 0">Sin alertas</div>
+        </div>
+    </div>
+</header>

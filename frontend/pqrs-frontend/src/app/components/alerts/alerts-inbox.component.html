@@ -1,0 +1,35 @@
+<section class="inbox">
+    <header class="inbox__header">
+        <h2>Bandeja de alertas</h2>
+        <div class="actions">
+            <button class="btn" (click)="toggleUnread()">
+                {{ onlyUnread() ? 'Ver todas' : 'Solo no leídas' }} ({{ unreadCount }})
+            </button>
+            <button class="btn btn-primary" [disabled]="unreadCount === 0" (click)="markAll()">Marcar todas como
+                leídas</button>
+        </div>
+    </header>
+
+    <div class="loading" *ngIf="loading">Cargando…</div>
+
+    <ul class="alerts" *ngIf="!loading">
+        <li *ngFor="let a of alerts" [class.unread]="!a.read_at" class="alert-item">
+            <div class="icon">{{ iconFor(a.type) }}</div>
+            <div class="content">
+                <div class="title">{{ a.title }}</div>
+                <div class="meta">
+                    <span class="type">{{ a.type }}</span>
+                    <span class="date">{{ a.created_at | date:'short' }}</span>
+                </div>
+                <div class="message" *ngIf="a.message">{{ a.message }}</div>
+            </div>
+            <div class="right">
+                <button class="btn btn-link" [disabled]="!!a.read_at" (click)="markRead(a)">Marcar leída</button>
+            </div>
+        </li>
+    </ul>
+
+    <div *ngIf="!loading && alerts.length === 0" class="empty">
+        No hay alertas por ahora.
+    </div>
+</section>

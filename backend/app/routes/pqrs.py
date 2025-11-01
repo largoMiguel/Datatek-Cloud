@@ -6,6 +6,7 @@ from app.config.database import get_db
 from app.models.pqrs import PQRS, EstadoPQRS
 from app.models.user import User, UserRole
 from app.schemas.pqrs import PQRSCreate, PQRSUpdate, PQRS as PQRSSchema, PQRSWithDetails, PQRSResponse
+from app.models.alert import Alert
 from app.utils.auth import get_current_active_user, require_admin
 from app.utils.helpers import generate_radicado
 
@@ -93,6 +94,33 @@ async def create_pqrs(
         db.add(db_pqrs)
         db.commit()
         db.refresh(db_pqrs)
+
+        # Crear alertas: nueva PQRS para admins de la entidad
+        try:
+            admins = db.query(User).filter(User.role == UserRole.ADMIN, User.entity_id == pqrs_data.entity_id).all()
+            for admin in admins:
+                db.add(Alert(
+                    entity_id=pqrs_data.entity_id,
+                    recipient_user_id=admin.id,
+                    type="NEW_PQRS",
+                    title=f"Nueva PQRS {db_pqrs.numero_radicado}",
+                    message=f"Asunto: {db_pqrs.asunto}",
+                    data=str({"pqrs_id": db_pqrs.id}),
+                ))
+            # Si se auto-asignó al secretario creador
+            if assigned_to_id:
+                db.add(Alert(
+                    entity_id=pqrs_data.entity_id,
+                    recipient_user_id=assigned_to_id,
+                    type="PQRS_ASSIGNED",
+                    title=f"Te asignaron la PQRS {db_pqrs.numero_radicado}",
+                    message=f"Asunto: {db_pqrs.asunto}",
+                    data=str({"pqrs_id": db_pqrs.id}),
+                ))
+            db.commit()
+        except Exception as _:
+            db.rollback()
+            # no interrumpir el flujo por alertas
         
         return db_pqrs
     
@@ -285,6 +313,20 @@ async def assign_pqrs(
         pqrs.fecha_delegacion = datetime.utcnow()
     
     db.commit()
+
+    # Crear alerta para el usuario asignado
+    try:
+        db.add(Alert(
+            entity_id=pqrs.entity_id,
+            recipient_user_id=assigned_to_id,
+            type="PQRS_ASSIGNED",
+            title=f"Te asignaron la PQRS {pqrs.numero_radicado}",
+            message=f"Asunto: {pqrs.asunto}",
+            data=str({"pqrs_id": pqrs.id}),
+        ))
+        db.commit()
+    except Exception as _:
+        db.rollback()
     
     return {"message": f"PQRS asignada a {assigned_user.full_name}"}
 

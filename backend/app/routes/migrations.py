@@ -325,6 +325,50 @@ def run_migrations(
                 # Si falla (porque ya es enum), simplemente continuar
                 migrations_applied.append(f"ℹ️ Normalización de user_type omitida (columna ya correcta): {str(norm_error)[:100]}")
 
+        # ====== ALERTS (Bandeja de alertas) ======
+        if not inspector.has_table("alerts"):
+            if is_postgres:
+                db.execute(text(
+                    """
+                    CREATE TABLE alerts (
+                        id SERIAL PRIMARY KEY,
+                        entity_id INTEGER NULL REFERENCES entities(id),
+                        recipient_user_id INTEGER NULL REFERENCES users(id),
+                        type VARCHAR(64) NOT NULL,
+                        title VARCHAR(256) NOT NULL,
+                        message VARCHAR(1024),
+                        data TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        read_at TIMESTAMP NULL
+                    )
+                    """
+                ))
+                db.execute(text("CREATE INDEX ix_alerts_recipient ON alerts(recipient_user_id)"))
+                db.execute(text("CREATE INDEX ix_alerts_entity ON alerts(entity_id)"))
+            else:
+                db.execute(text(
+                    """
+                    CREATE TABLE alerts (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        entity_id INTEGER NULL,
+                        recipient_user_id INTEGER NULL,
+                        type VARCHAR(64) NOT NULL,
+                        title VARCHAR(256) NOT NULL,
+                        message VARCHAR(1024),
+                        data TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        read_at TIMESTAMP NULL,
+                        FOREIGN KEY (entity_id) REFERENCES entities(id),
+                        FOREIGN KEY (recipient_user_id) REFERENCES users(id)
+                    )
+                    """
+                ))
+                db.execute(text("CREATE INDEX ix_alerts_recipient ON alerts(recipient_user_id)"))
+                db.execute(text("CREATE INDEX ix_alerts_entity ON alerts(entity_id)"))
+            migrations_applied.append("🆕 Tabla 'alerts' creada para bandeja de alertas")
+        else:
+            migrations_applied.append("ℹ️ Tabla 'alerts' ya existe")
+
         # Commit de cambios
         db.commit()
 
@@ -419,7 +463,7 @@ def migration_status(
             status_info["pdm_actividades_table"] = "⚠️ Tabla 'pdm_actividades' no encontrada - se requiere migración"
             status_info["pending_migrations"].append("create_pdm_actividades_table")
 
-        # Comprobar tabla users
+    # Comprobar tabla users
         if inspector.has_table("users"):
             users_cols = {c["name"] for c in inspector.get_columns("users")}
             
@@ -439,6 +483,13 @@ def migration_status(
         else:
             status_info["users_table"] = "⚠️ Tabla 'users' no encontrada"
             status_info["pending_migrations"].append("create_users_table")
+
+        # ALERTS
+        if inspector.has_table("alerts"):
+            status_info["alerts_table"] = "✅ Tabla 'alerts' existe"
+        else:
+            status_info["alerts_table"] = "⚠️ Tabla 'alerts' no encontrada - se requiere migración"
+            status_info["pending_migrations"].append("create_alerts_table")
 
         return status_info
 

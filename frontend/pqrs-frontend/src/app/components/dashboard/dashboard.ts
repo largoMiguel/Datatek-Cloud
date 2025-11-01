@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -14,6 +14,7 @@ import { PQRSWithDetails, ESTADOS_PQRS, EstadoPQRS, UpdatePQRSRequest, PQRSRespo
 import { BaseChartDirective } from 'ng2-charts';
 import { Chart, ChartConfiguration, ChartData, ChartType, registerables } from 'chart.js';
 import { Subscription, combineLatest, filter } from 'rxjs';
+import { NotificationsService, AlertItem } from '../../services/notifications.service';
 
 // Registrar todos los componentes de Chart.js
 Chart.register(...registerables);
@@ -46,6 +47,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   selectedSecretarioId: number | null = null;
   selectedEstado: string = '';
   private subscriptions = new Subscription();
+
+  // Alertas (campana en navbar)
+  showAlertsPanel = false;
+  alerts$!: import('rxjs').Observable<AlertItem[]>;
+  unreadCount$!: import('rxjs').Observable<number>;
 
   // Fechas para el informe
   fechaInicio: string = '';
@@ -106,8 +112,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private alertService: AlertService,
     private aiService: AiService,
     private reportService: ReportService,
-    public entityContext: EntityContextService
+    public entityContext: EntityContextService,
+    private notificationsService: NotificationsService
   ) {
+    // Inicializar streams de alertas con el servicio inyectado
+    this.alerts$ = this.notificationsService.alertsStream;
+    this.unreadCount$ = this.notificationsService.unreadCountStream;
     this.nuevaPqrsForm = this.fb.group({
       tipo_identificacion: ['personal', Validators.required],
       medio_respuesta: ['email', Validators.required],
@@ -235,6 +245,41 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     // Limpiar todas las suscripciones
     this.subscriptions.unsubscribe();
+  }
+
+  // Cerrar panel de alertas al hacer click fuera
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+    const isBell = target.closest('.alerts-bell');
+    if (!isBell && this.showAlertsPanel) {
+      this.showAlertsPanel = false;
+    }
+  }
+
+  toggleAlertsPanel() {
+    this.showAlertsPanel = !this.showAlertsPanel;
+    if (this.showAlertsPanel) {
+      // Al abrir, cargar alertas (solo no leídas primero)
+      this.notificationsService.fetch(true).subscribe();
+    }
+  }
+
+  verTodasAlertas() {
+    // Cargar todas las alertas en el panel
+    this.notificationsService.fetch(false).subscribe();
+  }
+
+  marcarLeida(alert: AlertItem, event?: MouseEvent) {
+    if (event) event.stopPropagation();
+    if (!alert.read_at) {
+      this.notificationsService.markRead(alert.id).subscribe();
+    }
+  }
+
+  marcarTodasLeidas(event?: MouseEvent) {
+    if (event) event.stopPropagation();
+    this.notificationsService.markAllRead().subscribe();
   }
 
   /**
