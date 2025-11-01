@@ -569,11 +569,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const updateData: UpdatePQRSRequest = {
-        assigned_to_id: this.selectedSecretarioId
-      };
-
-      this.pqrsService.updatePqrs(this.selectedPqrs.id, updateData).subscribe({
+      this.pqrsService.assignPqrs(this.selectedPqrs.id, this.selectedSecretarioId).subscribe({
         next: (response) => {
           // console.log('PQRS asignada exitosamente:', response);
           this.alertService.success(
