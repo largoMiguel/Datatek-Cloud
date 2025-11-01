@@ -17,7 +17,6 @@ import { enforceUserEntityGuard } from './guards/enforce-user-entity.guard';
 import { entityResolver } from './resolvers/entity.resolver';
 import { defaultEntityGuard } from './guards/default-entity.guard';
 import { moduleAccessGuard } from './guards/module-access.guard';
-import { AlertsInboxComponent } from './components/alerts/alerts-inbox.component';
 
 export const routes: Routes = [
     // Ruta raíz: redirige a la primera entidad activa
@@ -44,7 +43,6 @@ export const routes: Routes = [
             { path: 'contratacion', component: ContratacionComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard, contratacionEnabledGuard, moduleAccessGuard('contratacion')] },
             { path: 'pdm', component: PdmUploadComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard, pdmEnabledGuard, moduleAccessGuard('pdm')] },
             { path: 'pdm-dashboard', component: PdmDashboardComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard, pdmEnabledGuard, moduleAccessGuard('pdm')] },
-            { path: 'alertas', component: AlertsInboxComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard] },
         ]
     },
     { path: '**', redirectTo: '' }
