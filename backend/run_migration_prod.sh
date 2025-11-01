@@ -11,7 +11,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║   Script de Migraciones - Módulo de Contratación     ║${NC}"
+echo -e "${GREEN}║         Script de Migraciones - PQRS Alcaldía        ║${NC}"
 echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -80,12 +80,4 @@ echo ""
 echo -e "${GREEN}╔════════════════════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}║              ✅ Proceso completado                     ║${NC}"
 echo -e "${GREEN}╚════════════════════════════════════════════════════════╝${NC}"
-echo ""
-echo -e "${YELLOW}📋 Notas importantes:${NC}"
-echo -e "  • Se valida y agrega el campo 'nit' en 'entities' si falta (para consultas SECOP II)"
-echo -e "  • Se valida y agrega el flag 'enable_contratacion' en 'entities' si falta"
-echo -e "  • El módulo de Contratación consume datos de SECOP II en tiempo real"
-echo ""
-echo -e "${GREEN}Puedes verificar el frontend en:${NC}"
-echo -e "  https://pqrs-frontend.onrender.com"
 echo ""
