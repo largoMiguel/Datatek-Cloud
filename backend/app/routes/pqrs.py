@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from pydantic import BaseModel
 import json
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
@@ -303,10 +304,14 @@ async def update_pqrs(
     
     return pqrs
 
+class AssignPayload(BaseModel):
+    assigned_to_id: int
+
+
 @router.post("/{pqrs_id}/assign")
 async def assign_pqrs(
     pqrs_id: int,
-    assigned_to_id: int,
+    payload: AssignPayload,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin)
 ):
@@ -320,14 +325,14 @@ async def assign_pqrs(
         )
     
     # Verificar que el usuario existe
-    assigned_user = db.query(User).filter(User.id == assigned_to_id).first()
+    assigned_user = db.query(User).filter(User.id == payload.assigned_to_id).first()
     if not assigned_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Usuario no encontrado"
         )
     
-    pqrs.assigned_to_id = assigned_to_id
+    pqrs.assigned_to_id = payload.assigned_to_id
     if not pqrs.fecha_delegacion:
         pqrs.fecha_delegacion = datetime.utcnow()
     
@@ -337,7 +342,7 @@ async def assign_pqrs(
     try:
         db.add(Alert(
             entity_id=pqrs.entity_id,
-            recipient_user_id=assigned_to_id,
+            recipient_user_id=payload.assigned_to_id,
             type="PQRS_ASSIGNED",
             title=f"Te asignaron la PQRS {pqrs.numero_radicado}",
             message=f"Asunto: {pqrs.asunto}",
