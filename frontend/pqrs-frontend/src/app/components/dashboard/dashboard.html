@@ -80,7 +80,7 @@
                                     <div *ngIf="alerts.length === 0" class="text-center text-muted py-3">
                                         <i class="fas fa-inbox me-2"></i>No hay alertas
                                     </div>
-                                    <a *ngFor="let a of alerts" href="#"
+                                    <a *ngFor="let a of alerts"
                                         class="list-group-item list-group-item-action d-flex justify-content-between align-items-start"
                                         [class.unread]="!a.read_at" (click)="marcarLeida(a, $event)">
                                         <div class="me-2">

@@ -229,6 +229,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.limpiarDatos();
       this.loadPqrs();
       this.loadSecretarios();
+      // Traer conteo de alertas no leídas para el badge
+      this.notificationsService.fetch(true).subscribe();
     });
     this.subscriptions.add(combined);
 
@@ -271,7 +273,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   marcarLeida(alert: AlertItem, event?: MouseEvent) {
-    if (event) event.stopPropagation();
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
     if (!alert.read_at) {
       this.notificationsService.markRead(alert.id).subscribe();
     }
