@@ -30,9 +30,12 @@
 .card {
     transition: all 0.3s ease;
     border-radius: 12px !important;
+    position: relative;
 
     &:hover:not(.bg-gradient) {
+        /* Evitamos escala para no provocar solapamientos entre cards */
         transform: translateY(-4px);
+        z-index: 2;
         box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
     }
 }
@@ -42,13 +45,15 @@
     cursor: pointer;
 
     &:hover {
-        transform: translateY(-4px) scale(1.02);
+        /* Quitamos el scale() para evitar que las tarjetas se solapen visualmente */
+        transform: translateY(-4px);
+        z-index: 3;
         box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important;
         border: 2px solid #0d6efd !important;
     }
 
     &:active {
-        transform: translateY(-2px) scale(1.01);
+        transform: translateY(-2px);
     }
 }
 
