@@ -30,10 +30,9 @@
 .card {
     transition: all 0.3s ease;
     border-radius: 12px !important;
-    overflow: hidden; // Evita desbordes visuales sobre elementos adyacentes
 
     &:hover:not(.bg-gradient) {
-        transform: translateY(-2px);
+        transform: translateY(-4px);
         box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1) !important;
     }
 }
@@ -43,14 +42,13 @@
     cursor: pointer;
 
     &:hover {
-        // Evitar escalado para no sobreponer tarjetas adyacentes
-        transform: translateY(-3px);
+        transform: translateY(-4px) scale(1.02);
         box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important;
-        border-color: #0d6efd !important;
+        border: 2px solid #0d6efd !important;
     }
 
     &:active {
-        transform: translateY(-1px);
+        transform: translateY(-2px) scale(1.01);
     }
 }
 
@@ -175,16 +173,6 @@
     @media (max-width: 1200px) {
         grid-template-columns: 1fr;
     }
-}
-
-// Asegurar que las columnas dentro de pestañas estiren sus tarjetas sin solaparse
-.tab-content .row {
-    align-items: stretch;
-}
-
-// Refuerzo de separación vertical entre tarjetas dentro de las pestañas
-.tab-pane .row>[class^="col-"] {
-    margin-bottom: 0.5rem;
 }
 
 // Tabla de datos
