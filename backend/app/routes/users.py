@@ -140,6 +140,8 @@ async def create_user(
                 valid_modules.append("planes_institucionales")
             if entity.enable_contratacion:
                 valid_modules.append("contratacion")
+            if getattr(entity, 'enable_pdm', False):
+                valid_modules.append("pdm")
             
             # Verificar que todos los módulos solicitados están activos
             for module in user_data.allowed_modules:
@@ -241,6 +243,8 @@ async def update_user(
                 valid_modules.append("planes_institucionales")
             if entity.enable_contratacion:
                 valid_modules.append("contratacion")
+            if getattr(entity, 'enable_pdm', False):
+                valid_modules.append("pdm")
             
             for module in update_data.get("allowed_modules", []):
                 if module not in valid_modules:
@@ -433,6 +437,8 @@ async def update_user_modules(
                 valid_modules.append("planes_institucionales")
             if entity.enable_contratacion:
                 valid_modules.append("contratacion")
+            if getattr(entity, 'enable_pdm', False):
+                valid_modules.append("pdm")
             
             for module in modules:
                 if module not in valid_modules:
