@@ -7,7 +7,8 @@ from urllib.parse import urlencode
 
 router = APIRouter(prefix="/contratacion", tags=["Contratación"])
 
-DATOS_GOV_BASE_URL = "https://www.datos.gov.co/resource/p6dx-8zbt.json"
+# Dataset de contratos (jbjy-vk9h)
+DATOS_GOV_BASE_URL = "https://www.datos.gov.co/resource/jbjy-vk9h.json"
 
 
 @router.get("/proxy")

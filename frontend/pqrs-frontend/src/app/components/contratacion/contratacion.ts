@@ -40,10 +40,10 @@ export class ContratacionComponent implements OnInit, OnDestroy {
     contratosVencidos: ProcesoContratacion[] = [];
     mostrarContratosVencidos = false;
 
-    // Filtros UI
+    // Filtros UI - Por defecto desde 1 de enero 2025
     filtro: FiltroContratacion = {
         entidad: '',
-        fechaDesde: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0],
+        fechaDesde: '2025-01-01',
         fechaHasta: new Date().toISOString().split('T')[0],
         modalidad: '',
         tipoContrato: '',
@@ -122,6 +122,9 @@ export class ContratacionComponent implements OnInit, OnDestroy {
     mostrarModalInforme = false;
     incluirResumenIA = false;
 
+    // Estado de expansión de tarjetas
+    private expandedRefs = new Set<string>();
+
     constructor(
         private contratacionService: ContratacionService,
         public entityContext: EntityContextService,
@@ -176,16 +179,16 @@ export class ContratacionComponent implements OnInit, OnDestroy {
         // Actualizar catálogos
         this.modalidades = Array.from(new Set(data.map(d => d.modalidad_de_contratacion).filter(Boolean))) as string[];
         this.tiposContrato = Array.from(new Set(data.map(d => d.tipo_de_contrato).filter(Boolean))) as string[];
-        this.estadosResumen = Array.from(new Set(data.map(d => d.estado_resumen).filter(Boolean))) as string[];
+        this.estadosResumen = Array.from(new Set(data.map(d => d.estado_contrato).filter(Boolean))) as string[];
 
         // Filtros por columna
         const cf = this.columnFilters;
         if (cf.referencia) {
             const needle = cf.referencia.toLowerCase();
-            data = data.filter(p => (p.referencia_del_proceso || '').toLowerCase().includes(needle));
+            data = data.filter(p => (p.referencia_del_contrato || '').toLowerCase().includes(needle));
         }
         if (cf.estado) {
-            data = data.filter(p => (p.estado_resumen || '') === cf.estado);
+            data = data.filter(p => (p.estado_contrato || '') === cf.estado);
         }
         if (cf.modalidad) {
             data = data.filter(p => (p.modalidad_de_contratacion || '') === cf.modalidad);
@@ -194,34 +197,34 @@ export class ContratacionComponent implements OnInit, OnDestroy {
             data = data.filter(p => (p.tipo_de_contrato || '') === cf.tipo);
         }
         if (cf.precioMin != null && cf.precioMin !== undefined) {
-            data = data.filter(p => this.toNumber(p.precio_base) >= (cf.precioMin || 0));
+            data = data.filter(p => this.toNumber(p.valor_del_contrato) >= (cf.precioMin || 0));
         }
         if (cf.precioMax != null && cf.precioMax !== undefined) {
-            data = data.filter(p => this.toNumber(p.precio_base) <= (cf.precioMax || Number.MAX_SAFE_INTEGER));
+            data = data.filter(p => this.toNumber(p.valor_del_contrato) <= (cf.precioMax || Number.MAX_SAFE_INTEGER));
         }
         if (cf.proveedor) {
             const needle = cf.proveedor.toLowerCase();
-            data = data.filter(p => (p.nombre_del_proveedor || '').toString().toLowerCase().includes(needle));
+            data = data.filter(p => (p.proveedor_adjudicado || '').toString().toLowerCase().includes(needle));
         }
         if (cf.publicacionDesde) {
             const d = new Date(cf.publicacionDesde);
-            data = data.filter(p => !p.fecha_de_publicacion_del || new Date(p.fecha_de_publicacion_del) >= d);
+            data = data.filter(p => !p.fecha_de_firma || new Date(p.fecha_de_firma) >= d);
         }
         if (cf.publicacionHasta) {
             const d = new Date(cf.publicacionHasta);
-            data = data.filter(p => !p.fecha_de_publicacion_del || new Date(p.fecha_de_publicacion_del) <= d);
+            data = data.filter(p => !p.fecha_de_firma || new Date(p.fecha_de_firma) <= d);
         }
         if (cf.ultimaDesde) {
             const d = new Date(cf.ultimaDesde);
-            data = data.filter(p => !p.fecha_de_ultima_publicaci || new Date(p.fecha_de_ultima_publicaci) >= d);
+            data = data.filter(p => !p.ultima_actualizacion || new Date(p.ultima_actualizacion) >= d);
         }
         if (cf.ultimaHasta) {
             const d = new Date(cf.ultimaHasta);
-            data = data.filter(p => !p.fecha_de_ultima_publicaci || new Date(p.fecha_de_ultima_publicaci) <= d);
+            data = data.filter(p => !p.ultima_actualizacion || new Date(p.ultima_actualizacion) <= d);
         }
 
         // Orden por referencia
-        data.sort((a, b) => (a.referencia_del_proceso || '').localeCompare(b.referencia_del_proceso || ''));
+        data.sort((a, b) => (a.referencia_del_contrato || '').localeCompare(b.referencia_del_contrato || ''));
 
         this.procesosFiltrados = data;
         this.computeKPIs();
@@ -231,33 +234,29 @@ export class ContratacionComponent implements OnInit, OnDestroy {
 
     detectarContratosVencidos(): void {
         const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0); // Normalizar a medianoche para comparación precisa
+
         this.contratosVencidos = this.procesosFiltrados.filter(p => {
-            // Solo contratos adjudicados (lógica normalizada)
-            if (!this.isAdjudicado(p)) return false;
+            // Solo contratos con fecha de finalización definida
+            if (!p.fecha_de_fin_del_contrato) return false;
 
-            // Verificar si tiene fecha de adjudicación y duración
-            if (!p.fecha_adjudicacion || !p.duracion) return false;
+            // Verificar si el contrato está vencido (fecha de fin anterior a hoy)
+            const fechaFin = new Date(p.fecha_de_fin_del_contrato);
+            fechaFin.setHours(0, 0, 0, 0);
 
-            const fechaAdjudicacion = new Date(p.fecha_adjudicacion);
-            const duracionNum = typeof p.duracion === 'number' ? p.duracion : parseInt(String(p.duracion));
-            const unidad = p.unidad_de_duracion || 'Dias';
+            // Normalizar estado
+            const estado = (p.estado_contrato ?? '')
+                .toString()
+                .trim()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '');
 
-            if (isNaN(duracionNum) || duracionNum <= 0) return false;
+            // Excluir contratos ya finalizados
+            const estadosFinalizados = ['terminado', 'cerrado', 'liquidado', 'cancelado', 'suspendido', 'anulado'];
+            if (estadosFinalizados.includes(estado)) return false;
 
-            // Convertir duración a días
-            let duracionDias = duracionNum;
-            const unidadLower = unidad.toLowerCase();
-            if (unidadLower.includes('mes')) {
-                duracionDias = duracionNum * 30;
-            } else if (unidadLower.includes('año') || unidadLower.includes('ano')) {
-                duracionDias = duracionNum * 365;
-            }
-
-            // Calcular fecha de finalización
-            const fechaFin = new Date(fechaAdjudicacion);
-            fechaFin.setDate(fechaFin.getDate() + duracionDias);
-
-            // El contrato está vencido si la fecha de fin es anterior a hoy
+            // Contrato vencido: fecha de fin ya pasó y no está finalizado
             return fechaFin < hoy;
         });
 
@@ -265,26 +264,9 @@ export class ContratacionComponent implements OnInit, OnDestroy {
     }
 
     calcularDiasVencidos(contrato: ProcesoContratacion): number {
-        if (!contrato.fecha_adjudicacion || !contrato.duracion) return 0;
+        if (!contrato.fecha_de_fin_del_contrato) return 0;
 
-        const fechaAdjudicacion = new Date(contrato.fecha_adjudicacion);
-        const duracionNum = typeof contrato.duracion === 'number' ? contrato.duracion : parseInt(String(contrato.duracion));
-        const unidad = contrato.unidad_de_duracion || 'Dias';
-
-        if (isNaN(duracionNum)) return 0;
-
-        // Convertir duración a días
-        let duracionDias = duracionNum;
-        const unidadLower = unidad.toLowerCase();
-        if (unidadLower.includes('mes')) {
-            duracionDias = duracionNum * 30;
-        } else if (unidadLower.includes('año') || unidadLower.includes('ano')) {
-            duracionDias = duracionNum * 365;
-        }
-
-        const fechaFin = new Date(fechaAdjudicacion);
-        fechaFin.setDate(fechaFin.getDate() + duracionDias);
-
+        const fechaFin = new Date(contrato.fecha_de_fin_del_contrato);
         const hoy = new Date();
         const diffTime = hoy.getTime() - fechaFin.getTime();
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -293,30 +275,29 @@ export class ContratacionComponent implements OnInit, OnDestroy {
     }
 
     formatearDuracion(contrato: ProcesoContratacion): string {
-        if (!contrato.duracion) return 'N/D';
-        const duracion = contrato.duracion;
-        const unidad = contrato.unidad_de_duracion || 'Días';
-        return `${duracion} ${unidad}`;
+        if (!contrato.duraci_n_del_contrato) return 'N/D';
+        return contrato.duraci_n_del_contrato;
     }
 
     computeKPIs(): void {
         const total = this.procesosFiltrados.length;
-        const adjudicados = this.procesosFiltrados.filter(p => this.isAdjudicado(p));
-        const sumaAdj = adjudicados.reduce((acc, p) => acc + this.toNumber(p.valor_total_adjudicacion), 0);
-        const promedioPrecio = this.avg(this.procesosFiltrados.map(p => this.toNumber(p.precio_base)));
+        const ejecutados = this.procesosFiltrados.filter(p => this.isContratado(p));
+        const sumaContratada = this.procesosFiltrados.reduce((acc, p) => acc + this.toNumber(p.valor_del_contrato), 0);
+        const sumaPagada = this.procesosFiltrados.reduce((acc, p) => acc + this.toNumber(p.valor_pagado), 0);
+        const promedioPrecio = this.avg(this.procesosFiltrados.map(p => this.toNumber(p.valor_del_contrato)));
 
         this.kpis = {
             totalProcesos: total,
-            totalAdjudicados: adjudicados.length,
-            tasaAdjudicacion: total ? adjudicados.length / total : 0,
-            sumaAdjudicado: sumaAdj,
+            totalAdjudicados: ejecutados.length,
+            tasaAdjudicacion: total ? ejecutados.length / total : 0,
+            sumaAdjudicado: sumaPagada,
             promedioPrecioBase: promedioPrecio
         };
     }
 
     updateCharts(): void {
         // Estados
-        const estados = this.groupCount(this.procesosFiltrados.map(p => p.estado_resumen || 'SIN ESTADO'));
+        const estados = this.groupCount(this.procesosFiltrados.map(p => p.estado_contrato || 'SIN ESTADO'));
         this.estadosChartData = {
             labels: Object.keys(estados),
             datasets: [{
@@ -338,13 +319,13 @@ export class ContratacionComponent implements OnInit, OnDestroy {
             }]
         };
 
-        // Timeline por mes (conteo por publicación)
-        const byMonth = this.groupCount(this.procesosFiltrados.map(p => this.toMonth(p.fecha_de_publicacion_del)));
+        // Timeline por mes (conteo por fecha de firma)
+        const byMonth = this.groupCount(this.procesosFiltrados.map(p => this.toMonth(p.fecha_de_firma)));
         const labels = Object.keys(byMonth).sort();
         this.timelineChartData = {
             labels,
             datasets: [{
-                label: 'Publicaciones',
+                label: 'Contratos Firmados',
                 data: labels.map(l => byMonth[l] || 0),
                 borderColor: '#216ba8',
                 backgroundColor: 'rgba(33, 107, 168, 0.1)',
@@ -433,29 +414,111 @@ export class ContratacionComponent implements OnInit, OnDestroy {
         return Math.round((list.reduce((a, b) => a + b, 0) / list.length) * 100) / 100;
     }
 
-    // Normaliza si un proceso está adjudicado
-    isAdjudicado(p: ProcesoContratacion): boolean {
-        const estado = (p.estado_resumen ?? '').toString().trim().toUpperCase();
-        const adj = p.adjudicado;
-        if (typeof adj === 'boolean') {
-            if (adj) return true;
-        } else {
-            const s = (adj ?? '').toString().trim().toUpperCase();
-            if (s === 'SI' || s === 'TRUE' || s === '1') return true;
+    // ===== Listado en tarjetas =====
+    getKey(p: ProcesoContratacion): string {
+        return (p.id_contrato as any) || p.referencia_del_contrato || `${p.nit_entidad || ''}-${p.documento_proveedor || ''}-${p.fecha_de_firma || ''}`;
+    }
+
+    isExpanded(key: string): boolean {
+        return this.expandedRefs.has(key);
+    }
+
+    toggleExpand(p: ProcesoContratacion): void {
+        const key = this.getKey(p);
+        if (!key) return;
+        if (this.expandedRefs.has(key)) this.expandedRefs.delete(key); else this.expandedRefs.add(key);
+    }
+
+    trackByContrato = (_: number, p: ProcesoContratacion) => this.getKey(p);
+
+    async copyReferencia(p: ProcesoContratacion): Promise<void> {
+        const ref = p.referencia_del_contrato || '';
+        try { await navigator.clipboard?.writeText(ref); } catch { /* noop */ }
+    }
+
+    // Normaliza si un contrato está contratado/en ejecución (activo)
+    isContratado(p: ProcesoContratacion): boolean {
+        // Normalizar estado: minúsculas sin acentos para comparación
+        const estado = (p.estado_contrato ?? '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, ''); // Eliminar acentos
+
+        // Estados que se consideran finalizados (no activos)
+        const estadosFinalizados = ['terminado', 'cerrado', 'liquidado', 'cancelado', 'suspendido', 'anulado'];
+
+        // Si está en un estado finalizado, NO está en ejecución
+        if (estadosFinalizados.includes(estado)) {
+            return false;
         }
-        if (estado.includes('ADJUDICADO')) return true;
-        if (p.fecha_adjudicacion) return true;
-        return false;
+
+        // Estados activos: En ejecución, Aprobado, Modificado
+        // La API devuelve: "En ejecución" (con acento), "Aprobado", "Modificado"
+        const estadosActivos = ['en ejecucion', 'aprobado', 'modificado', 'celebrado', 'activo'];
+        return estadosActivos.includes(estado);
     }
 
     // Clase visual para estado
     getEstadoBadgeClass(p: ProcesoContratacion): string {
-        const e = (p.estado_resumen ?? '').toString().trim().toUpperCase();
-        if (e.includes('ADJUDICADO') || e.includes('CELEBRADO')) return 'bg-success';
-        if (e.includes('PUBLICADO') || e.includes('EN PUBLICACIÓN')) return 'bg-primary';
-        if (e.includes('CANCELADO') || e.includes('SUSPENDIDO')) return 'bg-danger';
-        if (e.includes('DESIERTO')) return 'bg-warning';
+        // Normalizar estado: minúsculas sin acentos
+        const estado = (p.estado_contrato ?? '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
+        // Estados liquidados (azul info)
+        if (estado === 'liquidado') return 'bg-info';
+
+        // Estados cerrados/terminados (gris secundario)
+        if (estado === 'cerrado' || estado === 'terminado') return 'bg-secondary';
+
+        // Estados activos en ejecución (verde success)
+        if (estado === 'en ejecucion' ||
+            estado === 'aprobado' ||
+            estado === 'modificado' ||
+            estado === 'celebrado' ||
+            estado === 'activo') return 'bg-success';
+
+        // Estados problemáticos (rojo danger)
+        if (estado === 'cancelado' ||
+            estado === 'suspendido' ||
+            estado === 'anulado') return 'bg-danger';
+
+        // Estados en borrador/pendiente (amarillo warning)
+        if (estado === 'borrador' ||
+            estado === 'pendiente' ||
+            estado === 'proceso') return 'bg-warning';
+
+        // Por defecto (gris)
         return 'bg-secondary';
+    }
+
+    // Helper para verificar si un contrato está finalizado
+    private isEstadoFinalizado(estado: string): boolean {
+        const e = (estado ?? '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+        const finalizados = ['terminado', 'cerrado', 'liquidado', 'cancelado', 'suspendido', 'anulado'];
+        return finalizados.includes(e);
+    }
+
+    // Helper para verificar si un contrato está activo/en ejecución
+    private isEstadoActivo(estado: string): boolean {
+        const e = (estado ?? '')
+            .toString()
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+        const activos = ['en ejecucion', 'celebrado', 'aprobado', 'modificado', 'activo'];
+        return activos.includes(e);
     }
 
     groupCount(arr: string[]): Record<string, number> {
@@ -472,6 +535,11 @@ export class ContratacionComponent implements OnInit, OnDestroy {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     }
 
+    // Obtener mes de la fecha de firma para el timeline
+    getMesFirma(p: ProcesoContratacion): string {
+        return this.toMonth(p.fecha_de_firma);
+    }
+
     // Acciones UI
     buscar(): void {
         this.fetch();
@@ -480,7 +548,7 @@ export class ContratacionComponent implements OnInit, OnDestroy {
     limpiar(): void {
         this.filtro = {
             entidad: this.filtro.entidad,
-            fechaDesde: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0],
+            fechaDesde: '2025-01-01',
             fechaHasta: new Date().toISOString().split('T')[0],
             modalidad: '',
             tipoContrato: '',
@@ -501,10 +569,10 @@ export class ContratacionComponent implements OnInit, OnDestroy {
 
     exportCSV(): void {
         const headers = [
-            'referencia_del_proceso', 'fase', 'fecha_de_publicacion_del', 'fecha_de_ultima_publicaci', 'precio_base',
-            'modalidad_de_contratacion', 'duracion', 'unidad_de_duracion', 'fecha_de_recepcion_de', 'fecha_de_apertura_efectiva',
-            'adjudicado', 'fecha_adjudicacion', 'valor_total_adjudicacion', 'nombre_del_proveedor', 'estado_de_apertura_del_proceso',
-            'estado_resumen', 'urlproceso', 'descripci_n_del_procedimiento', 'tipo_de_contrato'
+            'referencia_del_contrato', 'estado_contrato', 'fecha_de_firma', 'fecha_de_inicio_del_contrato', 'fecha_de_fin_del_contrato',
+            'modalidad_de_contratacion', 'tipo_de_contrato', 'valor_del_contrato', 'proveedor_adjudicado',
+            'documento_proveedor', 'es_pyme', 'objeto_del_contrato', 'descripcion_del_proceso', 'nombre_supervisor',
+            'valor_pagado', 'valor_pendiente_de_pago', 'liquidaci_n', 'ultima_actualizacion'
         ];
         const rows = this.procesosFiltrados.map(p => headers.map(h => (p as any)[h] ?? ''));
         const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))].join('\n');
@@ -512,7 +580,7 @@ export class ContratacionComponent implements OnInit, OnDestroy {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `contratacion_${this.filtro.entidad || 'entidad'}_${this.filtro.fechaDesde}_${this.filtro.fechaHasta}.csv`;
+        a.download = `contratos_${this.filtro.entidad || 'entidad'}_${this.filtro.fechaDesde}_${this.filtro.fechaHasta}.csv`;
         a.click();
         URL.revokeObjectURL(url);
     }
@@ -520,8 +588,8 @@ export class ContratacionComponent implements OnInit, OnDestroy {
     private computeTopProveedoresChart(): void {
         const map = new Map<string, number>();
         for (const p of this.procesosFiltrados) {
-            const prov = (p.nombre_del_proveedor || 'N/D').toString();
-            const val = this.toNumber(p.valor_total_adjudicacion);
+            const prov = (p.proveedor_adjudicado || 'N/D').toString();
+            const val = this.toNumber(p.valor_del_contrato);
             if (val > 0) map.set(prov, (map.get(prov) || 0) + val);
         }
         const pairs = Array.from(map.entries()).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -530,7 +598,7 @@ export class ContratacionComponent implements OnInit, OnDestroy {
         this.proveedoresChartData = {
             labels,
             datasets: [{
-                label: 'Total adjudicado',
+                label: 'Total contratado',
                 data,
                 backgroundColor: 'rgba(40, 167, 69, 0.7)',
                 borderColor: 'rgba(40, 167, 69, 1)',
@@ -799,8 +867,8 @@ export class ContratacionComponent implements OnInit, OnDestroy {
             { id: 'chart-estados', title: 'Distribución por Estado' },
             { id: 'chart-modalidades', title: 'Modalidades' },
             { id: 'chart-tipos', title: 'Tipos de Contrato' },
-            { id: 'chart-proveedores', title: 'Top Proveedores por Valor' },
-            { id: 'chart-timeline', title: 'Timeline de Publicaciones' }
+            { id: 'chart-proveedores', title: 'Top Proveedores por Valor Contratado' },
+            { id: 'chart-timeline', title: 'Contratos firmados en el tiempo' }
         ];
         for (const c of charts) {
             const img = this.getChartImage(c.id);
@@ -816,17 +884,18 @@ export class ContratacionComponent implements OnInit, OnDestroy {
 
         // Tabla (resumen top 20 por tamaño)
         const headers = [
-            'Referencia', 'Estado', 'Modalidad', 'Tipo', 'Precio base', 'Proveedor', 'Publicación', 'Últ. pub.'
+            'Referencia', 'Estado', 'Modalidad', 'Tipo', 'Valor contrato', 'Valor pagado', 'Proveedor', 'Fecha firma', 'Fecha fin'
         ];
         const body = this.procesosFiltrados.slice(0, 20).map(p => [
-            p.referencia_del_proceso || '-',
-            p.estado_resumen || '-',
+            p.referencia_del_contrato || '-',
+            p.estado_contrato || '-',
             p.modalidad_de_contratacion || '-',
             p.tipo_de_contrato || '-',
-            `$ ${this.toNumber(p.precio_base).toLocaleString('es-CO')}`,
-            p.nombre_del_proveedor || '-',
-            p.fecha_de_publicacion_del ? new Date(p.fecha_de_publicacion_del).toLocaleDateString('es-CO') : '-',
-            p.fecha_de_ultima_publicaci ? new Date(p.fecha_de_ultima_publicaci).toLocaleDateString('es-CO') : '-',
+            `$ ${this.toNumber(p.valor_del_contrato).toLocaleString('es-CO')}`,
+            `$ ${this.toNumber(p.valor_pagado).toLocaleString('es-CO')}`,
+            p.proveedor_adjudicado || '-',
+            p.fecha_de_firma ? new Date(p.fecha_de_firma).toLocaleDateString('es-CO') : '-',
+            p.fecha_de_fin_del_contrato ? new Date(p.fecha_de_fin_del_contrato).toLocaleDateString('es-CO') : '-',
         ]);
 
         autoTable(doc, {
