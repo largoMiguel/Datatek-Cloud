@@ -29,7 +29,7 @@ export class ContratacionComponent implements OnInit, OnDestroy {
     procesosFiltrados: ProcesoContratacion[] = [];
     // Paginación
     pageIndex = 1; // 1-based
-    pageSize = 12;
+    pageSize = 8;
     pageSizes: number[] = [8, 12, 24, 48];
     loading = false;
     errorMsg = '';

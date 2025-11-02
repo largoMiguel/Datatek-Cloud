@@ -736,6 +736,38 @@
             outline-offset: 4px;
         }
 
+
+        // Chips meta compactos
+        .meta-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.25rem 0.5rem;
+            background: #f3f6f9;
+            border: 1px solid #e5ebf3;
+            color: #2b3954;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            line-height: 1;
+
+            i {
+                color: #4b6ea8;
+                font-size: 0.85rem;
+            }
+
+            .chip-text {
+                white-space: nowrap;
+            }
+        }
+
         // (El bloque de detalles inline y barra de acciones fue eliminado en favor del modal)
     }
 
