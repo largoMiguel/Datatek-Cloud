@@ -27,6 +27,10 @@ export class ContratacionComponent implements OnInit, OnDestroy {
 
     procesos: ProcesoContratacion[] = [];
     procesosFiltrados: ProcesoContratacion[] = [];
+    // Paginación
+    pageIndex = 1; // 1-based
+    pageSize = 12;
+    pageSizes: number[] = [8, 12, 24, 48];
     loading = false;
     errorMsg = '';
     subs = new Subscription();
@@ -252,9 +256,51 @@ export class ContratacionComponent implements OnInit, OnDestroy {
         data.sort((a, b) => (a.referencia_del_contrato || '').localeCompare(b.referencia_del_contrato || ''));
 
         this.procesosFiltrados = data;
+        // reset página al aplicar filtros
+        this.pageIndex = 1;
         this.computeKPIs();
         this.updateCharts();
         this.detectarContratosVencidos();
+    }
+
+    // Datos paginados para la vista
+    get totalPages(): number {
+        return Math.max(1, Math.ceil(this.procesosFiltrados.length / Math.max(this.pageSize, 1)));
+    }
+
+    get paginatedProcesos(): ProcesoContratacion[] {
+        const size = Math.max(this.pageSize, 1);
+        const start = (Math.max(this.pageIndex, 1) - 1) * size;
+        return this.procesosFiltrados.slice(start, start + size);
+    }
+
+    onPageSizeChange(size: number): void {
+        this.pageSize = Number(size) || 12;
+        this.pageIndex = 1;
+    }
+
+    goToPage(n: number): void {
+        const t = this.totalPages;
+        if (n < 1) n = 1;
+        if (n > t) n = t;
+        this.pageIndex = n;
+    }
+
+    nextPage(): void {
+        if (this.pageIndex < this.totalPages) this.pageIndex += 1;
+    }
+
+    prevPage(): void {
+        if (this.pageIndex > 1) this.pageIndex -= 1;
+    }
+
+    getPageNumbers(): number[] {
+        const total = this.totalPages;
+        const windowSize = 5;
+        let start = Math.max(1, this.pageIndex - Math.floor(windowSize / 2));
+        let end = Math.min(total, start + windowSize - 1);
+        start = Math.max(1, end - windowSize + 1);
+        return Array.from({ length: end - start + 1 }, (_, i) => start + i);
     }
 
     detectarContratosVencidos(): void {
