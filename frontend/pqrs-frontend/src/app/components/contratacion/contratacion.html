@@ -495,7 +495,7 @@
                             <i class="fas fa-file-contract"></i>
                             <span class="ref-code">{{ p.referencia_del_contrato || 'N/D' }}</span>
                         </div>
-                        <span class="status-badge" [ngClass]="getEstadoBadgeClass(p)">
+                        <span class="badge status-badge" [ngClass]="getEstadoBadgeClass(p)">
                             <span class="badge-dot"></span>
                             {{ p.estado_contrato || 'N/D' }}
                         </span>

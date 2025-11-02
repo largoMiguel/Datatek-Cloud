@@ -522,16 +522,71 @@
             color: #1a1a1a;
             // El detalle expandido inline fue reemplazado por modal
             font-size: 1.2rem;
-            background: rgba(255, 255, 255, 0.8);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            background: transparent;
+            box-shadow: none;
+        }
 
-            .primary & {
-                color: #1976d2;
+        // Badge de estado en header
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.2px;
+            line-height: 1;
+
+            // Asegurar contraste en variantes bootstrap
+            &.bg-success,
+            &.bg-info,
+            &.bg-primary,
+            &.bg-danger,
+            &.bg-secondary,
+            &.bg-dark {
+                color: #fff;
             }
 
-            .success & {
-                color: #388e3c;
+            &.bg-warning {
+                color: #3a3a3a;
             }
+        }
+
+        .badge-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25);
+        }
+
+        .value-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+
+        .value-item.primary {
+            background: linear-gradient(180deg, #f3f8ff 0%, #eef4fb 100%);
+        }
+
+        .value-item.success {
+            background: linear-gradient(180deg, #effaf3 0%, #e8f6ee 100%);
+        }
+
+        .value-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            background: white;
+            color: #216ba8;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
         }
 
         .value-content {
@@ -621,7 +676,7 @@
             align-items: center;
             justify-content: space-between;
             padding: 0.75rem;
-            background: linear-gradient(135deg, #fff9e6 0%, #ffe9a0 100%);
+            background: linear-gradient(135deg, #fafcff 0%, #eef3f9 100%);
             border-radius: 10px;
             margin-bottom: 1rem;
         }
@@ -631,16 +686,16 @@
             align-items: center;
             gap: 0.5rem;
             font-weight: 600;
-            color: #5a4a00;
+            color: #2b3954;
             font-size: 0.9rem;
 
             i {
-                color: #ffc107;
+                color: #216ba8;
             }
         }
 
         .date-separator {
-            color: #ffc107;
+            color: #9db5d3;
             font-weight: 700;
             font-size: 1.2rem;
         }
@@ -675,121 +730,13 @@
             }
         }
 
-        // Detalles expandidos
-        .expanded-details {
-            margin-top: 1.5rem;
-            padding-top: 1.5rem;
-            border-top: 2px solid #e9ecef;
-            animation: slideDown 0.4s ease;
+        // Accesibilidad: foco visible
+        &:focus-visible {
+            outline: 3px solid rgba(33, 107, 168, 0.35);
+            outline-offset: 4px;
         }
 
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .details-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .detail-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            padding: 0.75rem;
-            background: #f8f9fa;
-            border-radius: 10px;
-            transition: all 0.3s ease;
-
-            &:hover {
-                background: #e9ecef;
-                transform: translateX(4px);
-            }
-        }
-
-        .detail-icon {
-            width: 32px;
-            height: 32px;
-            background: white;
-            border-radius: 8px;
-            display: grid;
-            place-items: center;
-            color: #216ba8;
-            font-size: 0.9rem;
-            flex-shrink: 0;
-        }
-
-        .detail-label {
-            display: block;
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.25rem;
-        }
-
-        .detail-value {
-            display: block;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #1a1a1a;
-        }
-
-        // Barra de acciones
-        .actions-bar {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .action-btn {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            padding: 0.75rem 1.5rem;
-            border-radius: 10px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            border: none;
-            cursor: pointer;
-
-            &.primary {
-                background: linear-gradient(135deg, #216ba8 0%, #1a5686 100%);
-                color: white;
-                box-shadow: 0 4px 12px rgba(33, 107, 168, 0.3);
-
-                &:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 20px rgba(33, 107, 168, 0.4);
-                }
-            }
-
-            &.secondary {
-                background: white;
-                color: #216ba8;
-                border: 2px solid #216ba8;
-
-                &:hover {
-                    background: #216ba8;
-                    color: white;
-                    transform: translateY(-2px);
-                }
-            }
-        }
+        // (El bloque de detalles inline y barra de acciones fue eliminado en favor del modal)
     }
 
     // Responsive
