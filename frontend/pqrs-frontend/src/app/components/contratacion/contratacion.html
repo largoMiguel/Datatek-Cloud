@@ -576,11 +576,11 @@
                         <div class="modal-title">
                             <i class="fas fa-file-contract"></i>
                             <div class="title-texts">
-                                <h3>{{ selectedProceso?.referencia_del_contrato }}</h3>
+                                <h3>{{ selectedProceso.referencia_del_contrato }}</h3>
                                 <div class="subtitle">
                                     <span class="badge" [ngClass]="getEstadoBadgeClass(selectedProceso!)">
                                         <span class="badge-dot"></span>
-                                        {{ selectedProceso?.estado_contrato }}
+                                        {{ selectedProceso.estado_contrato }}
                                     </span>
                                 </div>
                             </div>
@@ -593,42 +593,42 @@
                         <div class="modal-section">
                             <div class="modal-field">
                                 <span class="label">Proveedor</span>
-                                <span class="value">{{ selectedProceso?.proveedor_adjudicado || 'N/D' }}</span>
+                                <span class="value">{{ selectedProceso.proveedor_adjudicado || 'N/D' }}</span>
                             </div>
                             <div class="modal-field">
                                 <span class="label">Valor contrato</span>
-                                <span class="value">$ {{ toNumber(selectedProceso?.valor_del_contrato) | number:'1.0-0'
+                                <span class="value">$ {{ toNumber(selectedProceso.valor_del_contrato) | number:'1.0-0'
                                     }}</span>
                             </div>
                             <div class="modal-field">
                                 <span class="label">Pagado</span>
-                                <span class="value text-success">$ {{ toNumber(selectedProceso?.valor_pagado) |
+                                <span class="value text-success">$ {{ toNumber(selectedProceso.valor_pagado) |
                                     number:'1.0-0' }}</span>
                             </div>
                         </div>
                         <div class="modal-section">
                             <div class="modal-field">
                                 <span class="label">Tipo</span>
-                                <span class="value">{{ selectedProceso?.tipo_de_contrato || 'N/D' }}</span>
+                                <span class="value">{{ selectedProceso.tipo_de_contrato || 'N/D' }}</span>
                             </div>
                             <div class="modal-field">
                                 <span class="label">Modalidad</span>
-                                <span class="value">{{ selectedProceso?.modalidad_de_contratacion || 'N/D' }}</span>
+                                <span class="value">{{ selectedProceso.modalidad_de_contratacion || 'N/D' }}</span>
                             </div>
                             <div class="modal-field">
                                 <span class="label">Documento proveedor</span>
-                                <span class="value">{{ selectedProceso?.tipodocproveedor }} {{
-                                    selectedProceso?.documento_proveedor }}</span>
+                                <span class="value">{{ selectedProceso.tipodocproveedor }} {{
+                                    selectedProceso.documento_proveedor }}</span>
                             </div>
                         </div>
                         <div class="modal-section">
                             <div class="modal-field">
                                 <span class="label">Fecha firma</span>
-                                <span class="value">{{ selectedProceso?.fecha_de_firma | date:'dd/MM/yyyy' }}</span>
+                                <span class="value">{{ selectedProceso.fecha_de_firma | date:'dd/MM/yyyy' }}</span>
                             </div>
                             <div class="modal-field">
                                 <span class="label">Fecha fin</span>
-                                <span class="value">{{ selectedProceso?.fecha_de_fin_del_contrato | date:'dd/MM/yyyy'
+                                <span class="value">{{ selectedProceso.fecha_de_fin_del_contrato | date:'dd/MM/yyyy'
                                     }}</span>
                             </div>
                             <div class="modal-field">
@@ -638,7 +638,7 @@
                         </div>
                         <div class="modal-description">
                             <span class="label">Objeto del contrato</span>
-                            <p>{{ selectedProceso?.objeto_del_contrato || 'Sin descripción' }}</p>
+                            <p>{{ selectedProceso.objeto_del_contrato || 'Sin descripción' }}</p>
                         </div>
                     </div>
                     <div class="modal-actions">
