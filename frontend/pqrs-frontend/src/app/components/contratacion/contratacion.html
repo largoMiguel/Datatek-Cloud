@@ -103,8 +103,8 @@
                             <div class="d-none">
                                 <div class="row g-2 small">
                                     <div class="col-6"><strong>Estado:</strong> <span class="badge"
-                                            [ngClass]="getEstadoBadgeClass(contrato)">{{ contrato.estado_contrato ||
-                                            'N/D' }}</span></div>
+                                            [ngClass]="getEstadoBadgeClass(contrato)">{{ getEstadoDisplay(contrato)
+                                            }}</span></div>
                                     <div class="col-6"><strong>Modalidad:</strong> {{ contrato.modalidad_de_contratacion
                                         || 'N/D' }}</div>
                                     <div class="col-6"><strong>Tipo:</strong> {{ contrato.tipo_de_contrato || 'N/D' }}
@@ -524,7 +524,7 @@
                         </div>
                         <span class="badge status-badge" [ngClass]="getEstadoBadgeClass(p)">
                             <span class="badge-dot"></span>
-                            {{ p.estado_contrato || 'N/D' }}
+                            {{ getEstadoDisplay(p) }}
                         </span>
                     </div>
 
@@ -629,7 +629,7 @@
                                 <div class="subtitle">
                                     <span class="badge" [ngClass]="getEstadoBadgeClass(selectedProceso!)">
                                         <span class="badge-dot"></span>
-                                        {{ selectedProceso.estado_contrato }}
+                                        {{ getEstadoDisplay(selectedProceso!) }}
                                     </span>
                                 </div>
                             </div>
@@ -688,6 +688,56 @@
                         <div class="modal-description">
                             <span class="label">Objeto del contrato</span>
                             <p>{{ selectedProceso.objeto_del_contrato || 'Sin descripción' }}</p>
+                        </div>
+                        <!-- Más detalles previamente mostrados -->
+                        <div class="modal-section">
+                            <div class="modal-field">
+                                <span class="label">Liquidación</span>
+                                <span class="value">{{ selectedProceso.liquidaci_n || 'Pendiente' }}</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="label">Supervisor</span>
+                                <span class="value">{{ selectedProceso.nombre_supervisor || 'N/D' }}</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="label">Última actualización</span>
+                                <span class="value">{{ selectedProceso.ultima_actualizacion | date:'dd/MM/yyyy'
+                                    }}</span>
+                            </div>
+                        </div>
+                        <div class="modal-section">
+                            <div class="modal-field">
+                                <span class="label">Pago adelantado</span>
+                                <span class="value">$ {{ toNumber(selectedProceso.valor_de_pago_adelantado) |
+                                    number:'1.0-0' }}</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="label">Facturado</span>
+                                <span class="value">$ {{ toNumber(selectedProceso.valor_facturado) | number:'1.0-0'
+                                    }}</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="label">Pendiente de pago</span>
+                                <span class="value">$ {{ toNumber(selectedProceso.valor_pendiente_de_pago) |
+                                    number:'1.0-0' }}</span>
+                            </div>
+                        </div>
+                        <div class="modal-section">
+                            <div class="modal-field">
+                                <span class="label">Amortizado</span>
+                                <span class="value">$ {{ toNumber(selectedProceso.valor_amortizado) | number:'1.0-0'
+                                    }}</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="label">Pendiente de ejecución</span>
+                                <span class="value">$ {{ toNumber(selectedProceso.valor_pendiente_de_ejecucion) |
+                                    number:'1.0-0' }}</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="label">Inicio de liquidación</span>
+                                <span class="value">{{ selectedProceso.fecha_inicio_liquidacion | date:'dd/MM/yyyy'
+                                    }}</span>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-actions">

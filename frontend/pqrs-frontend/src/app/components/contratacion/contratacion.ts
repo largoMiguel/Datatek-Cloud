@@ -568,6 +568,14 @@ export class ContratacionComponent implements OnInit, OnDestroy {
         return 'bg-secondary';
     }
 
+    // Texto a mostrar para estado (mapear 'terminado' -> 'Liquidado')
+    getEstadoDisplay(p: ProcesoContratacion): string {
+        const raw = p.estado_contrato || '';
+        const norm = raw.toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        if (norm === 'terminado') return 'Liquidado';
+        return raw || 'N/D';
+    }
+
     // Helper para verificar si un contrato está finalizado
     private isEstadoFinalizado(estado: string): boolean {
         const e = (estado ?? '')
