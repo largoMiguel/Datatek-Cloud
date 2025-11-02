@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -125,6 +125,10 @@ export class ContratacionComponent implements OnInit, OnDestroy {
     // Estado de expansión de tarjetas
     private expandedRefs = new Set<string>();
 
+    // Modal de detalle minimalista
+    showModal = false;
+    selectedProceso: ProcesoContratacion | null = null;
+
     constructor(
         private contratacionService: ContratacionService,
         public entityContext: EntityContextService,
@@ -150,6 +154,27 @@ export class ContratacionComponent implements OnInit, OnDestroy {
         this.subs.add(sub);
     } ngOnDestroy(): void {
         this.subs.unsubscribe();
+    }
+
+    // Abrir modal de detalle
+    openModal(p: ProcesoContratacion): void {
+        this.selectedProceso = p;
+        this.showModal = true;
+        // Evitar scroll de fondo
+        document.body.style.overflow = 'hidden';
+    }
+
+    // Cerrar modal de detalle
+    closeModal(): void {
+        this.showModal = false;
+        this.selectedProceso = null;
+        document.body.style.overflow = '';
+    }
+
+    // Accesibilidad: cerrar con tecla ESC
+    @HostListener('document:keydown.escape')
+    onEsc() {
+        if (this.showModal) this.closeModal();
     }
 
     fetch(): void {

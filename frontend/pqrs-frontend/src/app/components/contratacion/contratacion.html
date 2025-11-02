@@ -53,8 +53,7 @@
                     <div class="col-12 col-md-6 col-lg-4"
                         *ngFor="let contrato of contratosVencidos; trackBy: trackByContrato">
                         <div class="contract-card card shadow-sm border-danger" role="button" tabindex="0"
-                            (click)="toggleExpand(contrato)" (keydown.enter)="toggleExpand(contrato)"
-                            [class.expanded]="isExpanded(getKey(contrato))">
+                            (click)="openModal(contrato)" (keydown.enter)="openModal(contrato)">
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <div>
@@ -101,8 +100,7 @@
                                     contrato.objeto_del_contrato || 'N/D' }}</div>
                             </div>
 
-                            <div class="card-footer bg-light" *ngIf="isExpanded(getKey(contrato))"
-                                (click)="$event.stopPropagation()">
+                            <div class="d-none">
                                 <div class="row g-2 small">
                                     <div class="col-6"><strong>Estado:</strong> <span class="badge"
                                             [ngClass]="getEstadoBadgeClass(contrato)">{{ contrato.estado_contrato ||
@@ -118,15 +116,7 @@
                                     <div class="col-6"><strong>Liquidación:</strong> {{ contrato.liquidaci_n ||
                                         'Pendiente' }}</div>
                                 </div>
-                                <div class="d-flex justify-content-end gap-2 mt-2">
-                                    <button class="btn btn-sm btn-outline-secondary" (click)="copyReferencia(contrato)">
-                                        <i class="fas fa-copy me-1"></i>Copiar ref.
-                                    </button>
-                                    <a class="btn btn-sm btn-danger" [href]="getProcesoUrl(contrato)" target="_blank"
-                                        rel="noopener noreferrer">
-                                        <i class="fas fa-external-link-alt me-1"></i>Ver en SECOP
-                                    </a>
-                                </div>
+                                <div class="d-flex justify-content-end gap-2 mt-2"></div>
                             </div>
                         </div>
                     </div>
@@ -496,10 +486,9 @@
             <!-- Grid de tarjetas modernas -->
             <div class="contracts-grid">
                 <div class="contract-card-modern" *ngFor="let p of procesosFiltrados; trackBy: trackByContrato"
-                    role="button" tabindex="0" (click)="toggleExpand(p)"
-                    (keydown.enter)="toggleExpand(p)" (keydown.space)="toggleExpand(p)"
-                    [class.expanded]="isExpanded(getKey(p))">
-                    
+                    role="button" tabindex="0" (click)="openModal(p)" (keydown.enter)="openModal(p)"
+                    (keydown.space)="openModal(p)">
+
                     <!-- Header de la card -->
                     <div class="card-header-modern">
                         <div class="card-reference">
@@ -520,7 +509,8 @@
                             </div>
                             <div class="value-content">
                                 <span class="value-label">Valor Contrato</span>
-                                <span class="value-amount">$ {{ toNumber(p.valor_del_contrato) | number:'1.0-0' }}</span>
+                                <span class="value-amount">$ {{ toNumber(p.valor_del_contrato) | number:'1.0-0'
+                                    }}</span>
                             </div>
                         </div>
                         <div class="value-item success">
@@ -537,11 +527,13 @@
                     <!-- Barra de progreso -->
                     <div class="progress-bar-container" *ngIf="toNumber(p.valor_del_contrato) > 0">
                         <div class="progress-bar">
-                            <div class="progress-fill" 
-                                [style.width.%]="(toNumber(p.valor_pagado) / toNumber(p.valor_del_contrato)) * 100"></div>
+                            <div class="progress-fill"
+                                [style.width.%]="(toNumber(p.valor_pagado) / toNumber(p.valor_del_contrato)) * 100">
+                            </div>
                         </div>
                         <span class="progress-label">
-                            {{ ((toNumber(p.valor_pagado) / toNumber(p.valor_del_contrato)) * 100) | number:'1.0-1' }}% ejecutado
+                            {{ ((toNumber(p.valor_pagado) / toNumber(p.valor_del_contrato)) * 100) | number:'1.0-1' }}%
+                            ejecutado
                         </span>
                     </div>
 
@@ -570,82 +562,95 @@
                         <p class="description-text">{{ p.objeto_del_contrato || 'Sin descripción' }}</p>
                     </div>
 
-                    <!-- Indicador de expandir -->
+                    <!-- Indicador de abrir modal -->
                     <div class="expand-indicator">
-                        <i class="fas fa-chevron-down"></i>
+                        <i class="fas fa-up-right-from-square"></i>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Detalles expandidos -->
-                    <div class="expanded-details" *ngIf="isExpanded(getKey(p))" (click)="$event.stopPropagation()">
-                        <div class="details-grid">
-                            <div class="detail-item">
-                                <span class="detail-icon"><i class="fas fa-tag"></i></span>
-                                <div>
-                                    <span class="detail-label">Tipo</span>
-                                    <span class="detail-value">{{ p.tipo_de_contrato || 'N/D' }}</span>
-                                </div>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-icon"><i class="fas fa-clipboard-list"></i></span>
-                                <div>
-                                    <span class="detail-label">Modalidad</span>
-                                    <span class="detail-value">{{ p.modalidad_de_contratacion || 'N/D' }}</span>
-                                </div>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-icon"><i class="fas fa-id-card"></i></span>
-                                <div>
-                                    <span class="detail-label">Doc. Proveedor</span>
-                                    <span class="detail-value">{{ p.tipodocproveedor }} {{ p.documento_proveedor }}</span>
-                                </div>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-icon"><i class="fas fa-clock"></i></span>
-                                <div>
-                                    <span class="detail-label">Duración</span>
-                                    <span class="detail-value">{{ formatearDuracion(p) }}</span>
-                                </div>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-icon"><i class="fas fa-user-tie"></i></span>
-                                <div>
-                                    <span class="detail-label">Supervisor</span>
-                                    <span class="detail-value">{{ p.nombre_supervisor || 'N/D' }}</span>
-                                </div>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-icon"><i class="fas fa-user-check"></i></span>
-                                <div>
-                                    <span class="detail-label">Ordenador</span>
-                                    <span class="detail-value">{{ p.nombre_ordenador_del_gasto || 'N/D' }}</span>
-                                </div>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-icon"><i class="fas fa-piggy-bank"></i></span>
-                                <div>
-                                    <span class="detail-label">Origen Recursos</span>
-                                    <span class="detail-value">{{ p.origen_de_los_recursos || 'N/D' }}</span>
-                                </div>
-                            </div>
-                            <div class="detail-item">
-                                <span class="detail-icon"><i class="fas fa-file-signature"></i></span>
-                                <div>
-                                    <span class="detail-label">Liquidación</span>
-                                    <span class="detail-value">{{ p.liquidaci_n || 'N/D' }}</span>
+            <!-- Modal de detalle minimalista -->
+            <div class="modal-overlay" *ngIf="showModal && selectedProceso" (click)="closeModal()">
+                <div class="modal-card" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+                    <div class="modal-header">
+                        <div class="modal-title">
+                            <i class="fas fa-file-contract"></i>
+                            <div class="title-texts">
+                                <h3>{{ selectedProceso?.referencia_del_contrato }}</h3>
+                                <div class="subtitle">
+                                    <span class="badge" [ngClass]="getEstadoBadgeClass(selectedProceso!)">
+                                        <span class="badge-dot"></span>
+                                        {{ selectedProceso?.estado_contrato }}
+                                    </span>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="actions-bar">
-                            <button class="action-btn secondary" (click)="copyReferencia(p)">
-                                <i class="fas fa-copy"></i>
-                                <span>Copiar referencia</span>
-                            </button>
-                            <a class="action-btn primary" [href]="getProcesoUrl(p)" target="_blank" rel="noopener noreferrer">
-                                <i class="fas fa-external-link-alt"></i>
-                                <span>Ver en SECOP</span>
-                            </a>
+                        <button class="close-btn" (click)="closeModal()" aria-label="Cerrar">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="modal-section">
+                            <div class="modal-field">
+                                <span class="label">Proveedor</span>
+                                <span class="value">{{ selectedProceso?.proveedor_adjudicado || 'N/D' }}</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="label">Valor contrato</span>
+                                <span class="value">$ {{ toNumber(selectedProceso?.valor_del_contrato) | number:'1.0-0'
+                                    }}</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="label">Pagado</span>
+                                <span class="value text-success">$ {{ toNumber(selectedProceso?.valor_pagado) |
+                                    number:'1.0-0' }}</span>
+                            </div>
                         </div>
+                        <div class="modal-section">
+                            <div class="modal-field">
+                                <span class="label">Tipo</span>
+                                <span class="value">{{ selectedProceso?.tipo_de_contrato || 'N/D' }}</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="label">Modalidad</span>
+                                <span class="value">{{ selectedProceso?.modalidad_de_contratacion || 'N/D' }}</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="label">Documento proveedor</span>
+                                <span class="value">{{ selectedProceso?.tipodocproveedor }} {{
+                                    selectedProceso?.documento_proveedor }}</span>
+                            </div>
+                        </div>
+                        <div class="modal-section">
+                            <div class="modal-field">
+                                <span class="label">Fecha firma</span>
+                                <span class="value">{{ selectedProceso?.fecha_de_firma | date:'dd/MM/yyyy' }}</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="label">Fecha fin</span>
+                                <span class="value">{{ selectedProceso?.fecha_de_fin_del_contrato | date:'dd/MM/yyyy'
+                                    }}</span>
+                            </div>
+                            <div class="modal-field">
+                                <span class="label">Duración</span>
+                                <span class="value">{{ formatearDuracion(selectedProceso!) }}</span>
+                            </div>
+                        </div>
+                        <div class="modal-description">
+                            <span class="label">Objeto del contrato</span>
+                            <p>{{ selectedProceso?.objeto_del_contrato || 'Sin descripción' }}</p>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="action-btn secondary" (click)="copyReferencia(selectedProceso!)">
+                            <i class="fas fa-copy"></i>
+                            <span>Copiar referencia</span>
+                        </button>
+                        <a class="action-btn primary" [href]="getProcesoUrl(selectedProceso!)" target="_blank"
+                            rel="noopener noreferrer">
+                            <i class="fas fa-external-link-alt"></i>
+                            <span>Ver en SECOP</span>
+                        </a>
                     </div>
                 </div>
             </div>
