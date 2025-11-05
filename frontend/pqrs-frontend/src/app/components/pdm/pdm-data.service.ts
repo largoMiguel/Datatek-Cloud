@@ -372,30 +372,43 @@ export class PdmDataService {
     }
 
     private calcularEstadosYAvances(pdmData: PDMData): void {
+        const añoActual = new Date().getFullYear();
+
         pdmData.planIndicativoProductos.forEach(producto => {
             const presupuestoTotalProducto = (producto.total2024 || 0) + (producto.total2025 || 0) + (producto.total2026 || 0) + (producto.total2027 || 0);
 
-            // Si no tiene presupuesto, marcamos como Sin Definir
+            // Si no tiene presupuesto, marcamos como Sin Definir y avance 0
             if (presupuestoTotalProducto <= 0) {
                 producto.avance = 0;
                 producto.estado = EstadoMeta.SIN_DEFINIR;
                 return;
             }
 
-            // NUEVA LÓGICA: Una actividad se considera cumplida solo si tiene al menos 1 avance registrado
-            // Los avances están en producto.avances que es un objeto con años como claves
-            const tieneAvances = producto.avances && Object.keys(producto.avances).some(anio => {
-                const avanceAnio = producto.avances![anio as unknown as keyof typeof producto.avances];
-                return avanceAnio && avanceAnio.valor > 0;
-            });
+            // NUEVA LÓGICA: Calcular avance basándose en actividades con ejecución real
+            const actividades = producto.actividades || [];
 
-            // NO calculamos porcentaje de avance basado en tiempo
-            // El estado es binario: cumplida (si tiene avances) o por cumplir (si no tiene)
-            if (tieneAvances) {
-                producto.avance = 100; // Marcamos como 100% solo para efectos visuales
-                producto.estado = EstadoMeta.CUMPLIDA;
-            } else {
+            // Sumar meta_ejecutar y valor_ejecutado de todas las actividades
+            const totalMetaEjecutar = actividades.reduce((sum, act) => sum + (act.meta_ejecutar || 0), 0);
+            const totalValorEjecutado = actividades.reduce((sum, act) => sum + (act.valor_ejecutado || 0), 0);
+
+            // Si no hay actividades con ejecución registrada, el avance es 0
+            if (totalValorEjecutado === 0 || totalMetaEjecutar === 0) {
                 producto.avance = 0;
+                producto.estado = totalMetaEjecutar > 0 ? EstadoMeta.POR_CUMPLIR : EstadoMeta.SIN_DEFINIR;
+                return;
+            }
+
+            // Calcular avance basándose en lo realmente ejecutado vs lo planeado ejecutar
+            producto.avance = totalMetaEjecutar > 0 ? (totalValorEjecutado / totalMetaEjecutar) * 100 : 0;
+
+            // Determinar estado basándose en avance real
+            if (producto.avance >= 100) {
+                producto.estado = EstadoMeta.CUMPLIDA;
+            } else if (producto.avance >= 50) {
+                producto.estado = EstadoMeta.EN_PROGRESO;
+            } else if (producto.avance > 0) {
+                producto.estado = EstadoMeta.PENDIENTE;
+            } else {
                 producto.estado = EstadoMeta.POR_CUMPLIR;
             }
         });
