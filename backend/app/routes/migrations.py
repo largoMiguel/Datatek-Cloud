@@ -155,10 +155,45 @@ def run_planes_migrations(db: Session) -> List[str]:
                 """))
                 db.commit()
                 results.append("✓ Columna entity_id agregada a planes_institucionales")
+
+            # Asegurar columnas críticas según el modelo
+            columnas_requeridas = {
+                "anio": "INTEGER",
+                "nombre": "TEXT",
+                "descripcion": "TEXT",
+                "periodo_inicio": "DATE",
+                "periodo_fin": "DATE",
+                # Evitar crear ENUM aquí: usamos TEXT por compatibilidad
+                "estado": "TEXT",
+                "porcentaje_avance": "NUMERIC(5,2) DEFAULT 0",
+                "responsable_elaboracion": "TEXT",
+                "responsable_aprobacion": "TEXT",
+                "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "updated_at": "TIMESTAMP",
+                "created_by": "TEXT"
+            }
+
+            for col, tipo in columnas_requeridas.items():
+                if not check_column_exists("planes_institucionales", col):
+                    log_migration(f"Agregando columna {col} a planes_institucionales...")
+                    db.execute(text(f"ALTER TABLE planes_institucionales ADD COLUMN {col} {tipo}"))
+                    db.commit()
+                    results.append(f"✓ Columna {col} agregada a planes_institucionales")
+
+            # Índices recomendados
+            try:
+                db.execute(text("CREATE INDEX IF NOT EXISTS idx_planes_entity ON planes_institucionales(entity_id)"))
+                db.execute(text("CREATE INDEX IF NOT EXISTS idx_planes_anio ON planes_institucionales(anio)"))
+                db.execute(text("CREATE INDEX IF NOT EXISTS idx_planes_periodo_inicio ON planes_institucionales(periodo_inicio)"))
+                db.execute(text("CREATE INDEX IF NOT EXISTS idx_planes_entity_anio ON planes_institucionales(entity_id, anio)"))
+                db.commit()
+                results.append("✓ Índices de planes verificados")
+            except Exception as e:
+                results.append(f"⚠ Índices de planes: {str(e)}")
         
-        # Verificar tabla componentes_proceso
-        if check_table_exists("componentes_proceso"):
-            results.append("✓ Tabla componentes_proceso existe")
+        # Verificar tabla componentes_procesos (nombre correcto)
+        if check_table_exists("componentes_procesos"):
+            results.append("✓ Tabla componentes_procesos existe")
         
         # Verificar tabla actividades
         if check_table_exists("actividades"):
@@ -364,7 +399,7 @@ async def get_migration_status(db: Session = Depends(get_db)):
             "users": check_table_exists("users"),
             "entities": check_table_exists("entities"),
             "planes_institucionales": check_table_exists("planes_institucionales"),
-            "componentes_proceso": check_table_exists("componentes_proceso"),
+            "componentes_procesos": check_table_exists("componentes_procesos"),
             "actividades": check_table_exists("actividades"),
             "pdm_actividades": check_table_exists("pdm_actividades"),
             "actividades_evidencias": check_table_exists("actividades_evidencias"),
