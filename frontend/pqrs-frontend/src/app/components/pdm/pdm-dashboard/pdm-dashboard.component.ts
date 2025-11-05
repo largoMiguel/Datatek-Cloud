@@ -735,18 +735,13 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         const productos = this.pdmData?.planIndicativoProductos || [];
         if (!productos.length) return;
 
-        const peticiones = productos.map(p =>
-            this.pdmBackend.getActividades(slug, p.codigoIndicadorProducto).pipe(
-                catchError(() => of(null))
-            )
-        );
-
-        forkJoin(peticiones).pipe(takeUntil(this.destroy$)).subscribe((respuestas) => {
-            respuestas.forEach((resp, idx) => {
-                if (!resp) return;
-
-                const producto = productos[idx];
-                const actividades = resp.actividades || [];
+        const codigos = productos.map(p => p.codigoIndicadorProducto);
+        this.pdmBackend.getActividadesBulk(slug, codigos).pipe(
+            takeUntil(this.destroy$),
+            catchError(() => of({ items: {} as Record<string, any[]> }))
+        ).subscribe((resp) => {
+            productos.forEach((producto) => {
+                const actividades = resp.items?.[producto.codigoIndicadorProducto] || [];
 
                 // Inicializar avances si no existe
                 if (!producto.avances) producto.avances = {};
@@ -962,22 +957,15 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
 
         const productos = this.pdmData.planIndicativoProductos;
         const productosConActividades: string[] = [];
-
-        // Cargar actividades de todos los productos para ver cuáles tienen actividades del secretario
-        const peticiones = productos.map(p =>
-            this.pdmBackend.getActividades(slug, p.codigoIndicadorProducto).pipe(
-                catchError(() => of(null))
+        const codigos = productos.map(p => p.codigoIndicadorProducto);
+        const resp = await firstValueFrom(
+            this.pdmBackend.getActividadesBulk(slug, codigos).pipe(
+                catchError(() => of({ items: {} as Record<string, any[]> }))
             )
         );
 
-        const respuestas = await firstValueFrom(forkJoin(peticiones));
-
-        respuestas.forEach((resp, idx) => {
-            if (!resp) return;
-            const producto = productos[idx];
-            const actividades = resp.actividades || [];
-
-            // Si tiene al menos una actividad asignada a esta secretaría, incluir el producto
+        productos.forEach((producto) => {
+            const actividades = resp.items?.[producto.codigoIndicadorProducto] || [];
             const tieneActividadesAsignadas = actividades.some((a: any) => a.responsable === secretaria);
             if (tieneActividadesAsignadas) {
                 productosConActividades.push(producto.codigoIndicadorProducto);
