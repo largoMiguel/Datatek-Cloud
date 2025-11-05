@@ -82,18 +82,48 @@ class PdmActividad(Base):
     )
 
 
+class PdmActividadEjecucion(Base):
+    """
+    Historial de ejecuciones de una actividad.
+    Cada registro representa un reporte de avance con sus evidencias.
+    """
+    __tablename__ = "pdm_actividades_ejecuciones"
+
+    id = Column(Integer, primary_key=True, index=True)
+    actividad_id = Column(Integer, ForeignKey("pdm_actividades.id", ondelete="CASCADE"), nullable=False, index=True)
+    entity_id = Column(Integer, ForeignKey("entities.id"), nullable=False, index=True)
+    
+    # Cantidad ejecutada en este reporte específico
+    valor_ejecutado_incremento = Column(Float, nullable=False, default=0.0)
+    
+    # Descripción del avance
+    descripcion = Column(String(2048), nullable=True)
+    
+    # URL de evidencia externa (opcional)
+    url_evidencia = Column(String(512), nullable=True)
+    
+    # Usuario que registró el avance (opcional)
+    registrado_por = Column(String(256), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class PdmActividadEvidencia(Base):
+    """
+    Evidencias (imágenes) asociadas a una ejecución de actividad.
+    Cada ejecución puede tener hasta 4 imágenes.
+    """
     __tablename__ = "pdm_actividades_evidencias"
 
     id = Column(Integer, primary_key=True, index=True)
-    actividad_id = Column(Integer, ForeignKey("pdm_actividades.id"), nullable=False, index=True)
+    ejecucion_id = Column(Integer, ForeignKey("pdm_actividades_ejecuciones.id", ondelete="CASCADE"), nullable=False, index=True)
     entity_id = Column(Integer, ForeignKey("entities.id"), nullable=False, index=True)
-    descripcion = Column(String(2048), nullable=True)
-    url = Column(String(512), nullable=True)
-    nombre_imagen = Column(String(256), nullable=True)
-    mime_type = Column(String(64), nullable=True)
-    tamano = Column(Integer, nullable=True)  # Tamaño en bytes
-    contenido = Column(LargeBinary, nullable=True)  # Imagen en base64 o binario
+    
+    nombre_imagen = Column(String(256), nullable=False)
+    mime_type = Column(String(64), nullable=False)
+    tamano = Column(Integer, nullable=False)  # Tamaño en bytes
+    contenido = Column(LargeBinary, nullable=False)  # Imagen en binario
 
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

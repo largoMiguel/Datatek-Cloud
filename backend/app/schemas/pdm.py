@@ -121,7 +121,62 @@ class ActividadesBulkResponse(BaseModel):
     items: Dict[str, List[ActividadResponse]]
 
 
-# Schemas para evidencias de actividades
+# Schemas para ejecuciones de actividades (historial de avances)
+class EjecucionImagenBase(BaseModel):
+    nombre_imagen: str = Field(..., max_length=256)
+    mime_type: str = Field(..., max_length=64)
+    tamano: int = Field(..., gt=0)
+    contenido_base64: str  # Imagen en base64
+
+
+class EjecucionCreateRequest(BaseModel):
+    """Request para registrar un nuevo avance/ejecución de una actividad"""
+    actividad_id: int
+    valor_ejecutado_incremento: float = Field(..., gt=0.0)
+    descripcion: Optional[str] = Field(None, max_length=2048)
+    url_evidencia: Optional[str] = Field(None, max_length=512)
+    imagenes: Optional[List[EjecucionImagenBase]] = Field(None, max_items=4)
+    registrado_por: Optional[str] = Field(None, max_length=256)
+
+
+class EvidenciaImagenResponse(BaseModel):
+    """Imagen de evidencia asociada a una ejecución"""
+    id: int
+    nombre_imagen: str
+    mime_type: str
+    tamano: int
+    contenido_base64: str  # Imagen en base64
+    created_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class EjecucionResponse(BaseModel):
+    """Respuesta de una ejecución (avance registrado)"""
+    id: int
+    actividad_id: int
+    entity_id: int
+    valor_ejecutado_incremento: float
+    descripcion: Optional[str] = None
+    url_evidencia: Optional[str] = None
+    registrado_por: Optional[str] = None
+    imagenes: List[EvidenciaImagenResponse] = []
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class EjecucionesListResponse(BaseModel):
+    """Lista de ejecuciones de una actividad (historial)"""
+    actividad_id: int
+    total_ejecutado: float  # Suma de todos los valor_ejecutado_incremento
+    ejecuciones: List[EjecucionResponse]
+
+
+# Schemas antiguos de evidencias (deprecated, mantener por compatibilidad)
 class EvidenciaBase(BaseModel):
     descripcion: Optional[str] = Field(None, max_length=2048)
     url: Optional[str] = Field(None, max_length=512)
@@ -140,14 +195,12 @@ class EvidenciaCreateRequest(BaseModel):
 
 class EvidenciaResponse(BaseModel):
     id: int
-    actividad_id: int
+    ejecucion_id: int
     entity_id: int
-    descripcion: Optional[str] = None
-    url: Optional[str] = None
-    nombre_imagen: Optional[str] = None
-    mime_type: Optional[str] = None
-    tamano: Optional[int] = None
-    contenido: Optional[str] = None  # Base64 encoded
+    nombre_imagen: str
+    mime_type: str
+    tamano: int
+    contenido: str  # Base64 encoded
     created_at: str
     updated_at: str
 
@@ -156,5 +209,5 @@ class EvidenciaResponse(BaseModel):
 
 
 class EvidenciasListResponse(BaseModel):
-    actividad_id: int
+    ejecucion_id: int
     evidencias: List[EvidenciaResponse]
