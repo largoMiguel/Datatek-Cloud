@@ -1,10 +1,22 @@
+/* Navbar height control */
+nav.navbar {
+    min-height: 72px;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+}
+
 .entity-logo {
-    height: 36px;
+    height: 40px;
     width: auto;
 }
 
 .software-logo {
-    height: 24px;
+    height: 32px;
     width: auto;
 }
 
@@ -12,19 +24,29 @@
     width: 1px;
     height: 32px;
     background: rgba(255, 255, 255, 0.35);
-    margin: 0 12px;
+}
+
+.entity-info {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
 }
 
 .entity-name {
     color: #fff;
     font-weight: 600;
+    font-size: 1rem;
 }
 
-.entity-subtitle,
-.software-name {
+.entity-subtitle {
     color: rgba(255, 255, 255, 0.85);
     font-size: 0.75rem;
-    display: block;
+}
+
+.software-name {
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 0.875rem;
+    font-weight: 500;
 }
 
 .alerts-panel {
@@ -51,7 +73,7 @@
     font-size: 1.5rem;
 }
 
-.user-info {
+.user-dropdown .user-info {
     display: flex;
     flex-direction: column;
     line-height: 1.1;

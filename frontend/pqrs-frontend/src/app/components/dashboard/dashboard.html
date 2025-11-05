@@ -101,13 +101,19 @@
         <div *ngIf="activeView === 'dashboard' && canAccessPqrs()">
             <!-- Header -->
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 class="mb-0 fw-bold"><i class="fas fa-chart-line me-2 text-primary"></i>Análisis del Panel</h3>
+                <div>
+                    <h3 class="mb-1"><i class="fas fa-chart-line me-2 text-primary"></i>Análisis del Panel</h3>
+                    <p class="text-muted mb-0 small">Panel de control y estadísticas de PQRS</p>
+                </div>
                 <div>
                     <button class="btn btn-primary btn-sm me-2" (click)="loadPqrs()">
                         <i class="fas fa-sync-alt me-1" [class.fa-spin]="isLoading"></i>Actualizar
                     </button>
-                    <button class="btn btn-success btn-sm" (click)="setActiveView('nueva-pqrs')">
+                    <button class="btn btn-primary btn-sm me-2" (click)="setActiveView('nueva-pqrs')">
                         <i class="fas fa-plus me-1"></i>Nueva PQRS
+                    </button>
+                    <button class="btn btn-primary btn-sm" (click)="openReportForm()" *ngIf="reportsPdfEnabled()">
+                        <i class="fas fa-file-pdf me-1"></i>Generar Informe
                     </button>
                 </div>
             </div>
@@ -334,9 +340,18 @@
         <!-- Mis PQRS View -->
         <div *ngIf="activeView === 'mis-pqrs' && canAccessPqrs()">
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0"><i class="fas fa-list me-2"></i>Mis PQRS</h5>
-                <button class="btn btn-primary btn-sm" (click)="setActiveView('nueva-pqrs')"><i
-                        class="fas fa-plus me-1"></i>Nueva PQRS</button>
+                <div>
+                    <h3 class="mb-1"><i class="fas fa-list me-2 text-primary"></i>Mis PQRS</h3>
+                    <p class="text-muted mb-0 small">Listado y gestión de peticiones, quejas, reclamos y sugerencias</p>
+                </div>
+                <div>
+                    <button class="btn btn-primary btn-sm me-2" (click)="setActiveView('nueva-pqrs')">
+                        <i class="fas fa-plus me-1"></i>Nueva PQRS
+                    </button>
+                    <button class="btn btn-primary btn-sm" (click)="openReportForm()" *ngIf="reportsPdfEnabled()">
+                        <i class="fas fa-file-pdf me-1"></i>Generar Informe
+                    </button>
+                </div>
             </div>
 
             <!-- Panel de Filtros -->
@@ -686,17 +701,23 @@
 
         <!-- Usuarios View -->
         <div *ngIf="activeView === 'usuarios' && isAdmin() && usersAdminEnabled()">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>Gestión de Usuarios</h5>
-                    <div>
-                        <button class="btn btn-success btn-sm me-2" (click)="setActiveView('crear-secretario')">
-                            <i class="fas fa-user-plus me-1"></i>Nuevo Usuario
-                        </button>
-                        <button class="btn btn-primary btn-sm" (click)="loadUsuarios()"><i
-                                class="fas fa-sync me-1"></i>Actualizar</button>
-                    </div>
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h3 class="mb-1"><i class="fas fa-users me-2 text-primary"></i>Gestión de Usuarios</h3>
+                    <p class="text-muted mb-0 small">Administración y control de usuarios del sistema</p>
                 </div>
+                <div>
+                    <button class="btn btn-primary btn-sm me-2" (click)="loadUsuarios()">
+                        <i class="fas fa-sync me-1"></i>Actualizar
+                    </button>
+                    <button class="btn btn-primary btn-sm" (click)="setActiveView('crear-secretario')">
+                        <i class="fas fa-user-plus me-1"></i>Nuevo Usuario
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
                 <div class="card-body">
                     <div *ngIf="isLoadingUsuarios" class="text-center my-4">
                         <div class="spinner-border" role="status"></div>
@@ -834,20 +855,14 @@
                                 <label for="secretaria" class="form-label">
                                     <i class="fas fa-building me-1 text-success"></i>Secretaría
                                 </label>
-                                <select class="form-select" id="secretaria" formControlName="secretaria">
-                                    <option value="">Seleccione una secretaría...</option>
-                                    <option value="Secretaría de Gobierno">Secretaría de Gobierno</option>
-                                    <option value="Secretaría de Hacienda">Secretaría de Hacienda</option>
-                                    <option value="Secretaría de Planeación">Secretaría de Planeación</option>
-                                    <option value="Secretaría de Obras Públicas">Secretaría de Obras Públicas</option>
-                                    <option value="Secretaría de Educación">Secretaría de Educación</option>
-                                    <option value="Secretaría de Salud">Secretaría de Salud</option>
-                                    <option value="Secretaría de Desarrollo Social">Secretaría de Desarrollo Social
-                                    </option>
-                                    <option value="Secretaría de Medio Ambiente">Secretaría de Medio Ambiente</option>
-                                    <option value="Secretaría de Cultura">Secretaría de Cultura</option>
-                                    <option value="Secretaría de Deportes">Secretaría de Deportes</option>
-                                </select>
+                                <input type="text" class="form-control" id="secretaria" formControlName="secretaria"
+                                    [attr.list]="'opc-secretaria'"
+                                    placeholder="Escribe el nombre de la secretaría (o selecciona sugerencia)">
+                                <datalist id="opc-secretaria">
+                                    <option *ngFor="let nombre of secretariasSugeridas" [value]="nombre"></option>
+                                </datalist>
+                                <small class="text-muted">Este campo es libre: si no ves tu secretaría en la lista,
+                                    escríbela para crearla.</small>
                             </div>
 
                             <div class="col-md-6 mb-3">
@@ -1146,17 +1161,15 @@
                         <p><strong>PQRS:</strong> {{ selectedPqrs.numero_radicado }}</p>
                         <p><strong>Ciudadano:</strong> {{ selectedPqrs.nombre_ciudadano }}</p>
                         <div class="mb-3">
-                            <label class="form-label">Seleccionar Secretario:</label>
+                            <label class="form-label fw-bold">Seleccionar Secretaría:</label>
                             <select class="form-select" [(ngModel)]="selectedSecretarioId">
-                                <option value="">Seleccione un secretario...</option>
-                                <option *ngFor="let secretario of secretariosList" [value]="secretario.id"
-                                    [disabled]="!secretario.is_active">
-                                    {{ secretario.full_name }}
-                                    <span *ngIf="!secretario.is_active"> (Inactivo)</span>
+                                <option value="">Seleccione una secretaría...</option>
+                                <option *ngFor="let nombre of secretariasSugeridas" [value]="nombre">
+                                    {{ nombre }}
                                 </option>
                             </select>
                             <small class="text-muted d-block mt-2">
-                                <i class="fas fa-info-circle me-1"></i>Solo se pueden asignar PQRS a usuarios activos
+                                <i class="fas fa-info-circle me-1"></i>Asigne la PQRS a una secretaría
                             </small>
                         </div>
                     </div>

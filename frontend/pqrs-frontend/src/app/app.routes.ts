@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { VentanillaComponent } from './components/ventanilla/ventanilla';
 import { LoginComponent } from './components/login/login';
 import { DashboardComponent } from './components/dashboard/dashboard';
-import { PlanesInstitucionalesComponent } from './components/planes-institucionales/planes-institucionales';
+import { PlanesInstitucionalesV2Component } from './components/planes-institucionales-v2/planes-institucionales-v2';
 import { PortalCiudadanoComponent } from './components/portal-ciudadano/portal-ciudadano';
 import { SoftAdminComponent } from './components/soft-admin/soft-admin';
 import { authGuard, loginGuard, adminPortalGuard, ciudadanoGuard } from './guards/auth.guard';
@@ -39,10 +39,12 @@ export const routes: Routes = [
             // El portal ciudadano no requiere permisos por módulos ni autenticación
             { path: 'portal-ciudadano', component: PortalCiudadanoComponent, canActivate: [ciudadanoGuard, pqrsEnabledGuard] },
             { path: 'dashboard', component: DashboardComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard] },
-            { path: 'planes-institucionales', component: PlanesInstitucionalesComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard, planesEnabledGuard, moduleAccessGuard('planes_institucionales')] },
+            { path: 'planes-dashboard', loadComponent: () => import('./components/planes-institucionales-v2/planes-dashboard/planes-dashboard').then(m => m.PlanesDashboardComponent), canActivate: [adminPortalGuard, enforceUserEntityGuard, planesEnabledGuard, moduleAccessGuard('planes_institucionales')] },
+            { path: 'planes-institucionales', component: PlanesInstitucionalesV2Component, canActivate: [adminPortalGuard, enforceUserEntityGuard, planesEnabledGuard, moduleAccessGuard('planes_institucionales')] },
             { path: 'contratacion', component: ContratacionComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard, contratacionEnabledGuard, moduleAccessGuard('contratacion')] },
             { path: 'pdm', component: PdmUploadComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard, pdmEnabledGuard, moduleAccessGuard('pdm')] },
             { path: 'pdm-dashboard', component: PdmDashboardComponent, canActivate: [adminPortalGuard, enforceUserEntityGuard, pdmEnabledGuard, moduleAccessGuard('pdm')] },
+            // Administración de usuarios se gestiona desde el Dashboard (vista interna ?v=usuarios)
         ]
     },
     { path: '**', redirectTo: '' }

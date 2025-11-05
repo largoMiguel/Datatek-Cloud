@@ -1,10 +1,11 @@
-import { Component, HostListener, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { EntityContextService } from '../../../services/entity-context.service';
 import { AuthService } from '../../../services/auth.service';
 import { NotificationsService, AlertItem } from '../../../services/notifications.service';
 import { AlertsEventsService } from '../../../services/alerts-events.service';
+import { SidebarService } from '../../../services/sidebar.service';
 
 @Component({
     selector: 'app-global-navbar',
@@ -13,10 +14,11 @@ import { AlertsEventsService } from '../../../services/alerts-events.service';
     templateUrl: './global-navbar.html',
     styleUrl: './global-navbar.scss'
 })
-export class GlobalNavbarComponent implements OnInit {
+export class GlobalNavbarComponent implements OnInit, OnDestroy {
     showAlertsPanel = false;
     alerts$!: import('rxjs').Observable<AlertItem[]>;
     unreadCount$!: import('rxjs').Observable<number>;
+    private refreshInterval: any;
 
     private router = inject(Router);
 
@@ -24,7 +26,8 @@ export class GlobalNavbarComponent implements OnInit {
         public entityContext: EntityContextService,
         public auth: AuthService,
         private notifications: NotificationsService,
-        private alertsEvents: AlertsEventsService
+        private alertsEvents: AlertsEventsService,
+        public sidebar: SidebarService
     ) {
         this.alerts$ = this.notifications.alertsStream;
         this.unreadCount$ = this.notifications.unreadCountStream;
@@ -44,6 +47,29 @@ export class GlobalNavbarComponent implements OnInit {
                 this.notifications.fetch(true).subscribe();
             }
         });
+
+        // Auto-refresh de alertas cada 60 segundos
+        this.refreshInterval = setInterval(() => {
+            if (!this.auth.isAuthenticated()) {
+                if (this.refreshInterval) {
+                    clearInterval(this.refreshInterval);
+                }
+                return;
+            }
+
+            const user = this.auth.getCurrentUserValue();
+            const entity = this.entityContext.currentEntity;
+            if (user && entity) {
+                this.notifications.fetch(true).subscribe();
+            }
+        }, 60000);
+    }
+
+    ngOnDestroy() {
+        // Limpiar el intervalo de auto-refresh
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+        }
     }
 
     @HostListener('document:click', ['$event'])
@@ -93,9 +119,42 @@ export class GlobalNavbarComponent implements OnInit {
             this.notifications.markRead(alert.id).subscribe();
         }
 
-        // Asegurar que el Dashboard esté activo para abrir detalle allí
-        await this.goToDashboardIfNeeded();
-        setTimeout(() => this.alertsEvents.requestOpen(alert), 50);
+        // Detectar tipo de alerta y redirigir según corresponda
+        const slug = this.entityContext.currentEntity?.slug;
+        if (!slug) {
+            console.warn('No hay entidad actual para abrir alerta');
+            this.showAlertsPanel = false;
+            return;
+        }
+
+        // Parsear datos de la alerta
+        let data: any = {};
+        try {
+            data = alert.data ? JSON.parse(alert.data) : {};
+        } catch (e) {
+            console.error('Error parseando data de alerta:', e);
+        }
+
+        // Redirigir según el tipo de alerta
+        if (alert.type === 'PDM_PRODUCT_ASSIGNED' || alert.type === 'PDM_NEW_ACTIVITY') {
+            // Alerta de PDM - redirigir al dashboard PDM y emitir evento
+            await this.router.navigate([`/${slug}/pdm-dashboard`]);
+            setTimeout(() => this.alertsEvents.requestOpen(alert), 100);
+        } else if (alert.type === 'PLAN_COMPONENT_ASSIGNED' || alert.type === 'PLAN_NEW_ACTIVITY') {
+            // Alerta de Planes - redirigir al módulo de planes y emitir evento
+            await this.router.navigate([`/${slug}/planes-institucionales`]);
+            setTimeout(() => this.alertsEvents.requestOpen(alert), 100);
+        } else if (alert.type === 'NEW_PQRS' || alert.type === 'PQRS_ASSIGNED') {
+            // Alerta de PQRS - comportamiento original
+            await this.goToDashboardIfNeeded();
+            setTimeout(() => this.alertsEvents.requestOpen(alert), 50);
+        } else {
+            // Tipo desconocido - intentar comportamiento por defecto
+            console.warn('Tipo de alerta desconocido:', alert.type);
+            await this.goToDashboardIfNeeded();
+            setTimeout(() => this.alertsEvents.requestOpen(alert), 50);
+        }
+
         this.showAlertsPanel = false;
     }
 

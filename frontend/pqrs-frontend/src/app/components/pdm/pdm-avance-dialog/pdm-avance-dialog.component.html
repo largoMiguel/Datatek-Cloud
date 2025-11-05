@@ -36,7 +36,7 @@
         <!-- Formulario -->
         <div class="mb-3">
             <label for="actividad" class="form-label fw-bold">
-                <i class="fas fa-tasks me-2"></i>Actividad
+                <i class="fas fa-tasks me-2"></i>Actividad *
             </label>
             <select class="form-select form-select-lg" id="actividad" [(ngModel)]="actividadId"
                 (change)="onActividadChange()">
@@ -56,19 +56,49 @@
         </div>
 
         <div class="mb-3">
-            <label for="comentario" class="form-label fw-bold">
-                <i class="fas fa-comment-alt me-2"></i>Comentario (Opcional)
+            <label for="descripcion" class="form-label fw-bold">
+                <i class="fas fa-comment-alt me-2"></i>Descripción
             </label>
-            <textarea class="form-control" id="comentario" rows="3" [(ngModel)]="comentario"
-                placeholder="Notas, fuente, aclaraciones..."></textarea>
+            <textarea class="form-control" id="descripcion" rows="3" [(ngModel)]="descripcion"
+                placeholder="Descripción del avance realizado..."></textarea>
+            <small class="text-muted">Debe proporcionar al menos: descripción, URL o imágenes</small>
         </div>
 
         <div class="mb-3">
-            <label for="evidencia" class="form-label fw-bold">
-                <i class="fas fa-paperclip me-2"></i>Evidencia (opcional)
+            <label for="url" class="form-label fw-bold">
+                <i class="fas fa-link me-2"></i>URL de Evidencia
             </label>
-            <input type="file" id="evidencia" class="form-control" (change)="onFileChange($event)">
-            <div class="form-text">Puedes adjuntar un archivo de evidencia.</div>
+            <input type="text" class="form-control" id="url" [(ngModel)]="url"
+                placeholder="https://ejemplo.com/documento.pdf">
+            <small class="text-muted">Enlace a documento externo (opcional)</small>
+        </div>
+
+        <div class="mb-3">
+            <label for="imagenes" class="form-label fw-bold">
+                <i class="fas fa-images me-2"></i>Imágenes de Evidencia (máximo 4)
+            </label>
+            <input type="file" #fileInput class="form-control" id="imagenes" accept="image/*" multiple
+                (change)="onFileSelected($event)" [disabled]="imagenesSeleccionadas.length >= 4">
+            <small class="text-muted">Tamaño máximo por imagen: 2MB. Formatos: JPG, PNG, GIF, WEBP</small>
+        </div>
+
+        <!-- Vista previa de imágenes seleccionadas -->
+        <div *ngIf="imagenesSeleccionadas.length > 0" class="mb-3">
+            <label class="form-label fw-bold">Imágenes seleccionadas ({{imagenesSeleccionadas.length}}/4)</label>
+            <div class="row g-2">
+                <div *ngFor="let img of imagenesSeleccionadas; let i = index" class="col-6 col-md-3">
+                    <div class="position-relative">
+                        <img [src]="img.preview" class="img-thumbnail w-100" style="height: 120px; object-fit: cover;"
+                            [alt]="img.nombre">
+                        <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1"
+                            (click)="eliminarImagenSeleccionada(i)" style="padding: 2px 6px; font-size: 0.75rem;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <small class="d-block text-truncate mt-1" [title]="img.nombre">{{img.nombre}}</small>
+                        <small class="text-muted d-block">{{formatearTamano(img.tamano)}}</small>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Error Alert -->
@@ -79,11 +109,13 @@
     </div>
 
     <div class="modal-footer">
-        <button type="button" class="btn btn-secondary btn-lg" (click)="cancelar()">
+        <button type="button" class="btn btn-secondary btn-lg" (click)="cancelar()" [disabled]="guardando">
             <i class="fas fa-times me-2"></i>Cancelar
         </button>
-        <button type="button" class="btn btn-primary btn-lg" (click)="guardar()">
-            <i class="fas fa-save me-2"></i>Guardar
+        <button type="button" class="btn btn-primary btn-lg" (click)="guardar()" [disabled]="guardando">
+            <span *ngIf="guardando" class="spinner-border spinner-border-sm me-2"></span>
+            <i *ngIf="!guardando" class="fas fa-save me-2"></i>
+            {{ guardando ? 'Guardando...' : 'Guardar' }}
         </button>
     </div>
 </div>

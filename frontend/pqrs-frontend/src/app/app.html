@@ -190,4 +190,22 @@
 <!-- * * * * * * * * * * End of Placeholder  * * * * * * * * * * * * -->
 <!-- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * -->
 <app-global-navbar *ngIf="showGlobalNav"></app-global-navbar>
-<router-outlet />
+
+<!-- Layout con Sidebar -->
+<div class="app-layout" *ngIf="showGlobalNav; else simpleOutlet">
+  <div class="sidebar-wrapper" [class.sidebar-open]="(sidebar.open$ | async)">
+    <app-sidebar></app-sidebar>
+  </div>
+
+  <div class="content-wrapper">
+    <router-outlet />
+  </div>
+
+  <!-- Backdrop oscuro con blur -->
+  <div class="offcanvas-backdrop fade show" *ngIf="(sidebar.open$ | async)" (click)="sidebar.close()"></div>
+</div>
+
+<ng-template #simpleOutlet>
+  <router-outlet />
+
+</ng-template>

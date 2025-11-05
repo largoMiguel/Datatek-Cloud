@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List
+from io import BytesIO
 from app.config.database import get_db
 from app.models.entity import Entity
 from app.models.user import User, UserRole
-from app.models.pdm import PdmMetaAssignment, PdmAvance, PdmActividad
+from app.models.pdm import PdmMetaAssignment, PdmAvance, PdmActividad, PdmArchivoExcel
+from app.models.alert import Alert
+import json
 from app.schemas.pdm import (
     AssignmentUpsertRequest,
     AssignmentResponse,
@@ -16,6 +20,11 @@ from app.schemas.pdm import (
     ActividadUpdateRequest,
     ActividadResponse,
     ActividadesListResponse,
+    ExcelUploadResponse,
+    ExcelInfoResponse,
+    EvidenciaCreateRequest,
+    EvidenciaResponse,
+    EvidenciasListResponse,
 )
 from app.utils.auth import get_current_active_user
 
@@ -64,17 +73,51 @@ async def upsert_assignment(
         PdmMetaAssignment.entity_id == entity.id,
         PdmMetaAssignment.codigo_indicador_producto == payload.codigo_indicador_producto,
     ).first()
+    
+    # Detectar si es una nueva asignación o cambio de secretaría
+    is_new_assignment = False
+    old_secretaria = None
     if rec:
+        old_secretaria = rec.secretaria
+        if rec.secretaria != payload.secretaria and payload.secretaria:
+            is_new_assignment = True
         rec.secretaria = payload.secretaria
     else:
+        is_new_assignment = bool(payload.secretaria)
         rec = PdmMetaAssignment(
             entity_id=entity.id,
             codigo_indicador_producto=payload.codigo_indicador_producto,
             secretaria=payload.secretaria,
         )
         db.add(rec)
+    
     db.commit()
     db.refresh(rec)
+    
+    # Crear alerta para usuarios de la secretaría asignada
+    if is_new_assignment and payload.secretaria:
+        try:
+            secretarios = db.query(User).filter(
+                User.role == UserRole.SECRETARIO,
+                User.entity_id == entity.id,
+                User.secretaria == payload.secretaria
+            ).all()
+            
+            for secretario in secretarios:
+                db.add(Alert(
+                    entity_id=entity.id,
+                    recipient_user_id=secretario.id,
+                    type="PDM_PRODUCT_ASSIGNED",
+                    title=f"Producto PDM asignado a {payload.secretaria}",
+                    message=f"Se asignó el producto {payload.codigo_indicador_producto} a tu secretaría",
+                    data=json.dumps({"codigo_indicador_producto": payload.codigo_indicador_producto}),
+                ))
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            # No interrumpir el flujo por alertas
+            print(f"Error creando alertas de asignación: {e}")
+    
     return AssignmentResponse(
         entity_id=rec.entity_id,
         codigo_indicador_producto=rec.codigo_indicador_producto,
@@ -249,6 +292,38 @@ async def create_actividad(
     db.commit()
     db.refresh(nueva_actividad)
 
+    # Crear alertas para secretarios asignados al producto
+    try:
+        assignment = db.query(PdmMetaAssignment).filter(
+            PdmMetaAssignment.entity_id == entity.id,
+            PdmMetaAssignment.codigo_indicador_producto == payload.codigo_indicador_producto
+        ).first()
+        
+        if assignment and assignment.secretaria:
+            secretarios = db.query(User).filter(
+                User.role == UserRole.SECRETARIO,
+                User.entity_id == entity.id,
+                User.secretaria == assignment.secretaria
+            ).all()
+            
+            for secretario in secretarios:
+                db.add(Alert(
+                    entity_id=entity.id,
+                    recipient_user_id=secretario.id,
+                    type="PDM_NEW_ACTIVITY",
+                    title=f"Nueva actividad en PDM",
+                    message=f"Se creó la actividad '{nueva_actividad.nombre}' para el producto {payload.codigo_indicador_producto}",
+                    data=json.dumps({
+                        "codigo_indicador_producto": payload.codigo_indicador_producto,
+                        "actividad_id": nueva_actividad.id
+                    }),
+                ))
+            db.commit()
+    except Exception as e:
+        db.rollback()
+        # No interrumpir el flujo por alertas
+        print(f"Error creando alertas de nueva actividad: {e}")
+
     return ActividadResponse(
         id=nueva_actividad.id,
         entity_id=nueva_actividad.entity_id,
@@ -354,5 +429,361 @@ async def delete_actividad(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Actividad no encontrada")
 
     db.delete(actividad)
+    db.commit()
+    return None
+
+
+# ============================================================================
+# ENDPOINTS PARA GESTIÓN DE EVIDENCIAS DE ACTIVIDADES
+# ============================================================================
+
+@router.post("/{slug}/actividades/{actividad_id}/evidencias", response_model=dict)
+async def create_evidencia(
+    slug: str,
+    actividad_id: int,
+    payload: EvidenciaCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Crea evidencias para una actividad. Puede incluir descripción, URL y/o imágenes.
+    Al menos uno de los campos debe estar presente.
+    """
+    from app.models.pdm import PdmActividadEvidencia
+    from app.schemas.pdm import EvidenciaCreateRequest
+    import base64
+    
+    entity = get_entity_or_404(db, slug)
+    ensure_user_can_manage_entity(current_user, entity)
+
+    # Verificar que la actividad existe
+    actividad = db.query(PdmActividad).filter(
+        PdmActividad.id == actividad_id,
+        PdmActividad.entity_id == entity.id,
+    ).first()
+
+    if not actividad:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Actividad no encontrada")
+
+    # Validar que al menos un campo esté presente
+    tiene_descripcion = payload.descripcion and payload.descripcion.strip()
+    tiene_url = payload.url and payload.url.strip()
+    tiene_imagenes = payload.imagenes and len(payload.imagenes) > 0
+
+    if not (tiene_descripcion or tiene_url or tiene_imagenes):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Debe proporcionar al menos descripción, URL o imágenes"
+        )
+
+    evidencias_creadas = []
+
+    # Crear evidencia con descripción y/o URL
+    if tiene_descripcion or tiene_url:
+        evidencia = PdmActividadEvidencia(
+            actividad_id=actividad_id,
+            entity_id=entity.id,
+            descripcion=payload.descripcion if tiene_descripcion else None,
+            url=payload.url if tiene_url else None,
+        )
+        db.add(evidencia)
+        evidencias_creadas.append("texto")
+
+    # Crear evidencias para cada imagen
+    if tiene_imagenes:
+        # Validar máximo 4 imágenes
+        if len(payload.imagenes) > 4:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Máximo 4 imágenes permitidas"
+            )
+
+        for img in payload.imagenes:
+            # Validar tamaño (2MB)
+            tamano = img.get('tamano', 0)
+            if tamano > 2 * 1024 * 1024:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"La imagen {img.get('nombre', 'sin nombre')} supera el tamaño máximo de 2MB"
+                )
+
+            # Decodificar base64
+            contenido_base64 = img.get('contenido_base64', '')
+            try:
+                contenido_binario = base64.b64decode(contenido_base64)
+            except Exception:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Error al decodificar la imagen"
+                )
+
+            evidencia_img = PdmActividadEvidencia(
+                actividad_id=actividad_id,
+                entity_id=entity.id,
+                nombre_imagen=img.get('nombre'),
+                mime_type=img.get('mime_type'),
+                tamano=tamano,
+                contenido=contenido_binario,
+            )
+            db.add(evidencia_img)
+            evidencias_creadas.append("imagen")
+
+    db.commit()
+    
+    return {
+        "message": "Evidencias creadas exitosamente",
+        "count": len(evidencias_creadas)
+    }
+
+
+@router.get("/{slug}/actividades/{actividad_id}/evidencias", response_model=EvidenciasListResponse)
+async def get_evidencias(
+    slug: str,
+    actividad_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Obtiene todas las evidencias de una actividad.
+    """
+    from app.models.pdm import PdmActividadEvidencia
+    from app.schemas.pdm import EvidenciaResponse, EvidenciasListResponse
+    import base64
+    
+    entity = get_entity_or_404(db, slug)
+    
+    # Verificar que la actividad existe
+    actividad = db.query(PdmActividad).filter(
+        PdmActividad.id == actividad_id,
+        PdmActividad.entity_id == entity.id,
+    ).first()
+
+    if not actividad:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Actividad no encontrada")
+
+    evidencias = db.query(PdmActividadEvidencia).filter(
+        PdmActividadEvidencia.actividad_id == actividad_id,
+        PdmActividadEvidencia.entity_id == entity.id,
+    ).all()
+
+    # Convertir a response
+    evidencias_response = []
+    for ev in evidencias:
+        contenido_base64 = None
+        if ev.contenido:
+            contenido_base64 = base64.b64encode(ev.contenido).decode('utf-8')
+        
+        evidencias_response.append(EvidenciaResponse(
+            id=ev.id,
+            actividad_id=ev.actividad_id,
+            entity_id=ev.entity_id,
+            descripcion=ev.descripcion,
+            url=ev.url,
+            nombre_imagen=ev.nombre_imagen,
+            mime_type=ev.mime_type,
+            tamano=ev.tamano,
+            contenido=contenido_base64,
+            created_at=ev.created_at.isoformat() if ev.created_at else '',
+            updated_at=ev.updated_at.isoformat() if ev.updated_at else '',
+        ))
+
+    return EvidenciasListResponse(
+        actividad_id=actividad_id,
+        evidencias=evidencias_response
+    )
+
+
+@router.delete("/{slug}/actividades/{actividad_id}/evidencias/{evidencia_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_evidencia(
+    slug: str,
+    actividad_id: int,
+    evidencia_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Elimina una evidencia específica.
+    """
+    from app.models.pdm import PdmActividadEvidencia
+    
+    entity = get_entity_or_404(db, slug)
+    ensure_user_can_manage_entity(current_user, entity)
+
+    evidencia = db.query(PdmActividadEvidencia).filter(
+        PdmActividadEvidencia.id == evidencia_id,
+        PdmActividadEvidencia.actividad_id == actividad_id,
+        PdmActividadEvidencia.entity_id == entity.id,
+    ).first()
+
+    if not evidencia:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidencia no encontrada")
+
+    db.delete(evidencia)
+    db.commit()
+    return None
+
+
+# ============================================================================
+# ENDPOINTS PARA GESTIÓN DE ARCHIVO EXCEL PDM
+# ============================================================================
+
+@router.post("/{slug}/upload-excel", response_model=ExcelUploadResponse)
+async def upload_excel(
+    slug: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Sube un archivo Excel del PDM y lo almacena en la base de datos.
+    Si ya existe un archivo para esta entidad, lo reemplaza.
+    """
+    entity = get_entity_or_404(db, slug)
+    ensure_user_can_manage_entity(current_user, entity)
+
+    # Validar tipo de archivo
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El archivo debe ser un Excel válido (.xlsx o .xls)"
+        )
+
+    # Leer contenido del archivo
+    contenido = await file.read()
+    tamanio = len(contenido)
+
+    # Validar tamaño (máximo 10MB)
+    max_size = 10 * 1024 * 1024
+    if tamanio > max_size:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El archivo es demasiado grande. Máximo 10MB."
+        )
+
+    # Verificar si ya existe un archivo para esta entidad
+    archivo_existente = db.query(PdmArchivoExcel).filter(
+        PdmArchivoExcel.entity_id == entity.id
+    ).first()
+
+    if archivo_existente:
+        # Actualizar archivo existente
+        archivo_existente.nombre_archivo = file.filename
+        archivo_existente.contenido = contenido
+        archivo_existente.tamanio = tamanio
+        from datetime import datetime
+        archivo_existente.updated_at = datetime.utcnow()
+        mensaje = "Archivo Excel actualizado correctamente"
+    else:
+        # Crear nuevo registro
+        nuevo_archivo = PdmArchivoExcel(
+            entity_id=entity.id,
+            nombre_archivo=file.filename,
+            contenido=contenido,
+            tamanio=tamanio
+        )
+        db.add(nuevo_archivo)
+        mensaje = "Archivo Excel cargado correctamente"
+
+    db.commit()
+
+    # Obtener el archivo actualizado
+    archivo = db.query(PdmArchivoExcel).filter(
+        PdmArchivoExcel.entity_id == entity.id
+    ).first()
+
+    return ExcelUploadResponse(
+        entity_id=archivo.entity_id,
+        nombre_archivo=archivo.nombre_archivo,
+        tamanio=archivo.tamanio,
+        created_at=archivo.created_at,
+        mensaje=mensaje
+    )
+
+
+@router.get("/{slug}/excel-info", response_model=ExcelInfoResponse)
+async def get_excel_info(
+    slug: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Obtiene información sobre el archivo Excel almacenado para esta entidad.
+    """
+    entity = get_entity_or_404(db, slug)
+    ensure_user_can_manage_entity(current_user, entity)
+
+    archivo = db.query(PdmArchivoExcel).filter(
+        PdmArchivoExcel.entity_id == entity.id
+    ).first()
+
+    if not archivo:
+        return ExcelInfoResponse(existe=False)
+
+    return ExcelInfoResponse(
+        existe=True,
+        nombre_archivo=archivo.nombre_archivo,
+        tamanio=archivo.tamanio,
+        fecha_carga=archivo.created_at
+    )
+
+
+@router.get("/{slug}/download-excel")
+async def download_excel(
+    slug: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Descarga el archivo Excel almacenado en la base de datos.
+    """
+    entity = get_entity_or_404(db, slug)
+    ensure_user_can_manage_entity(current_user, entity)
+
+    archivo = db.query(PdmArchivoExcel).filter(
+        PdmArchivoExcel.entity_id == entity.id
+    ).first()
+
+    if not archivo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No se ha cargado ningún archivo Excel para esta entidad"
+        )
+
+    # Crear un stream del contenido
+    excel_stream = BytesIO(archivo.contenido)
+    excel_stream.seek(0)
+
+    return StreamingResponse(
+        excel_stream,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": f"attachment; filename={archivo.nombre_archivo}"
+        }
+    )
+
+
+@router.delete("/{slug}/delete-excel", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_excel(
+    slug: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Elimina el archivo Excel almacenado para esta entidad.
+    """
+    entity = get_entity_or_404(db, slug)
+    ensure_user_can_manage_entity(current_user, entity)
+
+    archivo = db.query(PdmArchivoExcel).filter(
+        PdmArchivoExcel.entity_id == entity.id
+    ).first()
+
+    if not archivo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No se ha cargado ningún archivo Excel para esta entidad"
+        )
+
+    db.delete(archivo)
     db.commit()
     return None

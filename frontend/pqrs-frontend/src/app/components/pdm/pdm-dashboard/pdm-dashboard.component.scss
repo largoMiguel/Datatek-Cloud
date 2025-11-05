@@ -57,6 +57,95 @@
     }
 }
 
+// Cards con efecto hover suave
+.card-hover {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12) !important;
+    }
+}
+
+// Headers de sección
+.section-header {
+    position: relative;
+    padding-bottom: 0.75rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 3px solid #e9ecef;
+
+    h4 {
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 0.25rem;
+    }
+
+    small {
+        display: block;
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 0;
+        width: 80px;
+        height: 3px;
+        background: linear-gradient(90deg, #0d6efd 0%, #0dcaf0 100%);
+    }
+}
+
+// Fondo gradiente suave
+.bg-gradient-light {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+// Tarjetas KPI del resumen ejecutivo
+.card.border-start {
+    border-left-width: 4px !important;
+
+    .card-body {
+        position: relative;
+        overflow: hidden;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+    }
+
+    &:hover .card-body::before {
+        opacity: 1;
+    }
+}
+
+// Botones de selector de año
+.btn-group-vertical {
+    gap: 0.25rem;
+
+    .btn {
+        font-weight: 600;
+        transition: all 0.2s ease;
+
+        &.btn-primary {
+            box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
+        }
+
+        &:hover {
+            transform: translateX(4px);
+        }
+    }
+}
+
 // Filas de tabla clickeables
 .table-row-clickeable {
     transition: all 0.2s ease;
@@ -454,4 +543,131 @@ mat-expansion-panel {
     border-radius: 6px;
     max-width: 300px;
     word-wrap: break-word;
+}
+
+// Tabs de años profesionales
+.nav-pills {
+    .nav-link {
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        transition: all 0.3s ease;
+        background: white;
+        border: 2px solid #e2e8f0;
+        color: #64748b;
+        font-weight: 600;
+        margin: 0 0.25rem;
+
+        &:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        &.active {
+            background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+            color: white;
+            border-color: #0d6efd;
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.4);
+            transform: translateY(-4px);
+
+            &:hover {
+                background: linear-gradient(135deg, #0a58ca 0%, #084298 100%);
+            }
+
+            .badge {
+                background: rgba(255, 255, 255, 0.25) !important;
+                color: white !important;
+            }
+        }
+
+        small {
+            font-size: 0.7rem;
+
+            .badge {
+                font-size: 0.65rem;
+                padding: 0.2rem 0.4rem;
+            }
+        }
+    }
+}
+
+// Tarjetas de resumen del año
+.card.border-success,
+.card.border-info,
+.card.border-warning,
+.card.border-secondary {
+    border-width: 2px !important;
+    transition: all 0.3s ease;
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12) !important;
+    }
+
+    .card-body {
+        i {
+            opacity: 0.8;
+        }
+
+        h4 {
+            font-weight: 700;
+            font-size: 2rem;
+        }
+    }
+}
+
+// Fondo gradiente para headers especiales
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+}
+
+// Mejoras a la tabla del año seleccionado
+.table {
+    thead th {
+        background: #f8fafc;
+        color: #1e293b;
+        font-weight: 700;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        padding: 1rem 0.75rem;
+        border-bottom: 2px solid #cbd5e1;
+        white-space: nowrap;
+    }
+
+    tbody {
+        tr {
+            &:hover {
+                background: #f8fafc !important;
+            }
+
+            td {
+                padding: 0.875rem 0.75rem;
+                vertical-align: middle;
+            }
+        }
+    }
+
+    code {
+        background: #f1f5f9;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        color: #334155;
+        border: 1px solid #e2e8f0;
+    }
+
+    .btn-group-sm {
+        .btn {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            border-radius: 6px;
+
+            &:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            }
+        }
+    }
 }

@@ -31,6 +31,9 @@ export class PdmUploadComponent implements OnInit {
     cacheInfo = signal<{ existe: boolean; fecha?: Date; version?: string }>({ existe: false });
     tieneDatos = signal(false);
 
+    // Info del archivo en BD
+    excelEnBD = signal<{ existe: boolean; nombre?: string; fecha?: Date; tamanio?: number }>({ existe: false });
+
     private showToast: (message: string, type: 'success' | 'error' | 'info') => void;
 
     constructor(
@@ -68,11 +71,29 @@ export class PdmUploadComponent implements OnInit {
 
     ngOnInit(): void {
         this.verificarCache();
+        this.verificarExcelEnBD();
     }
 
     verificarCache(): void {
         this.cacheInfo.set(this.pdmDataService.obtenerInfoCache());
         this.tieneDatos.set(this.pdmDataService.tieneDatosEnCache());
+    }
+
+    async verificarExcelEnBD(): Promise<void> {
+        const slug = this.entityContext.currentEntity?.slug;
+        if (!slug) return;
+
+        try {
+            const info = await this.pdmDataService.obtenerInfoExcelBD(slug);
+            this.excelEnBD.set({
+                existe: info.existe,
+                nombre: info.nombre_archivo,
+                fecha: info.fecha_carga ? new Date(info.fecha_carga) : undefined,
+                tamanio: info.tamanio
+            });
+        } catch (error) {
+            console.error('Error al verificar Excel en BD:', error);
+        }
     }
 
     onDragOver(event: DragEvent): void {
@@ -133,9 +154,15 @@ export class PdmUploadComponent implements OnInit {
         });
     }
 
-    procesarArchivo(): void {
+    async procesarArchivo(): Promise<void> {
         if (!this.archivoSeleccionado) {
             this.showToast('Por favor selecciona un archivo primero', 'error');
+            return;
+        }
+
+        const slug = this.entityContext.currentEntity?.slug;
+        if (!slug) {
+            this.showToast('Error: No se pudo obtener la entidad actual', 'error');
             return;
         }
 
@@ -150,35 +177,84 @@ export class PdmUploadComponent implements OnInit {
             }
         }, 300);
 
-        this.pdmDataService.procesarArchivoExcel(this.archivoSeleccionado)
-            .then(() => {
-                clearInterval(interval);
-                this.progreso.set(100);
+        try {
+            // Primera carga: Subir a BD y procesar localmente
+            await this.pdmDataService.primeraCargaExcel(this.archivoSeleccionado, slug);
 
-                this.showToast('✅ Excel procesado correctamente. Datos guardados en caché.', 'success');
+            clearInterval(interval);
+            this.progreso.set(100);
 
-                // Actualizar info de caché
-                this.verificarCache();
+            this.showToast('✅ Excel cargado en BD y procesado correctamente.', 'success');
 
-                // Navegar al dashboard
-                setTimeout(() => {
-                    const slug = this.entityContext.currentEntity?.slug || 'default';
-                    this.router.navigate([`/${slug}/pdm-dashboard`]);
-                }, 1500);
-            })
-            .catch((error) => {
-                clearInterval(interval);
-                console.error('Error al procesar archivo:', error);
+            // Actualizar info de caché y BD
+            await this.verificarCache();
+            await this.verificarExcelEnBD();
 
-                this.showToast(
-                    '❌ Error al procesar el archivo. Verifica que contenga todas las hojas requeridas.',
-                    'error'
-                );
-            })
-            .finally(() => {
-                this.cargando.set(false);
-                this.progreso.set(0);
-            });
+            // Navegar al dashboard
+            setTimeout(() => {
+                this.router.navigate([`/${slug}/pdm-dashboard`]);
+            }, 1500);
+        } catch (error) {
+            clearInterval(interval);
+            console.error('Error al procesar archivo:', error);
+
+            this.showToast(
+                '❌ Error al procesar el archivo. Verifica que contenga todas las hojas requeridas.',
+                'error'
+            );
+        } finally {
+            this.cargando.set(false);
+            this.progreso.set(0);
+        }
+    }
+
+    /**
+     * Descarga el Excel de BD y lo procesa para análisis
+     */
+    async cargarDesdeBaseDatos(): Promise<void> {
+        const slug = this.entityContext.currentEntity?.slug;
+        if (!slug) {
+            this.showToast('Error: No se pudo obtener la entidad actual', 'error');
+            return;
+        }
+
+        this.cargando.set(true);
+        this.progreso.set(10);
+
+        const interval = setInterval(() => {
+            const currentProgress = this.progreso();
+            if (currentProgress < 90) {
+                this.progreso.set(currentProgress + 10);
+            }
+        }, 300);
+
+        try {
+            await this.pdmDataService.cargarExcelParaAnalisis(slug);
+
+            clearInterval(interval);
+            this.progreso.set(100);
+
+            this.showToast('✅ Excel descargado de BD y cargado correctamente.', 'success');
+
+            // Actualizar info de caché
+            this.verificarCache();
+
+            // Navegar al dashboard
+            setTimeout(() => {
+                this.router.navigate([`/${slug}/pdm-dashboard`]);
+            }, 1500);
+        } catch (error) {
+            clearInterval(interval);
+            console.error('Error al cargar desde BD:', error);
+
+            this.showToast(
+                '❌ Error al cargar el archivo desde la base de datos.',
+                'error'
+            );
+        } finally {
+            this.cargando.set(false);
+            this.progreso.set(0);
+        }
     }
 
     irAlDashboard(): void {
@@ -186,14 +262,29 @@ export class PdmUploadComponent implements OnInit {
         this.router.navigate([`/${slug}/pdm-dashboard`]);
     }
 
-    limpiarDatos(): void {
-        if (confirm('¿Estás seguro de eliminar los datos almacenados? Deberás cargar el Excel nuevamente.')) {
-            this.pdmDataService.limpiarDatos();
-            this.archivoCargado.set(null);
-            this.archivoSeleccionado = null;
-            this.verificarCache();
+    async limpiarDatos(): Promise<void> {
+        if (confirm('¿Estás seguro de eliminar los datos almacenados? Esto eliminará el archivo de la base de datos y el caché local. Deberás cargar el Excel nuevamente.')) {
+            const slug = this.entityContext.currentEntity?.slug;
 
-            this.showToast('Datos eliminados correctamente', 'success');
+            try {
+                // Limpiar datos locales
+                this.pdmDataService.limpiarDatos();
+
+                // Limpiar archivo de BD si existe
+                if (slug && this.excelEnBD().existe) {
+                    await this.pdmDataService.eliminarExcelDeBD(slug);
+                }
+
+                this.archivoCargado.set(null);
+                this.archivoSeleccionado = null;
+                this.verificarCache();
+                await this.verificarExcelEnBD();
+
+                this.showToast('Datos eliminados correctamente', 'success');
+            } catch (error) {
+                console.error('Error al eliminar datos:', error);
+                this.showToast('Error al eliminar datos de la base de datos', 'error');
+            }
         }
     }
 

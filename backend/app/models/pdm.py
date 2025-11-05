@@ -1,7 +1,24 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Float, UniqueConstraint, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Float, UniqueConstraint, ForeignKey, LargeBinary
 from sqlalchemy.orm import relationship
 from app.config.database import Base
+
+
+class PdmArchivoExcel(Base):
+    __tablename__ = "pdm_archivos_excel"
+
+    id = Column(Integer, primary_key=True, index=True)
+    entity_id = Column(Integer, ForeignKey("entities.id"), nullable=False, index=True)
+    nombre_archivo = Column(String(512), nullable=False)
+    contenido = Column(LargeBinary, nullable=False)  # Archivo Excel en binario
+    tamanio = Column(Integer, nullable=False)  # Tamaño en bytes
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("entity_id", name="uq_archivo_excel_entity"),
+    )
 
 
 class PdmMetaAssignment(Base):
@@ -63,3 +80,20 @@ class PdmActividad(Base):
     __table_args__ = (
         UniqueConstraint("entity_id", "codigo_indicador_producto", "nombre", name="uq_actividad_entity_codigo_nombre"),
     )
+
+
+class PdmActividadEvidencia(Base):
+    __tablename__ = "pdm_actividades_evidencias"
+
+    id = Column(Integer, primary_key=True, index=True)
+    actividad_id = Column(Integer, ForeignKey("pdm_actividades.id"), nullable=False, index=True)
+    entity_id = Column(Integer, ForeignKey("entities.id"), nullable=False, index=True)
+    descripcion = Column(String(2048), nullable=True)
+    url = Column(String(512), nullable=True)
+    nombre_imagen = Column(String(256), nullable=True)
+    mime_type = Column(String(64), nullable=True)
+    tamano = Column(Integer, nullable=True)  # Tamaño en bytes
+    contenido = Column(LargeBinary, nullable=True)  # Imagen en base64 o binario
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -53,6 +53,18 @@ export interface PlanIndicativoProducto {
     // Estado calculado
     estado?: EstadoMeta;
     avance?: number;
+    // Estados por año (para análisis de gráficos)
+    estadosPorAnio?: {
+        2024: EstadoMeta;
+        2025: EstadoMeta;
+        2026: EstadoMeta;
+        2027: EstadoMeta;
+    };
+    // Metas por año (extraídas de programación)
+    meta2024?: number;
+    meta2025?: number;
+    meta2026?: number;
+    meta2027?: number;
     // Gestión
     secretariaAsignada?: string;
     // Avances por año registrados por el usuario

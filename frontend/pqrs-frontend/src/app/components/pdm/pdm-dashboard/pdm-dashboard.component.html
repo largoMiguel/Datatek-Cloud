@@ -31,161 +31,194 @@
     <!-- Main Dashboard -->
     @else {
     <!-- Header -->
-    <div class="row mb-4">
-        <div class="col">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <div class="d-flex align-items-center">
-                                <div class="bg-primary bg-opacity-10 rounded-3 p-3 me-3">
-                                    <i class="fas fa-chart-line fa-3x text-primary"></i>
-                                </div>
-                                <div>
-                                    <h1 class="h3 mb-1">Dashboard PDM</h1>
-                                    <p class="text-muted mb-0">Análisis y seguimiento del Plan de Desarrollo Municipal
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-auto">
-                            <button class="btn btn-outline-secondary me-2" (click)="exportarDatos()">
-                                <i class="fas fa-download me-2"></i>Exportar
-                            </button>
-                            <button class="btn btn-primary" (click)="cargarNuevoArchivo()">
-                                <i class="fas fa-sync-alt me-2"></i>Cargar Nuevo
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1"><i class="fas fa-chart-line me-2 text-primary"></i>Dashboard PDM</h3>
+            <p class="text-muted mb-0 small">Análisis y seguimiento del Plan de Desarrollo Municipal</p>
+            @if (excelEnBD.existe) {
+            <small class="text-success d-block mt-1">
+                <i class="fas fa-database me-1"></i>Excel en BD: {{ excelEnBD.nombre }}
+                ({{ formatearTamano(excelEnBD.tamano || 0) }})
+                · {{ formatearFechaExcel(excelEnBD.fecha) }}
+            </small>
+            }
+            @if (authService.getCurrentUserValue()?.role === 'secretario' &&
+            authService.getCurrentUserValue()?.secretaria) {
+            <small class="text-info d-block mt-1">
+                <i class="fas fa-filter me-1"></i>
+                <strong>Vista filtrada:</strong> Mostrando solo productos asignados a {{
+                authService.getCurrentUserValue()?.secretaria }}
+            </small>
+            }
+        </div>
+        <div class="d-flex align-items-center">
+            @if (!modoEdicion) {
+            <button class="btn btn-primary btn-sm me-2" (click)="descargarExcelDeBD()" [disabled]="!excelEnBD.existe"
+                title="Descargar Excel desde base de datos">
+                <i class="fas fa-download me-1"></i>Descargar Excel
+            </button>
+            <button class="btn btn-primary btn-sm me-2" (click)="recargarDatosDesdeLocalStorage()"
+                title="Recargar datos desde caché local">
+                <i class="fas fa-sync me-1"></i>Recargar
+            </button>
+            <button class="btn btn-primary btn-sm me-2" (click)="actualizarExcel()" title="Subir nuevo archivo Excel">
+                <i class="fas fa-upload me-1"></i>Actualizar Excel
+            </button>
+            <button class="btn btn-outline-secondary btn-sm me-2" (click)="exportarDatos()" title="Exportar datos">
+                <i class="fas fa-file-export me-1"></i>Exportar
+            </button>
+            @if (authService.isAdminOrSuperAdmin() && pdmData) {
+            <button class="btn btn-warning btn-sm" (click)="activarModoEdicion()" title="Editar datos del Excel">
+                <i class="fas fa-edit me-1"></i>Editar Excel
+            </button>
+            }
+            } @else {
+            <span class="badge bg-warning me-2">
+                <i class="fas fa-edit me-1"></i>Modo Edición: {{ productosModificados.size }} cambio(s)
+            </span>
+            <button class="btn btn-success btn-sm me-2" (click)="guardarCambiosExcel()"
+                [disabled]="guardandoCambios || productosModificados.size === 0" title="Guardar cambios en el Excel">
+                <i class="fas fa-save me-1"></i>
+                @if (guardandoCambios) {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                Guardar Cambios
+            </button>
+            <button class="btn btn-secondary btn-sm" (click)="cancelarEdicion()" [disabled]="guardandoCambios"
+                title="Cancelar edición">
+                <i class="fas fa-times me-1"></i>Cancelar
+            </button>
+            }
         </div>
     </div>
 
-    <!-- KPIs -->
-    <div class="row mb-4 g-3">
-        <!-- Total Metas -->
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 h-100 card-clickeable" (click)="filtrarPorEstado(undefined)">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
-                            <i class="fas fa-bullseye fa-2x text-primary"></i>
-                        </div>
-                        <div>
-                            <h6 class="text-muted mb-0 small">Total Metas</h6>
-                            <h2 class="mb-0">{{ analisis.indicadoresGenerales.totalMetas }}</h2>
-                        </div>
+    <!-- ========== SECCIÓN 1: RESUMEN EJECUTIVO ========== -->
+    <div class="section-header mb-3">
+        <h4 class="mb-0">
+            <i class="fas fa-chart-pie me-2 text-primary"></i>
+            Resumen Ejecutivo - Año {{ anioSeleccionado }}
+        </h4>
+        <small class="text-muted">Indicadores clave de desempeño del Plan de Desarrollo Municipal para el año
+            seleccionado</small>
+    </div>
+
+    <div class="row mb-5 g-3">
+        <!-- Total Productos -->
+        <div class="col-md-2">
+            <div class="card shadow-sm border-0 h-100 card-hover border-start border-primary border-4">
+                <div class="card-body text-center py-4">
+                    <div class="bg-primary bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
+                        <i class="fas fa-list fa-2x text-primary"></i>
                     </div>
-                    <div class="progress" style="height: 6px;">
-                        <div class="progress-bar bg-primary" style="width: 100%"></div>
-                    </div>
+                    <h2 class="mb-1 fw-bold text-primary">{{ productos.length }}</h2>
+                    <p class="text-muted mb-0 small text-uppercase fw-bold">Total Productos</p>
                 </div>
             </div>
         </div>
 
         <!-- Cumplidas -->
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 h-100 card-clickeable" (click)="filtrarPorEstado('cumplida')">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
-                            <i class="fas fa-check-circle fa-2x text-success"></i>
-                        </div>
-                        <div>
-                            <h6 class="text-muted mb-0 small">Cumplidas</h6>
-                            <h2 class="mb-0">{{ analisis.indicadoresGenerales.metasCumplidas }}</h2>
-                        </div>
+        <div class="col-md-2">
+            <div class="card shadow-sm border-0 h-100 card-hover border-start border-success border-4">
+                <div class="card-body text-center py-4">
+                    <div class="bg-success bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
+                        <i class="fas fa-check-circle fa-2x text-success"></i>
                     </div>
-                    <div class="progress" style="height: 6px;">
-                        <div class="progress-bar bg-success"
-                            [style.width.%]="(analisis.indicadoresGenerales.metasCumplidas / analisis.indicadoresGenerales.totalMetas) * 100">
-                        </div>
-                    </div>
-                    <small class="text-success">
+                    <h2 class="mb-1 fw-bold text-success">{{ contarMetasPorEstado(EstadoMeta.CUMPLIDA, anioSeleccionado)
+                        }}</h2>
+                    <p class="text-muted mb-0 small text-uppercase fw-bold">Cumplidas</p>
+                    <small class="text-success d-block mt-1">
                         <i class="fas fa-arrow-up me-1"></i>
-                        {{ formatearPorcentaje((analisis.indicadoresGenerales.metasCumplidas /
-                        analisis.indicadoresGenerales.totalMetas) * 100) }}
+                        {{ formatearPorcentaje((contarMetasPorEstado(EstadoMeta.CUMPLIDA, anioSeleccionado) /
+                        productos.length) * 100) }}
                     </small>
                 </div>
             </div>
         </div>
 
         <!-- En Progreso -->
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 h-100 card-clickeable" (click)="filtrarPorEstado('en_progreso')">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
-                            <i class="fas fa-clock fa-2x text-info"></i>
-                        </div>
-                        <div>
-                            <h6 class="text-muted mb-0 small">En Progreso</h6>
-                            <h2 class="mb-0">{{ analisis.indicadoresGenerales.metasEnProgreso }}</h2>
-                        </div>
+        <div class="col-md-2">
+            <div class="card shadow-sm border-0 h-100 card-hover border-start border-info border-4">
+                <div class="card-body text-center py-4">
+                    <div class="bg-info bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
+                        <i class="fas fa-spinner fa-2x text-info"></i>
                     </div>
-                    <div class="progress" style="height: 6px;">
-                        <div class="progress-bar bg-info"
-                            [style.width.%]="(analisis.indicadoresGenerales.metasEnProgreso / analisis.indicadoresGenerales.totalMetas) * 100">
-                        </div>
-                    </div>
+                    <h2 class="mb-1 fw-bold text-info">{{ contarMetasPorEstado(EstadoMeta.EN_PROGRESO, anioSeleccionado)
+                        }}</h2>
+                    <p class="text-muted mb-0 small text-uppercase fw-bold">En Progreso</p>
+                    <small class="text-info d-block mt-1">
+                        {{ formatearPorcentaje((contarMetasPorEstado(EstadoMeta.EN_PROGRESO, anioSeleccionado) /
+                        productos.length) * 100) }}
+                    </small>
                 </div>
             </div>
         </div>
 
         <!-- Pendientes -->
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0 h-100 card-clickeable" (click)="filtrarPorEstado('pendiente')">
-                <div class="card-body">
-                    <div class="d-flex align-items-center mb-3">
-                        <div class="bg-danger bg-opacity-10 rounded-circle p-3 me-3">
-                            <i class="fas fa-exclamation-triangle fa-2x text-danger"></i>
-                        </div>
-                        <div>
-                            <h6 class="text-muted mb-0 small">Pendientes</h6>
-                            <h2 class="mb-0">{{ analisis.indicadoresGenerales.metasPendientes }}</h2>
-                        </div>
+        <div class="col-md-2">
+            <div class="card shadow-sm border-0 h-100 card-hover border-start border-warning border-4">
+                <div class="card-body text-center py-4">
+                    <div class="bg-warning bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
+                        <i class="fas fa-clock fa-2x text-warning"></i>
                     </div>
-                    <div class="progress" style="height: 6px;">
-                        <div class="progress-bar bg-danger"
-                            [style.width.%]="(analisis.indicadoresGenerales.metasPendientes / analisis.indicadoresGenerales.totalMetas) * 100">
-                        </div>
+                    <h2 class="mb-1 fw-bold text-warning">{{ contarMetasPorEstado(EstadoMeta.PENDIENTE,
+                        anioSeleccionado) }}</h2>
+                    <p class="text-muted mb-0 small text-uppercase fw-bold">Pendientes</p>
+                    <small class="text-warning d-block mt-1">
+                        {{ formatearPorcentaje((contarMetasPorEstado(EstadoMeta.PENDIENTE, anioSeleccionado) /
+                        productos.length) * 100) }}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Por Cumplir -->
+        <div class="col-md-2">
+            <div class="card shadow-sm border-0 h-100 card-hover border-start border-secondary border-4">
+                <div class="card-body text-center py-4">
+                    <div class="bg-secondary bg-opacity-10 rounded-circle p-3 d-inline-flex mb-3">
+                        <i class="fas fa-hourglass-half fa-2x text-secondary"></i>
+                    </div>
+                    <h2 class="mb-1 fw-bold text-secondary">{{ contarMetasPorEstado(EstadoMeta.POR_CUMPLIR,
+                        anioSeleccionado) }}</h2>
+                    <p class="text-muted mb-0 small text-uppercase fw-bold">Por Cumplir</p>
+                    <small class="text-secondary d-block mt-1">
+                        {{ formatearPorcentaje((contarMetasPorEstado(EstadoMeta.POR_CUMPLIR, anioSeleccionado) /
+                        productos.length) * 100) }}
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Selector de Año -->
+        <div class="col-md-2">
+            <div class="card shadow-sm border-0 h-100 bg-gradient-light">
+                <div class="card-body text-center py-4 d-flex flex-column justify-content-center">
+                    <i class="fas fa-calendar-alt fa-2x text-primary mb-3"></i>
+                    <p class="text-muted mb-2 small text-uppercase fw-bold">Año Seleccionado</p>
+                    <div class="btn-group-vertical w-100">
+                        @for (anio of aniosDisponibles; track anio) {
+                        <button class="btn btn-sm" [class.btn-primary]="anioSeleccionado === anio"
+                            [class.btn-outline-secondary]="anioSeleccionado !== anio"
+                            (click)="cambiarAnioSeleccionado(anio)">
+                            {{ anio }}
+                        </button>
+                        }
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Alerts Section -->
-    <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="alert alert-success d-flex align-items-center">
-                <i class="fas fa-check-circle fa-2x me-3"></i>
-                <div>
-                    <strong>{{ analisis.indicadoresGenerales.metasCumplidas }}</strong> metas cumplidas
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="alert alert-info d-flex align-items-center">
-                <i class="fas fa-spinner fa-2x me-3"></i>
-                <div>
-                    <strong>{{ analisis.indicadoresGenerales.metasEnProgreso }}</strong> metas en progreso
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="alert alert-warning d-flex align-items-center">
-                <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
-                <div>
-                    <strong>{{ analisis.indicadoresGenerales.metasPorCumplir }}</strong> metas por cumplir
-                </div>
-            </div>
-        </div>
+    <!-- ========== SECCIÓN 2: ANÁLISIS VISUAL ========== -->
+    <div class="section-header mb-3">
+        <h4 class="mb-0">
+            <i class="fas fa-chart-line me-2 text-primary"></i>
+            Análisis Visual
+        </h4>
+        <small class="text-muted">Visualización de indicadores y estadísticas clave</small>
     </div>
 
-    <!-- Charts Section with Bootstrap Tabs -->
-    <div class="row mb-4">
+    <div class="row mb-5">
         <div class="col">
             <div class="card shadow-sm border-0">
                 <div class="card-body">
@@ -1181,17 +1214,29 @@
         </div>
     </div>
 
-    <!-- Data Table -->
+    <!-- ========== SECCIÓN 3: DETALLE DE PRODUCTOS POR AÑO ========== -->
+    <div class="section-header mb-3">
+        <h4 class="mb-0">
+            <i class="fas fa-table me-2 text-primary"></i>
+            Detalle de Productos e Indicadores
+        </h4>
+        <small class="text-muted">Información detallada de productos e indicadores del PDM por año</small>
+    </div>
+
     <div class="row">
         <div class="col">
             <div class="card shadow-sm border-0">
+                <!-- Filtros de Búsqueda -->
                 <div class="card-header bg-white border-0 pt-4">
                     <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h5 class="mb-0">
-                            <i class="fas fa-table me-2 text-primary"></i>
-                            Detalle de Productos e Indicadores
-                        </h5>
-                        <span class="badge bg-primary fs-6">{{ productosFiltrados.length }} productos</span>
+                        <h6 class="mb-0 text-uppercase fw-bold text-muted">
+                            <i class="fas fa-filter me-2"></i>
+                            Filtros de Búsqueda
+                        </h6>
+                        <span class="badge bg-primary fs-6">
+                            <i class="fas fa-list me-1"></i>
+                            {{ productosFiltrados.length }} productos
+                        </span>
                     </div>
 
                     <!-- Filters -->
@@ -1233,12 +1278,13 @@
                             </select>
                         </div>
 
-                        <!-- Secretaria -->
+                        <!-- Secretaría Asignada -->
                         <div class="col-md-2">
                             <select class="form-select" [(ngModel)]="filtros.secretaria"
-                                (ngModelChange)="aplicarFiltros()">
-                                <option [value]="undefined">Todas</option>
-                                @for (sec of pdmService.obtenerSecretariasUnicas(); track sec) {
+                                (ngModelChange)="aplicarFiltros()" title="Filtrar por secretaría asignada">
+                                <option [value]="undefined">Todas las secretarías</option>
+                                <option value="SIN_ASIGNAR">Sin asignar</option>
+                                @for (sec of secretariasDisponibles; track sec) {
                                 <option [value]="sec">{{ sec }}</option>
                                 }
                             </select>
@@ -1250,6 +1296,37 @@
                     </button>
                 </div>
 
+                <!-- Navegación por Años -->
+                <div class="card-header bg-gradient-primary border-top py-3">
+                    <h6 class="mb-3 text-center text-uppercase fw-bold">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        Seleccionar Año del Cuatrienio
+                    </h6>
+                    <ul class="nav nav-pills nav-fill gap-2">
+                        @for (anio of aniosDisponibles; track anio) {
+                        <li class="nav-item">
+                            <button class="nav-link" [class.active]="anioSeleccionado === anio"
+                                (click)="cambiarAnioSeleccionado(anio)">
+                                <i class="fas fa-calendar me-2"></i>
+                                <strong>{{ anio }}</strong>
+                                <br>
+                                <small class="d-block mt-1">
+                                    <span class="badge bg-success me-1">{{ contarMetasPorEstado(EstadoMeta.CUMPLIDA,
+                                        anio) }}</span>
+                                    <span class="badge bg-info me-1">{{ contarMetasPorEstado(EstadoMeta.EN_PROGRESO,
+                                        anio) }}</span>
+                                    <span class="badge bg-warning me-1">{{ contarMetasPorEstado(EstadoMeta.PENDIENTE,
+                                        anio) }}</span>
+                                    <span class="badge bg-secondary">{{ contarMetasPorEstado(EstadoMeta.POR_CUMPLIR,
+                                        anio) }}</span>
+                                </small>
+                            </button>
+                        </li>
+                        }
+                    </ul>
+                </div>
+
+                <!-- Tabla de Productos -->
                 <div class="card-body p-0">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0">
@@ -1263,16 +1340,13 @@
                                         Sector
                                         <i class="fas fa-sort ms-1"></i>
                                     </th>
-                                    <th>Producto</th>
+                                    <th>Producto / Indicador</th>
                                     <th>Secretaría</th>
-                                    <th class="text-center">Meta</th>
-                                    <th class="text-center">2024</th>
-                                    <th class="text-center">2025</th>
-                                    <th class="text-center">2026</th>
-                                    <th class="text-center">2027</th>
-                                    <th class="text-center">Avance</th>
-                                    <th class="text-center">Estado</th>
-                                    <th class="text-end">Presupuesto</th>
+                                    <th class="text-center">Meta {{ anioSeleccionado }}</th>
+                                    <th class="text-center">Avance {{ anioSeleccionado }}</th>
+                                    <th class="text-center">Estado {{ anioSeleccionado }}</th>
+                                    <th class="text-end">Presupuesto {{ anioSeleccionado }}</th>
+                                    <th class="text-center">Meta Total</th>
                                     <th class="text-center">Acciones</th>
                                 </tr>
                             </thead>
@@ -1280,84 +1354,93 @@
                                 @for (row of paginatedData; track row.codigoIndicadorProducto) {
                                 <tr class="table-row-clickeable" (click)="verDetalleProducto(row)"
                                     style="cursor: pointer;">
-                                    <td><code>{{ row.codigoIndicadorProducto }}</code></td>
-                                    <td><small>{{ row.sector }}</small></td>
+                                    <td><code class="fs-6">{{ row.codigoIndicadorProducto }}</code></td>
                                     <td>
-                                        <div style="max-width: 300px;" class="text-truncate">
-                                            {{ row.personalizacion || row.indicadorProducto }}
+                                        <span class="badge bg-secondary">{{ row.sector }}</span>
+                                    </td>
+                                    <td>
+                                        <div style="max-width: 350px;">
+                                            <strong class="d-block text-truncate">{{ row.personalizacion ||
+                                                row.indicadorProducto }}</strong>
+                                            <small class="text-muted">{{ row.lineaEstrategica }}</small>
                                         </div>
                                     </td>
                                     <td (click)="$event.stopPropagation()">
+                                        @if (authService.isAdminOrSuperAdmin()) {
                                         <select class="form-select form-select-sm"
                                             [value]="row.secretariaAsignada || ''"
                                             (change)="onCambiarSecretaria(row, $any($event.target).value || undefined)">
                                             <option value="">Sin asignar</option>
-                                            <option value="Planeación">Planeación</option>
-                                            <option value="Hacienda">Hacienda</option>
-                                            <option value="Infraestructura">Infraestructura</option>
-                                            <option value="Educación">Educación</option>
-                                            <option value="Salud">Salud</option>
-                                            <option value="Desarrollo Social">Desarrollo Social</option>
+                                            <option *ngFor="let secretaria of secretariasList"
+                                                [value]="secretaria.nombre">
+                                                {{ secretaria.nombre }}
+                                            </option>
                                         </select>
+                                        } @else {
+                                        <span class="badge bg-info">{{ row.secretariaAsignada || 'Sin asignar' }}</span>
+                                        }
                                     </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-secondary">{{ row.metaCuatrienio || 'N/A' }}</span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge" [class.bg-success]="(row.avances?.[2024]?.valor || 0) >= 70"
-                                            [class.bg-warning]="(row.avances?.[2024]?.valor || 0) >= 40 && (row.avances?.[2024]?.valor || 0) < 70"
-                                            [class.bg-secondary]="(row.avances?.[2024]?.valor || 0) < 40">
-                                            {{ row.avances?.[2024]?.valor || 0 }}%
+                                    <td class="text-center" (click)="$event.stopPropagation()">
+                                        @if (modoEdicion) {
+                                        <input type="number" class="form-control form-control-sm text-center"
+                                            style="width: 80px; display: inline-block;"
+                                            [ngModel]="obtenerProgramacionEditable(row, anioSeleccionado)"
+                                            (ngModelChange)="actualizarProgramacion(row, anioSeleccionado, $event)"
+                                            min="0" step="1" />
+                                        } @else {
+                                        <span class="badge bg-primary fs-6">
+                                            {{ obtenerMetaDelAnio(row, anioSeleccionado) }}
                                         </span>
+                                        }
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge" [class.bg-success]="(row.avances?.[2025]?.valor || 0) >= 70"
-                                            [class.bg-warning]="(row.avances?.[2025]?.valor || 0) >= 40 && (row.avances?.[2025]?.valor || 0) < 70"
-                                            [class.bg-secondary]="(row.avances?.[2025]?.valor || 0) < 40">
-                                            {{ row.avances?.[2025]?.valor || 0 }}%
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge" [class.bg-success]="(row.avances?.[2026]?.valor || 0) >= 70"
-                                            [class.bg-warning]="(row.avances?.[2026]?.valor || 0) >= 40 && (row.avances?.[2026]?.valor || 0) < 70"
-                                            [class.bg-secondary]="(row.avances?.[2026]?.valor || 0) < 40">
-                                            {{ row.avances?.[2026]?.valor || 0 }}%
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="badge" [class.bg-success]="(row.avances?.[2027]?.valor || 0) >= 70"
-                                            [class.bg-warning]="(row.avances?.[2027]?.valor || 0) >= 40 && (row.avances?.[2027]?.valor || 0) < 70"
-                                            [class.bg-secondary]="(row.avances?.[2027]?.valor || 0) < 40">
-                                            {{ row.avances?.[2027]?.valor || 0 }}%
-                                        </span>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="progress" style="height: 24px; min-width: 80px;">
-                                            <div class="progress-bar" [class.bg-success]="(row.avance || 0) >= 70"
-                                                [class.bg-warning]="(row.avance || 0) >= 40 && (row.avance || 0) < 70"
-                                                [class.bg-danger]="(row.avance || 0) < 40"
-                                                [style.width.%]="row.avance || 0">
-                                                {{ formatearPorcentaje(row.avance || 0) }}
+                                        <div class="progress" style="height: 28px; min-width: 100px;">
+                                            <div class="progress-bar fw-bold"
+                                                [class.bg-success]="obtenerAvanceDelAnio(row, anioSeleccionado) >= 70"
+                                                [class.bg-warning]="obtenerAvanceDelAnio(row, anioSeleccionado) >= 40 && obtenerAvanceDelAnio(row, anioSeleccionado) < 70"
+                                                [class.bg-danger]="obtenerAvanceDelAnio(row, anioSeleccionado) < 40"
+                                                [style.width.%]="obtenerAvanceDelAnio(row, anioSeleccionado)">
+                                                {{ obtenerAvanceDelAnio(row, anioSeleccionado) }}%
                                             </div>
                                         </div>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge" [ngClass]="{
-                                            'bg-success': obtenerColorEstado(row.estado) === 'success',
-                                            'bg-info': obtenerColorEstado(row.estado) === 'primary',
-                                            'bg-warning': obtenerColorEstado(row.estado) === 'warn',
-                                            'bg-danger': obtenerColorEstado(row.estado) === 'accent'
+                                        <span class="badge fs-6 px-3 py-2" [ngClass]="{
+                                            'bg-success': obtenerColorEstado(obtenerEstadoDelAnio(row, anioSeleccionado)) === 'success',
+                                            'bg-info': obtenerColorEstado(obtenerEstadoDelAnio(row, anioSeleccionado)) === 'primary',
+                                            'bg-warning': obtenerColorEstado(obtenerEstadoDelAnio(row, anioSeleccionado)) === 'warn',
+                                            'bg-danger': obtenerColorEstado(obtenerEstadoDelAnio(row, anioSeleccionado)) === 'accent',
+                                            'bg-secondary': obtenerColorEstado(obtenerEstadoDelAnio(row, anioSeleccionado)) === 'secondary'
                                         }">
-                                            {{ obtenerEtiquetaEstado(row.estado) }}
+                                            {{ obtenerEtiquetaEstado(obtenerEstadoDelAnio(row, anioSeleccionado)) }}
                                         </span>
                                     </td>
                                     <td class="text-end">
-                                        <small>{{ formatearMoneda(row.total2027 || 0) }}</small>
+                                        <strong class="text-primary">{{ formatearMoneda(obtenerPresupuestoDelAnio(row,
+                                            anioSeleccionado)) }}</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-dark">{{ row.metaCuatrienio }}</span>
                                     </td>
                                     <td class="text-center" (click)="$event.stopPropagation()">
-                                        <button class="btn btn-sm btn-primary" (click)="abrirDialogoAvance(row)">
-                                            <i class="fas fa-plus-circle"></i>
-                                        </button>
+                                        <div class="btn-group btn-group-sm">
+                                            @if (modoEdicion) {
+                                            <button class="btn btn-warning" (click)="abrirModalEdicion(row)"
+                                                title="Editar todos los campos">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            } @else {
+                                            <button class="btn btn-primary" (click)="abrirDialogoAvance(row)"
+                                                [disabled]="!puedeModificarProducto(row)"
+                                                [title]="puedeModificarProducto(row) ? 'Registrar avance' : 'No tienes permisos para modificar este producto'">
+                                                <i class="fas fa-plus-circle"></i>
+                                            </button>
+                                            }
+                                            <button class="btn btn-info" (click)="verDetalleProducto(row)"
+                                                title="Ver detalle">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                                 }
@@ -1591,7 +1674,8 @@
                                     'bg-success': obtenerColorEstado(productoSeleccionado.estado) === 'success',
                                     'bg-info': obtenerColorEstado(productoSeleccionado.estado) === 'primary',
                                     'bg-warning': obtenerColorEstado(productoSeleccionado.estado) === 'warn',
-                                    'bg-danger': obtenerColorEstado(productoSeleccionado.estado) === 'accent'
+                                    'bg-danger': obtenerColorEstado(productoSeleccionado.estado) === 'accent',
+                                    'bg-secondary': obtenerColorEstado(productoSeleccionado.estado) === 'secondary'
                                 }">
                                     {{ obtenerEtiquetaEstado(productoSeleccionado.estado) }}
                                 </span>
@@ -1604,9 +1688,11 @@
                 <div class="card">
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
                         <h6 class="mb-0"><i class="fas fa-tasks me-2"></i>Actividades para Cumplimiento</h6>
+                        @if (authService.isAdminOrSuperAdmin()) {
                         <button class="btn btn-sm btn-success" (click)="mostrarFormularioActividad()">
                             <i class="fas fa-plus me-1"></i>Nueva Actividad
                         </button>
+                        }
                     </div>
                     <div class="card-body">
                         @if (cargandoActividades) {
@@ -1743,11 +1829,14 @@
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="actResponsable" class="form-label">Responsable <span
+                            <label for="actResponsable" class="form-label">Responsable (Secretaría) <span
                                     class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="actResponsable"
-                                [(ngModel)]="formActividad.responsable" name="responsable" placeholder="Ej: Juan Pérez"
-                                required>
+                            <select class="form-select" id="actResponsable" [(ngModel)]="formActividad.responsable"
+                                name="responsable" required>
+                                <option value="">Seleccione una secretaría...</option>
+                                <option *ngFor="let secretaria of secretariasList" [value]="secretaria.nombre">{{
+                                    secretaria.nombre }}</option>
+                            </select>
                             @if (!(formActividad.responsable && formActividad.responsable.trim())) {
                             <div class="text-danger small mt-1">
                                 El responsable es requerido.
@@ -1838,8 +1927,6 @@
                 <strong>Meta del año {{ formActividad.anio }}:</strong> {{ obtenerMetaAnio(formActividad.anio) }}
                 | <strong>Presupuesto:</strong> {{ formatearMoneda(obtenerPresupuestoAnio(formActividad.anio)) }}
             </div>
-
-            <!-- Se elimina el control de porcentaje de avance; valor ejecutado = meta a ejecutar -->
             </form>
         </div>
         <div class="modal-footer">
@@ -1854,5 +1941,248 @@
         </div>
     </div>
 </div>
+</div>
+}
+
+<!-- Modal de Edición Completa de Producto -->
+@if (mostrandoModalEdicion && productoEditando) {
+<div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>
+                    Editar Producto PDM
+                </h5>
+                <button type="button" class="btn-close" (click)="cerrarModalEdicion()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Código:</strong> {{ productoEditando.codigoIndicadorProducto }}
+                </div>
+
+                <form>
+                    <div class="row g-3">
+                        <!-- Información Básica -->
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2 mb-3">
+                                <i class="fas fa-info-circle me-2"></i>Información Básica
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Código DANE</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.codigoDane"
+                                name="codigoDane">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Entidad Territorial</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.entidadTerritorial"
+                                name="entidadTerritorial">
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label">Nombre del Plan</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.nombrePlan"
+                                name="nombrePlan">
+                        </div>
+
+                        <!-- Línea Estratégica y Sectores -->
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2 mb-3 mt-3">
+                                <i class="fas fa-sitemap me-2"></i>Organización
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Código Indicador</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.codigoIndicador"
+                                name="codigoIndicador">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Línea Estratégica</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.lineaEstrategica"
+                                name="lineaEstrategica">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Código Sector</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.codigoSector"
+                                name="codigoSector">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Sector</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.sector" name="sector">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Código Programa</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.codigoPrograma"
+                                name="codigoPrograma">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Programa</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.programa"
+                                name="programa">
+                        </div>
+
+                        <!-- Producto e Indicador -->
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2 mb-3 mt-3">
+                                <i class="fas fa-chart-line me-2"></i>Producto e Indicador
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Código Producto</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.codigoProducto"
+                                name="codigoProducto">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Producto</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.producto"
+                                name="producto">
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label">Indicador de Producto</label>
+                            <textarea class="form-control" rows="2" [(ngModel)]="productoEditando.indicadorProducto"
+                                name="indicadorProducto"></textarea>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label">Personalización</label>
+                            <textarea class="form-control" rows="2" [(ngModel)]="productoEditando.personalizacion"
+                                name="personalizacion"></textarea>
+                        </div>
+
+                        <!-- Metas y Medición -->
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2 mb-3 mt-3">
+                                <i class="fas fa-bullseye me-2"></i>Metas y Medición
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Unidad de Medida</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.unidadMedida"
+                                name="unidadMedida">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Meta Cuatrienio</label>
+                            <input type="number" class="form-control" [(ngModel)]="productoEditando.metaCuatrienio"
+                                name="metaCuatrienio" min="0" step="0.01">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Principal</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.principal"
+                                name="principal">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Tipo de Acumulación</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.tipoAcumulacion"
+                                name="tipoAcumulacion">
+                        </div>
+
+                        <!-- Programación por Año -->
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2 mb-3 mt-3">
+                                <i class="fas fa-calendar-alt me-2"></i>Programación por Año
+                            </h6>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Programación 2024</label>
+                            <input type="number" class="form-control" [(ngModel)]="productoEditando.programacion2024"
+                                name="programacion2024" min="0" step="0.01">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Programación 2025</label>
+                            <input type="number" class="form-control" [(ngModel)]="productoEditando.programacion2025"
+                                name="programacion2025" min="0" step="0.01">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Programación 2026</label>
+                            <input type="number" class="form-control" [(ngModel)]="productoEditando.programacion2026"
+                                name="programacion2026" min="0" step="0.01">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Programación 2027</label>
+                            <input type="number" class="form-control" [(ngModel)]="productoEditando.programacion2027"
+                                name="programacion2027" min="0" step="0.01">
+                        </div>
+
+                        <!-- Totales por Año -->
+                        <div class="col-md-3">
+                            <label class="form-label">Total 2024</label>
+                            <input type="number" class="form-control" [(ngModel)]="productoEditando.total2024"
+                                name="total2024" min="0" step="0.01">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Total 2025</label>
+                            <input type="number" class="form-control" [(ngModel)]="productoEditando.total2025"
+                                name="total2025" min="0" step="0.01">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Total 2026</label>
+                            <input type="number" class="form-control" [(ngModel)]="productoEditando.total2026"
+                                name="total2026" min="0" step="0.01">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Total 2027</label>
+                            <input type="number" class="form-control" [(ngModel)]="productoEditando.total2027"
+                                name="total2027" min="0" step="0.01">
+                        </div>
+
+                        <!-- ODS y Otros -->
+                        <div class="col-12">
+                            <h6 class="border-bottom pb-2 mb-3 mt-3">
+                                <i class="fas fa-globe me-2"></i>ODS y Otros
+                            </h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Código ODS</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.codigoODS"
+                                name="codigoODS">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">ODS</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.ods" name="ods">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">BPIN</label>
+                            <input type="text" class="form-control" [(ngModel)]="productoEditando.bpin" name="bpin">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="cerrarModalEdicion()">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success" (click)="guardarProductoEditado()">
+                    <i class="fas fa-check me-2"></i>Aplicar Cambios
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 }

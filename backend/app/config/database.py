@@ -1,11 +1,23 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from app.config.settings import settings
 
+# Resolver ruta SQLite relativa a absoluta basada en la carpeta backend
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+db_url = settings.database_url
+if db_url.startswith("sqlite:///"):
+    raw_path = db_url.replace("sqlite:///", "", 1)
+    if raw_path.startswith("./") or not raw_path.startswith("/"):
+        abs_path = os.path.abspath(os.path.join(BASE_DIR, raw_path))
+        db_url = f"sqlite:///{abs_path}"
+        # Mensaje útil en desarrollo; no usar logging para mantener simple.
+        print(f"[DB] Usando SQLite absoluto: {db_url}")
+
 # Configurar argumentos de conexión según el tipo de base de datos
-if "sqlite" in settings.database_url:
+if "sqlite" in db_url:
     connect_args = {"check_same_thread": False}
 else:
     # PostgreSQL - Configuración para Render y producción
@@ -20,7 +32,7 @@ else:
     }
 
 engine = create_engine(
-    settings.database_url,
+    db_url,
     connect_args=connect_args,
     pool_pre_ping=True,  # Verifica la conexión antes de usarla
     pool_recycle=900,    # Recicla conexiones cada 15 min para evitar timeouts de idle

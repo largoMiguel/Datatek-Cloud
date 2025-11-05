@@ -47,4 +47,10 @@ export class UserService {
     updateUserModules(id: number, modules: string[]): Observable<User> {
         return this.http.patch<User>(`${this.baseUrl}${id}/modules/`, modules);
     }
+
+    // Lista de secretarías existentes (distintas) para la entidad actual del usuario
+    getSecretarias(entityId?: number): Observable<string[]> {
+        const url = entityId ? `${environment.apiUrl}/users/secretarias/?entity_id=${entityId}` : `${environment.apiUrl}/users/secretarias/`;
+        return this.http.get<string[]>(url);
+    }
 }

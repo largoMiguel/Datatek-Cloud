@@ -1,33 +1,46 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container-fluid">
+        <!-- Toggle Sidebar -->
+        <button class="btn btn-outline-light me-3 d-lg-inline d-inline" type="button" (click)="sidebar.toggle()"
+            title="Mostrar/Ocultar menú">
+            <i class="fas fa-bars"></i>
+        </button>
+
         <!-- Marca / Entidad -->
-        <div class="navbar-brand-section d-flex align-items-center">
+        <div class="navbar-brand-section d-flex align-items-center gap-3">
             <ng-container *ngIf="(entityContext.currentEntity$ | async) as entity; else defaultBrand">
-                <div class="entity-logo-wrapper">
-                    <ng-container *ngIf="entity.logo_url; else entityLogoFallback">
-                        <img [src]="entity.logo_url" [alt]="entity.name" class="entity-logo me-3">
-                    </ng-container>
-                    <ng-template #entityLogoFallback>
-                        <img src="assets/logos/logo_icono.png" alt="SoftOne360" class="entity-logo me-3">
-                    </ng-template>
-                </div>
+                <!-- Logo Entidad -->
+                <ng-container *ngIf="entity.logo_url; else entityLogoFallback">
+                    <img [src]="entity.logo_url" [alt]="entity.name" class="entity-logo">
+                </ng-container>
+                <ng-template #entityLogoFallback>
+                    <img src="assets/logos/logo_icono.png" alt="SoftOne360" class="entity-logo">
+                </ng-template>
+
                 <div class="navbar-divider"></div>
-                <div class="entity-info me-3">
+
+                <!-- Nombre Entidad -->
+                <div class="entity-info">
                     <h6 class="entity-name mb-0">{{ entity.name }}</h6>
                     <small class="entity-subtitle">Portal Administrativo</small>
                 </div>
+
                 <div class="navbar-divider"></div>
-                <div class="software-logo-wrapper">
+
+                <!-- Logo Sistema + Nombre -->
+                <div class="d-flex align-items-center gap-2">
                     <img src="assets/logos/logo_icono.png" alt="SoftOne360" class="software-logo">
-                    <small class="software-name">SoftOne360</small>
+                    <span class="software-name">SoftOne360</span>
                 </div>
             </ng-container>
             <ng-template #defaultBrand>
-                <div class="entity-logo-wrapper">
-                    <img src="assets/logos/logo_icono.png" alt="SoftOne360" class="entity-logo me-3">
-                </div>
+                <!-- Logo Sistema -->
+                <img src="assets/logos/logo_icono.png" alt="SoftOne360" class="entity-logo">
+
                 <div class="navbar-divider"></div>
-                <div class="entity-info me-3">
+
+                <!-- Nombre Sistema -->
+                <div class="entity-info">
                     <h6 class="entity-name mb-0">SoftOne360</h6>
                     <small class="entity-subtitle">Portal Administrativo</small>
                 </div>
@@ -119,49 +132,3 @@
         </div>
     </div>
 </nav>
-<!-- Pestañas globales (solo portal administrativo) -->
-<div class="container-fluid mb-3">
-    <ul class="nav nav-tabs">
-        <li class="nav-item">
-            <a class="nav-link" [class.active]="isActiveView('dashboard')" (click)="goDashboard('dashboard')">
-                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-            </a>
-        </li>
-        <li class="nav-item" *ngIf="canAccessPqrs()">
-            <a class="nav-link" [class.active]="isActiveView('mis-pqrs')" (click)="goDashboard('mis-pqrs')">
-                <i class="fas fa-list me-2"></i>Mis PQRS
-            </a>
-        </li>
-        <li class="nav-item" *ngIf="canAccessPqrs()">
-            <a class="nav-link" [class.active]="isActiveView('nueva-pqrs')" (click)="goDashboard('nueva-pqrs')">
-                <i class="fas fa-plus me-2"></i>Nueva PQRS
-            </a>
-        </li>
-        <li class="nav-item" *ngIf="isAdmin() && usersAdminEnabled()">
-            <a class="nav-link" [class.active]="isActiveView('usuarios')" (click)="goDashboard('usuarios')">
-                <i class="fas fa-users me-2"></i>Usuarios
-            </a>
-        </li>
-        <li class="nav-item" *ngIf="canAccessPlanes()">
-            <a class="nav-link" [class.active]="isActiveRoutePlanes()" (click)="goPlanes()">
-                <i class="fas fa-clipboard-list me-2"></i>Planes Institucionales
-            </a>
-        </li>
-        <li class="nav-item" *ngIf="canAccessContratacion()">
-            <a class="nav-link" [class.active]="isActiveRouteContratacion()" (click)="goContratacion()">
-                <i class="fas fa-file-contract me-2"></i>Contratación
-            </a>
-        </li>
-        <li class="nav-item" *ngIf="canAccessPdm()">
-            <a class="nav-link" [class.active]="isActiveRoutePdm()" (click)="goPdm()">
-                <i class="fas fa-chart-line me-2"></i>Plan de Desarrollo
-            </a>
-        </li>
-        <li class="nav-item ms-auto" *ngIf="isAdmin() && reportsPdfEnabled() && isActiveRouteDashboard()">
-            <button class="btn btn-success btn-sm mt-1" (click)="openReportForm()">
-                <i class="fas fa-file-pdf me-2"></i>Generar Informe
-            </button>
-        </li>
-    </ul>
-
-</div>

@@ -62,11 +62,36 @@ export class AuthService {
         return token;
     }
 
+    /**
+     * Verifica si el token JWT ha expirado
+     */
+    isTokenExpired(): boolean {
+        const token = this.getToken();
+        if (!token) return true;
+
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const exp = payload.exp;
+            if (!exp) return false;
+
+            const now = Math.floor(Date.now() / 1000);
+            return now >= exp;
+        } catch {
+            return true;
+        }
+    }
+
     isAuthenticated(): boolean {
         const token = this.getToken();
-        const isAuth = !!token;
-        // console.log('¿Está autenticado?', isAuth);
-        return isAuth;
+        if (!token) return false;
+
+        // Validar que el token no esté vencido
+        if (this.isTokenExpired()) {
+            this.logout();
+            return false;
+        }
+
+        return true;
     }
 
     isAdmin(): boolean {

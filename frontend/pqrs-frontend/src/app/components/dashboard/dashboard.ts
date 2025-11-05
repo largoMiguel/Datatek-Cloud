@@ -8,6 +8,7 @@ import { UserService } from '../../services/user.service';
 import { AlertService } from '../../services/alert.service';
 import { AiService } from '../../services/ai.service';
 import { ReportService } from '../../services/report.service';
+import { SecretariasService } from '../../services/secretarias.service';
 import { User } from '../../models/user.model';
 import { EntityContextService } from '../../services/entity-context.service';
 import { PQRSWithDetails, ESTADOS_PQRS, EstadoPQRS, UpdatePQRSRequest, PQRSResponse, TIPOS_IDENTIFICACION, MEDIOS_RESPUESTA } from '../../models/pqrs.model';
@@ -34,6 +35,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   pqrsList: PQRSWithDetails[] = [];
   usuariosList: User[] = [];
   secretariosList: User[] = [];
+  secretariasSugeridas: string[] = [];
   isLoading = true;
   isLoadingUsuarios = false;
   isSubmitting = false;
@@ -46,8 +48,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   selectedPqrs: PQRSWithDetails | null = null;
   respuestaTexto = '';
   selectedSecretarioId: number | null = null;
+  selectedSecretariaFilter: string = '';
   selectedEstado: string = '';
   private subscriptions = new Subscription();
+  private refreshInterval: any;
 
   // Alertas (campana en navbar)
   showAlertsPanel = false;
@@ -106,6 +110,50 @@ export class DashboardComponent implements OnInit, OnDestroy {
   };
   guardandoModulos = false;
 
+  // Helper para manejar errores de manera consistente
+  private extractErrorMessage(error: any): string {
+    if (!error) return 'Error desconocido';
+
+    // Si es un string directo
+    if (typeof error === 'string') return error;
+
+    // Si tiene error.error
+    if (error.error) {
+      if (typeof error.error === 'string') return error.error;
+
+      // Si tiene detail
+      if (error.error.detail) {
+        if (typeof error.error.detail === 'string') return error.error.detail;
+
+        // Si detail es un array (errores de validación Pydantic)
+        if (Array.isArray(error.error.detail)) {
+          return error.error.detail
+            .map((e: any) => {
+              if (typeof e === 'string') return e;
+              if (e.msg) return `${e.loc ? e.loc.join('.') + ': ' : ''}${e.msg}`;
+              return JSON.stringify(e);
+            })
+            .join('; ');
+        }
+
+        // Si detail es un objeto
+        return JSON.stringify(error.error.detail);
+      }
+
+      // Si tiene message
+      if (error.error.message) return error.error.message;
+    }
+
+    // Si error tiene message directo
+    if (error.message) return error.message;
+
+    // Si error tiene statusText
+    if (error.statusText) return error.statusText;
+
+    // Último recurso
+    return 'Error al procesar la solicitud';
+  }
+
   constructor(
     private authService: AuthService,
     private pqrsService: PqrsService,
@@ -116,6 +164,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     private alertService: AlertService,
     private aiService: AiService,
     private reportService: ReportService,
+    private secretariasSvc: SecretariasService,
     public entityContext: EntityContextService,
     private notificationsService: NotificationsService,
     private alertsEvents: AlertsEventsService
@@ -255,6 +304,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.limpiarDatos();
       this.loadPqrs();
       this.loadSecretarios();
+      // Cargar lista de secretarías sugeridas (distintas) para la entidad
+      const eid = this.entityContext.currentEntity?.id;
+      this.secretariasSvc.listar(eid).subscribe({
+        next: (items) => (this.secretariasSugeridas = (items || []).map(i => i.nombre)),
+        error: () => (this.secretariasSugeridas = [])
+      });
       // Traer conteo de alertas no leídas para el badge
       this.notificationsService.fetch(true).subscribe();
     });
@@ -276,11 +331,30 @@ export class DashboardComponent implements OnInit, OnDestroy {
       this.mostrarFormularioInforme();
     });
     this.subscriptions.add(openReportSub);
+
+    // Auto-refresh cada 60 segundos para cargar nuevas PQRS y alertas
+    this.refreshInterval = setInterval(() => {
+      if (!this.authService.isAuthenticated()) {
+        if (this.refreshInterval) {
+          clearInterval(this.refreshInterval);
+        }
+        return;
+      }
+
+      if (this.entityContext.currentEntity) {
+        this.loadPqrs();
+        this.notificationsService.fetch(true).subscribe();
+      }
+    }, 60000);
   }
 
   ngOnDestroy() {
     // Limpiar todas las suscripciones
     this.subscriptions.unsubscribe();
+    // Limpiar el intervalo de auto-refresh
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
   }
 
   // Cerrar panel de alertas al hacer click fuera
@@ -405,6 +479,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (topViews.has(view)) {
       this.updateQueryParamV(view);
     }
+    // Cargar secretarías al abrir formulario de crear usuario
+    if (view === 'crear-secretario') {
+      const eid = this.entityContext.currentEntity?.id;
+      this.secretariasSvc.listar(eid).subscribe({
+        next: (items) => (this.secretariasSugeridas = (items || []).map(i => i.nombre)),
+        error: () => (this.secretariasSugeridas = [])
+      });
+    }
   }
 
   private updateQueryParamV(view?: string) {
@@ -443,7 +525,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.secretariosList = data;
       },
       error: (error) => {
-        // console.error('Error cargando secretarios:', error);
+        console.error('Error cargando secretarios:', error);
+        const msg = this.extractErrorMessage(error);
+        this.alertService.error(msg, 'Error al Cargar');
       }
     });
   }
@@ -456,7 +540,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.isLoadingUsuarios = false;
       },
       error: (error) => {
-        // console.error('Error cargando usuarios:', error);
+        console.error('Error cargando usuarios:', error);
+        const msg = this.extractErrorMessage(error);
+        this.alertService.error(msg, 'Error al Cargar Usuarios');
         this.isLoadingUsuarios = false;
       }
     });
@@ -546,9 +632,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   mostrarAsignacion(pqrs: any): void {
     this.selectedPqrs = pqrs;
-    this.selectedSecretarioId = pqrs.assigned_to_id || null;
+    this.selectedSecretarioId = null;
+    this.selectedSecretariaFilter = '';
     // Recargar secretarios para asegurar que la lista esté actualizada
     this.loadSecretarios();
+  }
+
+  getUsuariosPorSecretaria(nombreSecretaria: string): User[] {
+    return this.secretariosList.filter(u =>
+      u.is_active &&
+      (u.secretaria || '').toLowerCase() === nombreSecretaria.toLowerCase()
+    );
   }
 
   mostrarCambioEstado(pqrs: any): void {
@@ -557,40 +651,44 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   confirmarAsignacion(): void {
-    if (this.selectedPqrs && this.selectedSecretarioId) {
-      // Validar que el secretario esté activo
-      const secretario = this.secretariosList.find(s => s.id === this.selectedSecretarioId);
-
-      if (secretario && !secretario.is_active) {
-        this.alertService.warning(
-          `El usuario ${secretario.full_name} está inactivo y no puede recibir asignaciones.\n\nPor favor, selecciona un usuario activo.`,
-          'Usuario Inactivo'
-        );
-        return;
-      }
-
-      this.pqrsService.assignPqrs(this.selectedPqrs.id, this.selectedSecretarioId).subscribe({
-        next: (response) => {
-          // console.log('PQRS asignada exitosamente:', response);
-          this.alertService.success(
-            `La PQRS N° ${this.selectedPqrs?.numero_radicado} ha sido asignada exitosamente a ${secretario?.full_name || 'el usuario seleccionado'}.`
-          );
-          this.loadPqrs();
-
-          const closeButton = document.querySelector('#asignacionModal .btn-close') as HTMLElement;
-          if (closeButton) {
-            closeButton.click();
-          }
-        },
-        error: (error) => {
-          // console.error('Error asignando PQRS:', error);
-          this.alertService.error(
-            error.error?.detail || 'No se pudo completar la asignación. Por favor, intenta nuevamente.',
-            'Error al Asignar PQRS'
-          );
-        }
-      });
+    if (!this.selectedPqrs || !this.selectedSecretarioId) {
+      this.alertService.warning('Por favor selecciona una secretaría para continuar');
+      return;
     }
+
+    // selectedSecretarioId ahora contiene el nombre de la secretaría
+    const nombreSecretaria = this.selectedSecretarioId as any;
+
+    // Buscar usuarios activos de esa secretaría
+    const usuariosDisponibles = this.getUsuariosPorSecretaria(nombreSecretaria);
+
+    if (usuariosDisponibles.length === 0) {
+      this.alertService.warning(
+        `No hay usuarios activos en la secretaría "${nombreSecretaria}". Por favor, crea un usuario para esta secretaría primero.`
+      );
+      return;
+    }
+
+    // Asignar al primer usuario disponible (o implementar lógica de rotación)
+    const usuarioAsignado = usuariosDisponibles[0];
+
+    this.pqrsService.assignPqrs(this.selectedPqrs.id, usuarioAsignado.id).subscribe({
+      next: (response) => {
+        this.alertService.success(
+          `La PQRS N° ${this.selectedPqrs?.numero_radicado} ha sido asignada exitosamente a la secretaría "${nombreSecretaria}".`
+        );
+        this.loadPqrs();
+
+        const closeButton = document.querySelector('#asignacionModal .btn-close') as HTMLElement;
+        if (closeButton) {
+          closeButton.click();
+        }
+      },
+      error: (error) => {
+        console.error('Error asignando PQRS:', error);
+        this.alertService.error(this.extractErrorMessage(error), 'Error al Asignar PQRS');
+      }
+    });
   }
 
   confirmarCambioEstado(): void {
@@ -615,11 +713,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
           }
         },
         error: (error) => {
-          // console.error('Error actualizando estado:', error);
-          this.alertService.error(
-            error.error?.detail || 'No se pudo actualizar el estado. Por favor, intenta nuevamente.',
-            'Error al Cambiar Estado'
-          );
+          console.error('Error actualizando estado:', error);
+          const msg = this.extractErrorMessage(error);
+          this.alertService.error(msg, 'Error al Cambiar Estado');
         }
       });
     }
@@ -653,11 +749,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.loadPqrs();
         },
         error: (error) => {
-          // console.error('Error eliminando PQRS:', error);
-          this.alertService.error(
-            error.error?.detail || 'No se pudo eliminar la PQRS. Por favor, intenta nuevamente.',
-            'Error al Eliminar'
-          );
+          console.error('Error eliminando PQRS:', error);
+          this.alertService.error(this.extractErrorMessage(error), 'Error al Eliminar');
         }
       });
     }
@@ -712,11 +805,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.loadPqrs();
         },
         error: (error) => {
-          // console.error('Error creando PQRS:', error);
-          this.alertService.error(
-            error.error?.message || 'No se pudo crear la PQRS. Por favor, verifica los datos e intenta nuevamente.',
-            'Error al Crear PQRS'
-          );
+          console.error('Error creando PQRS:', error);
+          this.alertService.error(this.extractErrorMessage(error), 'Error al Crear PQRS');
           this.isSubmitting = false;
         }
       });
@@ -779,11 +869,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.isSubmitting = false;
         },
         error: (error) => {
-          // console.error('Error actualizando PQRS:', error);
-          this.alertService.error(
-            error.error?.message || 'No se pudo actualizar la PQRS. Por favor, intenta nuevamente.',
-            'Error al Actualizar'
-          );
+          console.error('Error actualizando PQRS:', error);
+          const msg = this.extractErrorMessage(error);
+          this.alertService.error(msg, 'Error al Actualizar');
           this.isSubmitting = false;
         }
       });
@@ -821,12 +909,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.isSubmitting = false;
           this.setActiveView('usuarios');
           this.loadUsuarios();
+          // Refrescar sugerencias de secretarías (se va acumulando)
+          const eid = this.entityContext.currentEntity?.id;
+          this.secretariasSvc.listar(eid).subscribe({
+            next: (items) => (this.secretariasSugeridas = (items || []).map(i => i.nombre)),
+            error: () => { }
+          });
         },
         error: (error) => {
-          this.alertService.error(
-            error.error?.detail || 'No se pudo crear el usuario. Verifica que el usuario y email no existan.',
-            'Error al Crear Usuario'
-          );
+          console.error('Error creando usuario:', error);
+          const msg = this.extractErrorMessage(error);
+          this.alertService.error(msg, 'Error al Crear Usuario');
           this.isSubmitting = false;
         }
       });
@@ -856,11 +949,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.loadPqrs();
         },
         error: (error) => {
-          // console.error('Error enviando respuesta:', error);
-          this.alertService.error(
-            'No se pudo enviar la respuesta. Por favor, verifica tu conexión e intenta nuevamente.',
-            'Error al Enviar Respuesta'
-          );
+          console.error('Error enviando respuesta:', error);
+          const msg = this.extractErrorMessage(error);
+          this.alertService.error(msg, 'Error al Enviar Respuesta');
         }
       });
     }
@@ -940,7 +1031,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
         // console.log('Estado de usuario actualizado:', updatedUser);
       },
       error: (error) => {
-        // console.error('Error alternando estado de usuario:', error);
+        console.error('Error alternando estado de usuario:', error);
+        const msg = this.extractErrorMessage(error);
+        this.alertService.error(msg, 'Error al Cambiar Estado');
       }
     });
   }
@@ -977,11 +1070,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
           this.loadSecretarios();
         },
         error: (error) => {
-          // console.error('Error eliminando usuario:', error);
-          this.alertService.error(
-            error.error?.detail || 'No se pudo eliminar el usuario. Por favor, intenta nuevamente.',
-            'Error al Eliminar Usuario'
-          );
+          console.error('Error eliminando usuario:', error);
+          const msg = this.extractErrorMessage(error);
+          this.alertService.error(msg, 'Error al Eliminar Usuario');
         }
       });
     }
@@ -1212,6 +1303,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     if (this.chart) {
       this.chart.update();
     }
+  }
+
+  openReportForm(): void {
+    this.mostrarFormularioInforme();
   }
 
   mostrarFormularioInforme(): void {

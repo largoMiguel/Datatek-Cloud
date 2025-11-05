@@ -1,24 +1,52 @@
-<div class="container-fluid py-4">
+<div class="pdm-upload-container">
     <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="mb-1"><i class="fas fa-cloud-upload-alt me-2 text-primary"></i>Carga de Plan de Desarrollo
+                Municipal</h3>
+            <p class="text-muted mb-0 small">Sube tu archivo Excel con el PDM para analizar metas y cumplimiento</p>
+        </div>
+    </div>
+
+    <!-- Info del Excel en Base de Datos -->
+    @if (excelEnBD().existe) {
     <div class="row mb-4">
         <div class="col">
-            <div class="card shadow-sm border-0">
+            <div class="card shadow-sm border-primary">
                 <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="bg-primary bg-opacity-10 rounded-3 p-3 me-3">
-                            <i class="fas fa-cloud-upload-alt fa-3x text-primary"></i>
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <i class="fas fa-database fa-3x text-primary"></i>
                         </div>
-                        <div>
-                            <h1 class="h3 mb-1">Carga de Plan de Desarrollo Municipal</h1>
-                            <p class="text-muted mb-0">Sube tu archivo Excel con el PDM para analizar metas y
-                                cumplimiento
+                        <div class="col">
+                            <h4 class="mb-1">
+                                <i class="fas fa-file-excel me-2"></i>
+                                Excel almacenado en base de datos
+                            </h4>
+                            <p class="text-muted mb-2">
+                                <strong>Archivo:</strong> {{ excelEnBD().nombre }}
+                                <span class="badge bg-secondary ms-2">{{ formatBytes(excelEnBD().tamanio!) }}</span>
                             </p>
+                            <p class="text-muted mb-0">
+                                <strong>Fecha de carga:</strong> <span class="badge bg-info">{{
+                                    formatDate(excelEnBD().fecha!) }}</span>
+                            </p>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-success me-2" (click)="cargarDesdeBaseDatos()"
+                                [disabled]="cargando()">
+                                <i class="fas fa-download me-2"></i>Cargar para Análisis
+                            </button>
+                            <button class="btn btn-outline-danger" (click)="limpiarDatos()">
+                                <i class="fas fa-trash me-2"></i>Eliminar
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    }
 
     <!-- Info del caché -->
     @if (tieneDatos()) {
@@ -32,21 +60,19 @@
                         </div>
                         <div class="col">
                             <h4 class="mb-1">
-                                <i class="fas fa-database me-2"></i>
-                                Datos almacenados en caché
+                                <i class="fas fa-memory me-2"></i>
+                                Datos en caché local
                             </h4>
                             <p class="text-muted mb-2">
                                 Última carga: <span class="badge bg-info">{{ formatDate(cacheInfo().fecha!) }}</span>
                             </p>
-                            <p class="mb-0 small">Los datos del PDM ya están disponibles. Puedes ir directamente al
-                                dashboard o cargar un archivo actualizado.</p>
+                            <p class="mb-0 small">Los datos del PDM están listos para análisis. Puedes ir directamente
+                                al
+                                dashboard.</p>
                         </div>
                         <div class="col-auto">
                             <button class="btn btn-primary me-2" (click)="irAlDashboard()">
                                 <i class="fas fa-chart-line me-2"></i>Ir al Dashboard
-                            </button>
-                            <button class="btn btn-outline-danger" (click)="limpiarDatos()">
-                                <i class="fas fa-trash me-2"></i>Eliminar Caché
                             </button>
                         </div>
                     </div>
@@ -54,7 +80,9 @@
             </div>
         </div>
     </div>
+    }
 
+    @if (excelEnBD().existe || tieneDatos()) {
     <hr class="my-4">
 
     <div class="text-center mb-4">
@@ -176,9 +204,18 @@
             <div class="alert alert-info d-flex align-items-start">
                 <i class="fas fa-question-circle fa-2x me-3"></i>
                 <div>
-                    <h5 class="alert-heading">¿Necesitas ayuda?</h5>
-                    <p class="mb-0">Asegúrate de que tu archivo Excel contenga las 5 hojas requeridas con la estructura
-                        estándar del Plan de Desarrollo Municipal (PDM).</p>
+                    <h5 class="alert-heading">¿Cómo funciona?</h5>
+                    <ul class="mb-0">
+                        <li><strong>Primera vez:</strong> Sube tu archivo Excel. Se guardará en la base de datos y se
+                            procesará para análisis.</li>
+                        <li><strong>Análisis y seguimiento:</strong> Usa el botón "Cargar para Análisis" para descargar
+                            el Excel de la BD y procesarlo localmente.</li>
+                        <li><strong>Actualización:</strong> Puedes cargar un nuevo archivo en cualquier momento. El
+                            anterior será reemplazado.</li>
+                    </ul>
+                    <p class="mb-0 mt-2"><small>Asegúrate de que tu archivo Excel contenga las 5 hojas requeridas con la
+                            estructura
+                            estándar del Plan de Desarrollo Municipal (PDM).</small></p>
                 </div>
             </div>
         </div>

@@ -69,6 +69,37 @@ export interface ActividadResponse {
     updated_at: string;
 }
 
+export interface EvidenciaCreateRequest {
+    actividad_id: number;
+    descripcion?: string;
+    url?: string;
+    imagenes?: Array<{
+        nombre: string;
+        mime_type: string;
+        tamano: number;
+        contenido_base64: string;
+    }>;
+}
+
+export interface EvidenciaResponse {
+    id: number;
+    actividad_id: number;
+    entity_id: number;
+    descripcion?: string;
+    url?: string;
+    nombre_imagen?: string;
+    mime_type?: string;
+    tamano?: number;
+    contenido?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface EvidenciasListResponse {
+    actividad_id: number;
+    evidencias: EvidenciaResponse[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class PdmBackendService {
     private http = inject(HttpClient);
@@ -104,5 +135,29 @@ export class PdmBackendService {
 
     deleteActividad(slug: string, actividadId: number): Observable<void> {
         return this.http.delete<void>(`${this.baseUrl}/${slug}/actividades/${actividadId}`);
+    }
+
+    // Evidencias
+    createEvidencia(slug: string, actividadId: number, payload: EvidenciaCreateRequest): Observable<{ message: string; count: number }> {
+        return this.http.post<{ message: string; count: number }>(`${this.baseUrl}/${slug}/actividades/${actividadId}/evidencias`, payload);
+    }
+
+    getEvidencias(slug: string, actividadId: number): Observable<EvidenciasListResponse> {
+        return this.http.get<EvidenciasListResponse>(`${this.baseUrl}/${slug}/actividades/${actividadId}/evidencias`);
+    }
+
+    deleteEvidencia(slug: string, actividadId: number, evidenciaId: number): Observable<void> {
+        return this.http.delete<void>(`${this.baseUrl}/${slug}/actividades/${actividadId}/evidencias/${evidenciaId}`);
+    }
+
+    // Excel management
+    downloadExcel(slug: string): Observable<Blob> {
+        return this.http.get(`${this.baseUrl}/${slug}/download-excel`, {
+            responseType: 'blob'
+        });
+    }
+
+    getExcelInfo(slug: string): Observable<{ existe: boolean; nombre_archivo?: string; tamanio?: number; fecha_carga?: string }> {
+        return this.http.get<{ existe: boolean; nombre_archivo?: string; tamanio?: number; fecha_carga?: string }>(`${this.baseUrl}/${slug}/excel-info`);
     }
 }

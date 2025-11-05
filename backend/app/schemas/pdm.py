@@ -1,5 +1,27 @@
 from typing import Optional, List, Dict
 from pydantic import BaseModel, Field
+from datetime import datetime
+
+
+class ExcelUploadResponse(BaseModel):
+    entity_id: int
+    nombre_archivo: str
+    tamanio: int
+    created_at: datetime
+    mensaje: str
+
+    class Config:
+        from_attributes = True
+
+
+class ExcelInfoResponse(BaseModel):
+    existe: bool
+    nombre_archivo: Optional[str] = None
+    tamanio: Optional[int] = None
+    fecha_carga: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
 
 
 class AssignmentBase(BaseModel):
@@ -88,3 +110,42 @@ class ActividadResponse(ActividadBase):
 class ActividadesListResponse(BaseModel):
     codigo_indicador_producto: str
     actividades: List[ActividadResponse]
+
+
+# Schemas para evidencias de actividades
+class EvidenciaBase(BaseModel):
+    descripcion: Optional[str] = Field(None, max_length=2048)
+    url: Optional[str] = Field(None, max_length=512)
+    nombre_imagen: Optional[str] = Field(None, max_length=256)
+    mime_type: Optional[str] = Field(None, max_length=64)
+    tamano: Optional[int] = None
+    contenido: Optional[str] = None  # Base64 encoded image
+
+
+class EvidenciaCreateRequest(BaseModel):
+    actividad_id: int
+    descripcion: Optional[str] = Field(None, max_length=2048)
+    url: Optional[str] = Field(None, max_length=512)
+    imagenes: Optional[List[dict]] = None  # Lista de imágenes {nombre, mime_type, tamano, contenido_base64}
+
+
+class EvidenciaResponse(BaseModel):
+    id: int
+    actividad_id: int
+    entity_id: int
+    descripcion: Optional[str] = None
+    url: Optional[str] = None
+    nombre_imagen: Optional[str] = None
+    mime_type: Optional[str] = None
+    tamano: Optional[int] = None
+    contenido: Optional[str] = None  # Base64 encoded
+    created_at: str
+    updated_at: str
+
+    class Config:
+        from_attributes = True
+
+
+class EvidenciasListResponse(BaseModel):
+    actividad_id: int
+    evidencias: List[EvidenciaResponse]

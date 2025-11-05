@@ -15,6 +15,38 @@ from app.utils.auth import (
 
 router = APIRouter()
 
+@router.get("/users/secretarias/", response_model=List[str])
+async def list_secretarias(
+    entity_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Devuelve la lista de nombres de secretarías existentes (distintas) para una entidad.
+    - SUPERADMIN: puede consultar por cualquier entidad si especifica entity_id; si no, retorna vacío.
+    - ADMIN/SECRETARIO: retorna las secretarías dentro de su propia entidad.
+    """
+    query = db.query(User.secretaria).filter(
+        User.secretaria.isnot(None),
+        User.secretaria != ""
+    )
+
+    if current_user.role == UserRole.SUPERADMIN:
+        if entity_id:
+            query = query.filter(User.entity_id == entity_id)
+        else:
+            # Sin entity_id explícito, no retornar global para evitar mezclar entre entidades
+            return []
+    else:
+        # Admin/Secretario limitados a su entidad
+        if not current_user.entity_id:
+            return []
+        query = query.filter(User.entity_id == current_user.entity_id)
+
+    rows = query.distinct().all()
+    secretarias = sorted([r[0] for r in rows if r and r[0]], key=lambda s: s.lower())
+    return secretarias
+
 @router.get("/users/", response_model=List[UserResponse])
 async def get_users(
     role: Optional[str] = Query(None),

@@ -1,15 +1,20 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
-import { Subject, takeUntil, forkJoin, of } from 'rxjs';
+import { Router, ActivatedRoute } from '@angular/router';
+import { Subject, takeUntil, forkJoin, of, Observable, firstValueFrom } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ChartConfiguration, ChartData } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
+import * as XLSX from 'xlsx';
 import { PdmDataService } from '../pdm-data.service';
 import { AnalisisPDM, PDMData, FiltrosPDM, EstadoMeta, PlanIndicativoProducto } from '../pdm.models';
 import { PdmBackendService } from '../../../services/pdm-backend.service';
 import { EntityContextService } from '../../../services/entity-context.service';
+import { SecretariasService } from '../../../services/secretarias.service';
+import { AuthService } from '../../../services/auth.service';
+import { NotificationsService, AlertItem } from '../../../services/notifications.service';
+import { AlertsEventsService } from '../../../services/alerts-events.service';
 import { PdmAvanceDialogComponent, AvanceDialogData } from '../pdm-avance-dialog/pdm-avance-dialog.component';
 
 declare const bootstrap: any;
@@ -29,10 +34,18 @@ declare const bootstrap: any;
 export class PdmDashboardComponent implements OnInit, OnDestroy {
 
     private destroy$ = new Subject<void>();
+    private refreshInterval: any;
 
     pdmData: PDMData | null = null;
     analisis: AnalisisPDM | null = null;
     cargando = false;
+
+    // Notificaciones
+    alerts$!: Observable<AlertItem[]>;
+    unreadCount$!: Observable<number>;
+
+    // Exponer enum para el template
+    EstadoMeta = EstadoMeta;
 
     // Filtros
     filtros: FiltrosPDM = {};
@@ -56,6 +69,8 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
     itemsPerPage = 10;
     sortColumn: string = '';
     sortDirection: 'asc' | 'desc' = 'asc';
+    anioSeleccionado: number = new Date().getFullYear(); // Para tabs de años
+    aniosDisponibles: number[] = [2024, 2025, 2026, 2027];
 
     // Gráficos
     chartPorAnio: ChartData<'bar'> | null = null;
@@ -243,12 +258,68 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         }
     };
 
+    // Lista de secretarías
+    secretariasList: { id: number; nombre: string; is_active: boolean }[] = [];
+
+    // Estado del Excel en BD
+    excelEnBD: { existe: boolean; nombre?: string; tamano?: number; fecha?: Date } = { existe: false };
+
+    // Modo edición
+    modoEdicion = false;
+    productosModificados: Set<string> = new Set(); // Códigos de productos modificados
+    guardandoCambios = false;
+
+    // Modal de edición de producto
+    productoEditando: PlanIndicativoProducto | null = null;
+    mostrandoModalEdicion = false;
+
+    // Filtro para secretarios: productos con actividades asignadas
+    productosFiltradosPorActividades: string[] = [];
+
     constructor(
         public pdmService: PdmDataService,
         private router: Router,
+        private route: ActivatedRoute,
         private pdmBackend: PdmBackendService,
-        private entityContext: EntityContextService
-    ) { }
+        private entityContext: EntityContextService,
+        private secretariasService: SecretariasService,
+        public authService: AuthService, // Público para usar en el template
+        private notificationsService: NotificationsService,
+        private alertsEvents: AlertsEventsService
+    ) {
+        // Inicializar streams de alertas
+        this.alerts$ = this.notificationsService.alertsStream;
+        this.unreadCount$ = this.notificationsService.unreadCountStream;
+    }
+
+    // Helper para extraer mensajes de error
+    private extractErrorMsg(error: any): string {
+        if (!error) return 'Error desconocido';
+        if (typeof error === 'string') return error;
+
+        if (error.error) {
+            if (typeof error.error === 'string') return error.error;
+            if (error.error.detail) {
+                if (typeof error.error.detail === 'string') return error.error.detail;
+                if (Array.isArray(error.error.detail)) {
+                    return error.error.detail
+                        .map((e: any) => {
+                            if (typeof e === 'string') return e;
+                            if (e.msg) return `${e.loc ? e.loc.join('.') + ': ' : ''}${e.msg}`;
+                            return JSON.stringify(e);
+                        })
+                        .join('; ');
+                }
+                return JSON.stringify(error.error.detail);
+            }
+            if (error.error.message) return error.error.message;
+        }
+
+        if (error.message) return error.message;
+        if (error.statusText) return error.statusText;
+
+        return 'Error al procesar la solicitud';
+    }
 
     private showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
         const toastContainer = document.getElementById('toast-container');
@@ -279,6 +350,27 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
     }
 
     ngOnInit(): void {
+        // Cargar notificaciones al iniciar
+        this.notificationsService.fetch(true).subscribe();
+
+        // Escuchar eventos de alertas (cuando se hace click en una notificación)
+        this.alertsEvents.openRequested$
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(alert => this.abrirDesdeNotificacion(alert));
+
+        // Cargar secretarías
+        this.cargarSecretarias();
+
+        // Verificar Excel en BD
+        this.verificarExcelEnBD();
+
+        // Intentar cargar datos desde localStorage primero
+        const slug = this.entityContext.currentEntity?.slug;
+        if (slug) {
+            // Intentar descargar desde BD si existe y no hay datos locales
+            this.verificarYCargarDesdeBD(slug);
+        }
+
         this.pdmService.pdmData$
             .pipe(takeUntil(this.destroy$))
             .subscribe(data => {
@@ -287,31 +379,45 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
                     this.sectoresDisponibles = this.pdmService.obtenerSectoresUnicos();
                     this.lineasDisponibles = this.pdmService.obtenerLineasEstrategicasUnicas();
                     this.secretariasDisponibles = this.pdmService.obtenerSecretariasUnicas();
-                    this.actualizarTabla();
-                    // Cargar asignaciones guardadas y aplicar a filas
+
+                    // Cargar secretarías primero, luego asignaciones
                     const slug = this.entityContext.currentEntity?.slug;
                     if (slug) {
-                        this.pdmBackend.getAssignments(slug).subscribe({
-                            next: (resp: { assignments: Record<string, string | null> }) => {
-                                const map = resp.assignments || {};
-                                this.pdmData!.planIndicativoProductos.forEach(p => {
-                                    const sec = map[p.codigoIndicadorProducto];
-                                    if (sec !== undefined) p.secretariaAsignada = sec || undefined;
-                                });
-                                this.actualizarTabla();
-                                // Luego de asignaciones, cargar avances por cada producto
-                                this.cargarAvancesParaTodos(slug);
-                            },
-                            error: () => { /* silencioso */ }
-                        });
+                        this.cargarSecretarias();
+
+                        // Esperar un momento para asegurar que secretarías estén cargadas
+                        setTimeout(() => {
+                            this.pdmBackend.getAssignments(slug).subscribe({
+                                next: (resp: { assignments: Record<string, string | null> }) => {
+                                    const map = resp.assignments || {};
+                                    this.pdmData!.planIndicativoProductos.forEach(p => {
+                                        const sec = map[p.codigoIndicadorProducto];
+                                        if (sec !== undefined) {
+                                            // Asignar el valor de secretaría solo si existe
+                                            p.secretariaAsignada = sec || undefined;
+                                        }
+                                    });
+
+                                    // Aplicar filtro automático basado en el rol del usuario
+                                    this.aplicarFiltrosPorRol();
+
+                                    this.actualizarTabla();
+                                    // Luego de asignaciones, cargar avances por cada producto
+                                    this.cargarAvancesParaTodos(slug);
+                                },
+                                error: () => {
+                                    this.aplicarFiltrosPorRol();
+                                    this.actualizarTabla();
+                                }
+                            });
+                        }, 100);
                     } else {
                         // Si no hay slug, igual intentamos cargar tabla
+                        this.aplicarFiltrosPorRol();
                         this.actualizarTabla();
                     }
-                } else {
-                    // No hay datos, redirigir a la carga
-                    this.router.navigate(['pdm-upload'], { relativeTo: this.router.routerState.root });
                 }
+                // No redirigir, mostrar mensaje de "No hay datos"
             });
 
         this.pdmService.analisis$
@@ -328,20 +434,59 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
             .subscribe(cargando => {
                 this.cargando = cargando;
             });
+
+        // Auto-refresh cada 60 segundos para actualizar avances y actividades
+        this.refreshInterval = setInterval(() => {
+            // Verificar autenticación antes de hacer peticiones
+            if (!this.authService.isAuthenticated()) {
+                if (this.refreshInterval) {
+                    clearInterval(this.refreshInterval);
+                }
+                return;
+            }
+
+            const slug = this.entityContext.currentEntity?.slug;
+            if (slug && this.pdmData) {
+                this.cargarAvancesParaTodos(slug);
+            }
+        }, 60000);
+    }
+
+    cargarSecretarias() {
+        this.secretariasService.listar().subscribe({
+            next: (data) => {
+                this.secretariasList = data;
+            },
+            error: () => {
+                this.secretariasList = [];
+            }
+        });
     }
 
     onCambiarSecretaria(row: PlanIndicativoProducto, secretaria: string | undefined) {
         const slug = this.entityContext.currentEntity?.slug;
         if (!slug) return;
+
+        // Actualizar inmediatamente en la UI
+        row.secretariaAsignada = secretaria || undefined;
+
         this.pdmBackend.upsertAssignment(slug, {
             codigo_indicador_producto: row.codigoIndicadorProducto,
             secretaria: secretaria || null,
         }).subscribe({
             next: () => {
-                row.secretariaAsignada = secretaria;
-                this.showToast('Secretaría asignada', 'success');
+                // Actualizar la tabla para reflejar los cambios
+                this.actualizarTabla();
+                this.showToast('Secretaría asignada correctamente', 'success');
             },
-            error: () => this.showToast('No se pudo guardar la asignación', 'error')
+            error: (err) => {
+                console.error('Error asignando secretaría:', err);
+                // Revertir cambio en caso de error
+                row.secretariaAsignada = undefined;
+                this.actualizarTabla();
+                const msg = this.extractErrorMsg(err);
+                this.showToast(msg, 'error');
+            }
         });
     }
 
@@ -415,20 +560,36 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
                     actividades
                 } as any;
 
-                // Esperar a que el DOM se actualice
-                setTimeout(() => {
+                // Usar requestAnimationFrame para asegurar que el DOM esté listo
+                requestAnimationFrame(() => {
                     const modalElement = document.getElementById('avanceModal');
                     if (modalElement && bootstrap) {
+                        // Si ya existe una instancia, primero disposearla
+                        if (this.avanceModalInstance) {
+                            this.avanceModalInstance.dispose();
+                        }
                         this.avanceModalInstance = new bootstrap.Modal(modalElement);
                         this.avanceModalInstance.show();
                     }
-                }, 0);
+                });
             },
             error: () => this.showToast('No se pudieron cargar las actividades del producto.', 'error')
         });
     }
 
-    onAvanceSave(result: { actividadId: number; comentario: string; evidencia?: File | null }) {
+    onAvanceSave(result: {
+        actividadId: number;
+        descripcion: string;
+        url: string;
+        imagenes: Array<{
+            archivo: File;
+            preview: string;
+            base64: string;
+            nombre: string;
+            tamano: number;
+            mimeType: string;
+        }>;
+    }) {
         if (!this.avanceDialogData) return;
         const slug = this.entityContext.currentEntity?.slug;
         if (!slug) return;
@@ -448,33 +609,79 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         const anio = actividad.anio;
         const valor_ejecutado = Number(actividad.meta_ejecutar || 0);
 
+        // Primero registrar el avance
         this.pdmBackend.upsertAvance(slug, {
             codigo_indicador_producto: row.codigoIndicadorProducto,
             anio,
             valor_ejecutado,
-            comentario: result.comentario,
+            comentario: result.descripcion,
         }).subscribe({
             next: () => {
                 // Actualizar avances por año en la fila
                 if (!row.avances) row.avances = {};
                 row.avances[anio] = {
                     valor: valor_ejecutado,
-                    comentario: result.comentario
+                    comentario: result.descripcion
                 };
                 // Mantener la métrica general de avance como promedio simple de avances cargados
                 const valores = Object.values(row.avances).map(a => a.valor).filter(v => typeof v === 'number');
                 row.avance = valores.length ? (valores.reduce((a, b) => a + b, 0) / valores.length) : row.avance;
                 this.actualizarTabla();
                 this.calcularEstadisticasAvanzadas();
-                this.showToast('Avance registrado', 'success');
 
+                // Luego crear las evidencias
+                this.crearEvidencias(slug, result.actividadId, result.descripcion, result.url, result.imagenes);
+            },
+            error: () => {
+                this.showToast('No se pudo registrar el avance', 'error');
+                // Resetear estado de guardando en el modal
+                if (this.avanceDialogData) {
+                    (this.avanceDialogData as any).guardando = false;
+                }
+            }
+        });
+    }
+
+    private crearEvidencias(
+        slug: string,
+        actividadId: number,
+        descripcion: string,
+        url: string,
+        imagenes: Array<{ base64: string; nombre: string; mimeType: string; tamano: number }>
+    ) {
+        // Preparar imágenes para el backend
+        const imagenesPayload = imagenes.map(img => ({
+            nombre: img.nombre,
+            mime_type: img.mimeType,
+            tamano: img.tamano,
+            contenido_base64: img.base64.split(',')[1] || img.base64 // Remover data:image/...;base64,
+        }));
+
+        const payload = {
+            actividad_id: actividadId,
+            descripcion: descripcion.trim() || undefined,
+            url: url.trim() || undefined,
+            imagenes: imagenesPayload.length > 0 ? imagenesPayload : undefined
+        };
+
+        this.pdmBackend.createEvidencia(slug, actividadId, payload).subscribe({
+            next: () => {
+                this.showToast('Avance y evidencias registrados exitosamente', 'success');
                 // Cerrar modal
                 if (this.avanceModalInstance) {
                     this.avanceModalInstance.hide();
                 }
                 this.avanceDialogData = null;
             },
-            error: () => this.showToast('No se pudo registrar el avance', 'error')
+            error: (err) => {
+                console.error('Error al crear evidencias:', err);
+                this.showToast('Avance registrado pero hubo un error al guardar evidencias', 'error');
+                // Cerrar modal igualmente
+                if (this.avanceModalInstance) {
+                    this.avanceModalInstance.hide();
+                }
+                this.avanceDialogData = null;
+            }
         });
     }
 
@@ -515,7 +722,123 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
                 }
             });
             this.actualizarTabla();
+            // Después de cargar avances por año, calcular avance general basado en actividades
+            this.cargarActividadesParaTodos(slug);
         });
+    }
+
+    /**
+     * Carga actividades por producto y calcula el avance general basado en valor ejecutado vs meta del año
+     * Fórmula: avance = (suma_valores_ejecutados / meta_total_anio) * 100
+     */
+    private cargarActividadesParaTodos(slug: string) {
+        const productos = this.pdmData?.planIndicativoProductos || [];
+        if (!productos.length) return;
+
+        const peticiones = productos.map(p =>
+            this.pdmBackend.getActividades(slug, p.codigoIndicadorProducto).pipe(
+                catchError(() => of(null))
+            )
+        );
+
+        forkJoin(peticiones).pipe(takeUntil(this.destroy$)).subscribe((respuestas) => {
+            respuestas.forEach((resp, idx) => {
+                if (!resp) return;
+
+                const producto = productos[idx];
+                const actividades = resp.actividades || [];
+
+                // Inicializar avances si no existe
+                if (!producto.avances) producto.avances = {};
+
+                // Calcular avance para cada año basado en actividades
+                [2024, 2025, 2026, 2027].forEach(anio => {
+                    const metaAnio = this.obtenerMetaAnioProducto(producto, anio);
+
+                    if (metaAnio === 0) {
+                        // Si no hay meta para este año, el avance es 0
+                        producto.avances![anio] = { valor: 0, comentario: '' };
+                    } else {
+                        // Sumar todos los valores ejecutados de las actividades de este año
+                        const totalEjecutado = actividades
+                            .filter((a: any) => a.anio === anio)
+                            .reduce((sum: number, a: any) => sum + (a.valor_ejecutado || 0), 0);
+
+                        // Calcular porcentaje de avance
+                        const avance = Math.min((totalEjecutado / metaAnio) * 100, 100);
+                        producto.avances![anio] = {
+                            valor: Math.round(avance * 100) / 100, // Redondear a 2 decimales
+                            comentario: producto.avances![anio]?.comentario || ''
+                        };
+                    }
+                });
+
+                // Calcular avance general como promedio de todos los años
+                const valores = Object.values(producto.avances).map(a => a.valor).filter(v => typeof v === 'number' && v > 0);
+                producto.avance = valores.length ? Math.round((valores.reduce((a, b) => a + b, 0) / valores.length) * 100) / 100 : 0;
+
+                // Calcular estado de la meta para el año actual (para mostrar en la tabla)
+                const añoActual = new Date().getFullYear();
+                producto.estado = this.calcularEstadoMeta(producto, actividades, añoActual);
+
+                // Calcular y guardar estados por año (para análisis de gráficos)
+                producto.estadosPorAnio = {
+                    2024: this.calcularEstadoMeta(producto, actividades, 2024),
+                    2025: this.calcularEstadoMeta(producto, actividades, 2025),
+                    2026: this.calcularEstadoMeta(producto, actividades, 2026),
+                    2027: this.calcularEstadoMeta(producto, actividades, 2027)
+                };
+            });
+            this.actualizarTabla();
+            this.calcularEstadisticasAvanzadas();
+        });
+    }
+
+    /**
+     * Calcula el estado de una meta basado en el año, actividades y avance
+     */
+    private calcularEstadoMeta(producto: any, actividades: any[], año: number): EstadoMeta {
+        // Si no tiene meta definida para ese año específico
+        const metaAnio = this.obtenerMetaAnioProducto(producto, año);
+        if (metaAnio === 0) {
+            return EstadoMeta.SIN_DEFINIR;
+        }
+
+        // Si es una meta futura (años después del actual)
+        const añoActual = new Date().getFullYear();
+        if (año > añoActual) {
+            return EstadoMeta.POR_CUMPLIR;
+        }
+
+        // Filtrar actividades del año específico
+        const actividadesAnio = actividades.filter((a: any) => a.anio === año);
+
+        // Si no tiene actividades para ese año, está pendiente
+        if (actividadesAnio.length === 0) {
+            return EstadoMeta.PENDIENTE;
+        }
+
+        // Calcular avance ESPECÍFICO del año
+        const totalEjecutado = actividadesAnio.reduce((sum: number, a: any) => sum + (a.valor_ejecutado || 0), 0);
+        const avanceDelAnio = (totalEjecutado / metaAnio) * 100;
+
+        // Determinar estado basado en el avance del año
+        if (avanceDelAnio >= 100) {
+            return EstadoMeta.CUMPLIDA;
+        } else if (avanceDelAnio > 0) {
+            return EstadoMeta.EN_PROGRESO;
+        } else {
+            return EstadoMeta.PENDIENTE;
+        }
+    }    /**
+     * Obtiene la meta de un producto para un año específico
+     */
+    private obtenerMetaAnioProducto(producto: any, anio: number): number {
+        if (anio === 2024) return producto.meta2024 || 0;
+        if (anio === 2025) return producto.meta2025 || 0;
+        if (anio === 2026) return producto.meta2026 || 0;
+        if (anio === 2027) return producto.meta2027 || 0;
+        return 0;
     }
 
     calcularEstadisticasAvanzadas(): void {
@@ -611,6 +934,79 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
     ngOnDestroy(): void {
         this.destroy$.next();
         this.destroy$.complete();
+        // Limpiar el intervalo de auto-refresh
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+        }
+    }
+
+    /**
+     * Aplica filtros automáticos según el rol y secretaría del usuario
+     */
+    private async aplicarFiltrosPorRol(): Promise<void> {
+        const currentUser = this.authService.getCurrentUserValue();
+        if (!currentUser) return;
+
+        // Para secretarios: filtrar productos que tienen actividades asignadas a su secretaría
+        if (currentUser.role === 'secretario' && currentUser.secretaria) {
+            await this.filtrarProductosConActividadesAsignadas(currentUser.secretaria);
+        }
+
+        // Los admin y superadmin pueden ver todo
+        // No aplicar filtros automáticos
+    }
+
+    private async filtrarProductosConActividadesAsignadas(secretaria: string): Promise<void> {
+        const slug = this.entityContext.currentEntity?.slug;
+        if (!slug || !this.pdmData) return;
+
+        const productos = this.pdmData.planIndicativoProductos;
+        const productosConActividades: string[] = [];
+
+        // Cargar actividades de todos los productos para ver cuáles tienen actividades del secretario
+        const peticiones = productos.map(p =>
+            this.pdmBackend.getActividades(slug, p.codigoIndicadorProducto).pipe(
+                catchError(() => of(null))
+            )
+        );
+
+        const respuestas = await firstValueFrom(forkJoin(peticiones));
+
+        respuestas.forEach((resp, idx) => {
+            if (!resp) return;
+            const producto = productos[idx];
+            const actividades = resp.actividades || [];
+
+            // Si tiene al menos una actividad asignada a esta secretaría, incluir el producto
+            const tieneActividadesAsignadas = actividades.some((a: any) => a.responsable === secretaria);
+            if (tieneActividadesAsignadas) {
+                productosConActividades.push(producto.codigoIndicadorProducto);
+            }
+        });
+
+        // Aplicar filtro para mostrar solo productos con actividades asignadas
+        this.productosFiltradosPorActividades = productosConActividades;
+        this.actualizarTabla();
+    }
+
+    /**
+     * Verifica si el usuario actual puede modificar un producto
+     */
+    puedeModificarProducto(producto: PlanIndicativoProducto): boolean {
+        const currentUser = this.authService.getCurrentUserValue();
+        if (!currentUser) return false;
+
+        // Superadmin y admin pueden modificar todo
+        if (currentUser.role === 'superadmin' || currentUser.role === 'admin') {
+            return true;
+        }
+
+        // Secretarios solo pueden modificar productos asignados a su secretaría
+        if (currentUser.role === 'secretario' && currentUser.secretaria) {
+            return producto.secretariaAsignada === currentUser.secretaria;
+        }
+
+        return false;
     }
 
     aplicarFiltros(): void {
@@ -624,6 +1020,15 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
 
     private actualizarTabla(): void {
         this.productos = this.pdmService.obtenerDatosFiltrados(this.filtros);
+
+        // Aplicar filtro adicional para secretarios: solo productos con actividades asignadas
+        const currentUser = this.authService.getCurrentUserValue();
+        if (currentUser?.role === 'secretario' && this.productosFiltradosPorActividades.length > 0) {
+            this.productos = this.productos.filter(p =>
+                this.productosFiltradosPorActividades.includes(p.codigoIndicadorProducto)
+            );
+        }
+
         this.aplicarFiltroYOrdenamiento();
         this.calcularEstadisticasAvanzadas();
     }
@@ -981,8 +1386,10 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
                 return 'warn';
             case EstadoMeta.PENDIENTE:
                 return 'accent';
+            case EstadoMeta.SIN_DEFINIR:
+                return 'secondary';
             default:
-                return '';
+                return 'secondary';
         }
     }
 
@@ -1025,14 +1432,357 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         }
     }
 
+    // Métodos para vista por años
+    cambiarAnioSeleccionado(anio: number): void {
+        this.anioSeleccionado = anio;
+        this.currentPage = 1; // Resetear paginación
+    }
+
+    obtenerEstadoDelAnio(producto: PlanIndicativoProducto, anio: number): EstadoMeta {
+        return producto.estadosPorAnio?.[anio as 2024 | 2025 | 2026 | 2027] || EstadoMeta.SIN_DEFINIR;
+    }
+
+    obtenerMetaDelAnio(producto: PlanIndicativoProducto, anio: number): number {
+        switch (anio) {
+            case 2024: return producto.meta2024 || producto.programacion2024 || 0;
+            case 2025: return producto.meta2025 || producto.programacion2025 || 0;
+            case 2026: return producto.meta2026 || producto.programacion2026 || 0;
+            case 2027: return producto.meta2027 || producto.programacion2027 || 0;
+            default: return 0;
+        }
+    }
+
+    obtenerPresupuestoDelAnio(producto: PlanIndicativoProducto, anio: number): number {
+        switch (anio) {
+            case 2024: return producto.total2024 || 0;
+            case 2025: return producto.total2025 || 0;
+            case 2026: return producto.total2026 || 0;
+            case 2027: return producto.total2027 || 0;
+            default: return 0;
+        }
+    }
+
+    obtenerAvanceDelAnio(producto: PlanIndicativoProducto, anio: number): number {
+        return producto.avances?.[anio]?.valor || 0;
+    }
+
+    contarMetasPorEstado(estado: EstadoMeta, anio: number): number {
+        return this.productosFiltrados.filter(p =>
+            this.obtenerEstadoDelAnio(p, anio) === estado
+        ).length;
+    }
+
     cargarNuevoArchivo(): void {
-        this.pdmService.limpiarDatos();
-        this.router.navigate(['pdm-upload'], { relativeTo: this.router.routerState.root });
+        const slug = this.entityContext.currentEntity?.slug;
+        if (slug) {
+            this.router.navigate([`/${slug}/pdm`]);
+        }
+    }
+
+    actualizarExcel(): void {
+        // Navegar a la vista de carga para actualizar el Excel
+        const slug = this.entityContext.currentEntity?.slug;
+        if (slug) {
+            this.router.navigate([`/${slug}/pdm`]);
+        }
+    }
+
+    async descargarExcelDeBD(): Promise<void> {
+        const slug = this.entityContext.currentEntity?.slug;
+        if (!slug) {
+            this.showToast('No se pudo identificar la entidad', 'error');
+            return;
+        }
+
+        try {
+            this.cargando = true;
+            await this.pdmService.descargarExcelAlDispositivo(slug);
+            this.showToast('Excel descargado exitosamente', 'success');
+        } catch (err: any) {
+            this.showToast('Error al descargar Excel: ' + this.extractErrorMsg(err), 'error');
+        } finally {
+            this.cargando = false;
+        }
+    }
+
+    recargarDatosDesdeLocalStorage(): void {
+        this.cargando = true;
+        setTimeout(() => {
+            // Forzar recarga desde localStorage
+            const datosGuardados = localStorage.getItem('pdmData');
+            if (datosGuardados) {
+                const data = JSON.parse(datosGuardados);
+                this.pdmService['pdmDataSubject'].next(data);
+                this.showToast('Datos recargados desde caché local', 'success');
+            } else {
+                this.showToast('No hay datos en caché local', 'info');
+            }
+            this.cargando = false;
+        }, 500);
+    }
+
+    async verificarExcelEnBD(): Promise<void> {
+        const slug = this.entityContext.currentEntity?.slug;
+        if (!slug) return;
+
+        try {
+            const info = await this.pdmService.obtenerInfoExcelBD(slug);
+            this.excelEnBD = {
+                existe: info.existe,
+                nombre: info.nombre_archivo,
+                tamano: info.tamanio,
+                fecha: info.fecha_carga ? new Date(info.fecha_carga) : undefined
+            };
+        } catch {
+            this.excelEnBD = { existe: false };
+        }
+    }
+
+    async verificarYCargarDesdeBD(slug: string): Promise<void> {
+        // Verificar si hay datos en localStorage
+        const datosGuardados = localStorage.getItem('pdmData');
+
+        if (!datosGuardados) {
+            // No hay datos locales, intentar descargar desde BD
+            try {
+                const info = await this.pdmService.obtenerInfoExcelBD(slug);
+                if (info.existe) {
+                    this.showToast('Descargando datos desde base de datos...', 'info');
+                    await this.pdmService.descargarYProcesarExcelDesdeBD(slug);
+                    this.showToast('Datos cargados exitosamente', 'success');
+                }
+            } catch (err: any) {
+                console.error('Error al verificar/cargar desde BD:', err);
+                // Silencioso, simplemente no hay datos
+            }
+        }
+    }
+
+    formatearTamano(bytes: number): string {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    formatearFechaExcel(fecha?: Date): string {
+        if (!fecha) return '';
+        return new Date(fecha).toLocaleDateString('es-CO', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     }
 
     exportarDatos(): void {
-        // TODO: Implementar exportación a PDF o Excel
-        console.log('Exportar datos');
+        if (!this.pdmData) {
+            this.showToast('No hay datos para exportar', 'error');
+            return;
+        }
+
+        try {
+            // Crear un nuevo libro de Excel
+            const wb = XLSX.utils.book_new();
+
+            // Exportar productos con filtros aplicados
+            const productosExport = this.productosFiltrados.map(p => ({
+                'Código': p.codigoIndicadorProducto,
+                'Indicador': p.indicadorProducto,
+                'Línea Estratégica': p.lineaEstrategica,
+                'Sector': p.sector,
+                'Programa': p.programa,
+                'Producto': p.producto,
+                'Unidad Medida': p.unidadMedida,
+                'Meta Cuatrienio': p.metaCuatrienio,
+                'Programación 2024': p.programacion2024,
+                'Programación 2025': p.programacion2025,
+                'Programación 2026': p.programacion2026,
+                'Programación 2027': p.programacion2027,
+                'Total 2024': p.total2024,
+                'Total 2025': p.total2025,
+                'Total 2026': p.total2026,
+                'Total 2027': p.total2027,
+                'Estado': p.estado || 'SIN_DEFINIR',
+                'Avance %': p.avance ? `${p.avance.toFixed(1)}%` : '0%',
+                'Secretaría Asignada': p.secretariaAsignada || ''
+            }));
+
+            const wsProductos = XLSX.utils.json_to_sheet(productosExport);
+            XLSX.utils.book_append_sheet(wb, wsProductos, 'Productos');
+
+            // Exportar resumen por sector
+            if (this.analisis && this.analisis.analisisPorSector) {
+                const sectoresExport = this.analisis.analisisPorSector.map(s => ({
+                    'Sector': s.sector,
+                    'Total Metas': s.totalMetas,
+                    'Metas Cumplidas': s.metasCumplidas,
+                    '% Cumplimiento': `${s.porcentajeCumplimiento.toFixed(1)}%`,
+                    'Presupuesto Total': s.presupuestoTotal
+                }));
+
+                const wsSectores = XLSX.utils.json_to_sheet(sectoresExport);
+                XLSX.utils.book_append_sheet(wb, wsSectores, 'Resumen por Sector');
+            }
+
+            // Exportar resumen por línea estratégica
+            if (this.analisis && this.analisis.analisisPorLineaEstrategica) {
+                const lineasExport = this.analisis.analisisPorLineaEstrategica.map(l => ({
+                    'Línea Estratégica': l.lineaEstrategica,
+                    'Total Metas': l.totalMetas,
+                    'Metas Cumplidas': l.metasCumplidas,
+                    '% Cumplimiento': `${l.porcentajeCumplimiento.toFixed(1)}%`
+                }));
+
+                const wsLineas = XLSX.utils.json_to_sheet(lineasExport);
+                XLSX.utils.book_append_sheet(wb, wsLineas, 'Resumen por Línea');
+            }
+
+            // Generar archivo
+            const timestamp = new Date().toISOString().split('T')[0];
+            const entitySlug = this.entityContext.currentEntity?.slug || 'Export';
+            const fileName = `PDM_Analisis_${entitySlug}_${timestamp}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+
+            this.showToast('Datos exportados exitosamente', 'success');
+        } catch (error) {
+            console.error('Error al exportar datos:', error);
+            this.showToast('Error al exportar datos', 'error');
+        }
+    }
+
+    // ============================================================================
+    // MÉTODOS PARA EDICIÓN DE EXCEL
+    // ============================================================================
+
+    activarModoEdicion(): void {
+        if (!this.authService.isAdminOrSuperAdmin()) {
+            this.showToast('No tienes permisos para editar el Excel', 'error');
+            return;
+        }
+        this.modoEdicion = true;
+        this.productosModificados.clear();
+        this.showToast('Modo edición activado. Haz clic en los campos para editarlos', 'info');
+    }
+
+    cancelarEdicion(): void {
+        if (this.productosModificados.size > 0) {
+            if (!confirm('Tienes cambios sin guardar. ¿Deseas cancelar?')) {
+                return;
+            }
+        }
+        this.modoEdicion = false;
+        this.productosModificados.clear();
+        // Recargar datos originales desde el servicio
+        const slug = this.entityContext.currentEntity?.slug;
+        if (slug) {
+            this.pdmService.descargarYProcesarExcelDesdeBD(slug)
+                .then(() => {
+                    this.showToast('Datos recargados', 'info');
+                })
+                .catch(err => {
+                    console.error('Error al recargar datos:', err);
+                });
+        }
+    }
+
+    marcarProductoModificado(codigoProducto: string): void {
+        this.productosModificados.add(codigoProducto);
+    }
+
+    obtenerProgramacionEditable(producto: PlanIndicativoProducto, anio: number): number {
+        switch (anio) {
+            case 2024: return producto.programacion2024;
+            case 2025: return producto.programacion2025;
+            case 2026: return producto.programacion2026;
+            case 2027: return producto.programacion2027;
+            default: return 0;
+        }
+    }
+
+    actualizarProgramacion(producto: PlanIndicativoProducto, anio: number, valor: number): void {
+        const valorNumerico = Number(valor) || 0;
+        switch (anio) {
+            case 2024: producto.programacion2024 = valorNumerico; break;
+            case 2025: producto.programacion2025 = valorNumerico; break;
+            case 2026: producto.programacion2026 = valorNumerico; break;
+            case 2027: producto.programacion2027 = valorNumerico; break;
+        }
+        this.marcarProductoModificado(producto.codigoIndicadorProducto);
+    }
+
+    abrirModalEdicion(producto: PlanIndicativoProducto): void {
+        if (!this.modoEdicion) {
+            this.showToast('Activa el modo edición primero', 'info');
+            return;
+        }
+        // Hacer una copia para editar sin modificar el original hasta guardar
+        this.productoEditando = JSON.parse(JSON.stringify(producto));
+        this.mostrandoModalEdicion = true;
+    }
+
+    cerrarModalEdicion(): void {
+        this.mostrandoModalEdicion = false;
+        this.productoEditando = null;
+    }
+
+    guardarProductoEditado(): void {
+        if (!this.productoEditando || !this.pdmData) return;
+
+        // Encontrar el producto original en la lista
+        const index = this.pdmData.planIndicativoProductos.findIndex(
+            p => p.codigoIndicadorProducto === this.productoEditando!.codigoIndicadorProducto
+        );
+
+        if (index !== -1) {
+            // Actualizar el producto original con los cambios
+            this.pdmData.planIndicativoProductos[index] = { ...this.productoEditando };
+            this.marcarProductoModificado(this.productoEditando.codigoIndicadorProducto);
+            this.showToast('Producto actualizado (recuerda guardar los cambios)', 'success');
+            this.cerrarModalEdicion();
+            // Refrescar la vista
+            this.aplicarFiltros();
+        }
+    }
+
+    actualizarCampoProducto(campo: keyof PlanIndicativoProducto, valor: any): void {
+        if (!this.productoEditando) return;
+        (this.productoEditando as any)[campo] = valor;
+    }
+
+    async guardarCambiosExcel(): Promise<void> {
+        if (!this.pdmData) {
+            this.showToast('No hay datos para guardar', 'error');
+            return;
+        }
+
+        if (this.productosModificados.size === 0) {
+            this.showToast('No hay cambios para guardar', 'info');
+            return;
+        }
+
+        const slug = this.entityContext.currentEntity?.slug;
+        if (!slug) {
+            this.showToast('No se pudo identificar la entidad', 'error');
+            return;
+        }
+
+        if (!confirm(`¿Guardar ${this.productosModificados.size} cambio(s) en el Excel?`)) {
+            return;
+        }
+
+        try {
+            this.guardandoCambios = true;
+            await this.pdmService.guardarCambiosEnExcel(this.pdmData, slug);
+            this.showToast('Cambios guardados exitosamente en el Excel', 'success');
+            this.modoEdicion = false;
+            this.productosModificados.clear();
+            await this.verificarExcelEnBD();
+        } catch (err: any) {
+            this.showToast('Error al guardar cambios: ' + this.extractErrorMsg(err), 'error');
+        } finally {
+            this.guardandoCambios = false;
+        }
     }
 
     // Nuevas funciones para interactividad
@@ -1088,6 +1838,50 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         if (tableElement) tableElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
+    /**
+     * Abre un producto desde una notificación
+     */
+    abrirDesdeNotificacion(alert: AlertItem): void {
+        // Marcar como leída
+        if (!alert.read_at) {
+            this.notificationsService.markRead(alert.id).subscribe();
+        }
+
+        // Parsear datos de la alerta
+        let data: { codigo_indicador_producto?: string; actividad_id?: number } = {};
+        try {
+            data = alert.data ? JSON.parse(alert.data) : {};
+        } catch (e) {
+            console.error('Error parseando data de alerta:', e);
+            return;
+        }
+
+        const { codigo_indicador_producto } = data;
+        if (!codigo_indicador_producto) {
+            console.warn('Alerta sin codigo_indicador_producto');
+            return;
+        }
+
+        // Buscar el producto en la lista
+        const producto = this.productos.find(p => p.codigoIndicadorProducto === codigo_indicador_producto);
+        if (producto) {
+            // Abrir el detalle del producto
+            this.verDetalleProducto(producto);
+
+            // Scroll al detalle
+            setTimeout(() => {
+                const detalleElement = document.querySelector('.detalle-producto');
+                if (detalleElement) {
+                    detalleElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
+
+            this.showToast(`Mostrando detalles de: ${producto.indicadorProducto}`, 'info');
+        } else {
+            this.showToast('Producto no encontrado o sin permisos de acceso', 'error');
+        }
+    }
+
     verDetalleProducto(producto: PlanIndicativoProducto): void {
         this.productoSeleccionado = producto;
         this.cargarActividades();
@@ -1121,13 +1915,56 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         this.cargandoActividades = true;
         this.pdmBackend.getActividades(slug, this.productoSeleccionado.codigoIndicadorProducto).subscribe({
             next: (response) => {
-                this.actividadesProducto = response.actividades;
+                const currentUser = this.authService.getCurrentUserValue();
+
+                // Si es secretario, filtrar solo sus actividades
+                if (currentUser?.role === 'secretario' && currentUser.secretaria) {
+                    this.actividadesProducto = response.actividades.filter(
+                        (act: any) => act.responsable === currentUser.secretaria
+                    );
+                } else {
+                    this.actividadesProducto = response.actividades;
+                }
+
                 this.cargandoActividades = false;
+
+                // Recalcular avance del producto seleccionado basado en valor ejecutado vs meta del año
+                const añoActual = new Date().getFullYear();
+                const metaAnio = this.obtenerMetaAnioProducto(this.productoSeleccionado!, añoActual);
+
+                if (metaAnio === 0) {
+                    this.productoSeleccionado!.avance = 0;
+                } else {
+                    // Sumar todos los valores ejecutados de las actividades del año actual
+                    const totalEjecutado = this.actividadesProducto
+                        .filter(a => a.anio === añoActual)
+                        .reduce((sum, a) => sum + (a.valor_ejecutado || 0), 0);
+
+                    // Calcular porcentaje de avance
+                    const avance = (totalEjecutado / metaAnio) * 100;
+                    this.productoSeleccionado!.avance = Math.min(Math.round(avance * 100) / 100, 100);
+                }
+
+                // Calcular estado de la meta
+                this.productoSeleccionado!.estado = this.calcularEstadoMeta(
+                    this.productoSeleccionado!,
+                    this.actividadesProducto,
+                    añoActual
+                );
+
+                // Sincronizar con la fila en la tabla
+                const row = this.productos.find(p => p.codigoIndicadorProducto === this.productoSeleccionado!.codigoIndicadorProducto);
+                if (row) {
+                    row.avance = this.productoSeleccionado!.avance;
+                    row.estado = this.productoSeleccionado!.estado;
+                    this.actualizarTabla();
+                }
             },
             error: (error) => {
                 console.error('Error al cargar actividades:', error);
                 this.cargandoActividades = false;
-                this.showToast('Error al cargar las actividades', 'error');
+                const msg = this.extractErrorMsg(error);
+                this.showToast(msg, 'error');
             }
         });
     }
@@ -1178,8 +2015,9 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
 
         this.guardandoActividad = true;
 
-        // El valor ejecutado se calcula con la meta a ejecutar (sin porcentaje)
-        const valorEjecutado = Number(this.formActividad.meta_ejecutar || 0);
+        // Para nuevas actividades, valor ejecutado siempre es 0
+        // Para edición, mantener el valor actual o 0
+        const valorEjecutado = this.actividadEditando ? Number(this.formActividad.valor_ejecutado || 0) : 0;
 
         const payload = {
             ...this.formActividad,
@@ -1203,7 +2041,8 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
             },
             error: (error) => {
                 console.error('Error al guardar actividad:', error);
-                this.showToast('Error al guardar la actividad', 'error');
+                const msg = this.extractErrorMsg(error);
+                this.showToast(msg, 'error');
                 this.guardandoActividad = false;
             }
         });
@@ -1222,7 +2061,8 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
             },
             error: (error) => {
                 console.error('Error al eliminar actividad:', error);
-                this.showToast('Error al eliminar la actividad', 'error');
+                const msg = this.extractErrorMsg(error);
+                this.showToast(msg, 'error');
             }
         });
     }

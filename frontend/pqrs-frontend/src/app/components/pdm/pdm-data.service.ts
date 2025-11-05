@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { BehaviorSubject, Observable, firstValueFrom } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import * as XLSX from 'xlsx';
 import {
     PDMData,
@@ -12,6 +13,22 @@ import {
     EstadoMeta,
     FiltrosPDM
 } from './pdm.models';
+import { environment } from '../../../environments/environment';
+
+interface ExcelInfoResponse {
+    existe: boolean;
+    nombre_archivo?: string;
+    tamanio?: number;
+    fecha_carga?: string;
+}
+
+interface ExcelUploadResponse {
+    entity_id: number;
+    nombre_archivo: string;
+    tamanio: number;
+    created_at: string;
+    mensaje: string;
+}
 
 @Injectable({
     providedIn: 'root'
@@ -28,6 +45,9 @@ export class PdmDataService {
     pdmData$ = this.pdmDataSubject.asObservable();
     analisis$ = this.analisisSubject.asObservable();
     cargando$ = this.cargandoSubject.asObservable();
+
+    private http = inject(HttpClient);
+    private apiUrl = environment.apiUrl;
 
     constructor() {
         this.cargarDatosDesdCache();
@@ -282,7 +302,12 @@ export class PdmDataService {
             total2025: this.convertirNumero(row[53]),
             total2026: this.convertirNumero(row[68]),
             total2027: this.convertirNumero(row[83]),
-            bpin: this.limpiarValor(row[84])
+            bpin: this.limpiarValor(row[84]),
+            // Inicializar metas con las programaciones
+            meta2024: this.convertirNumero(row[20]),
+            meta2025: this.convertirNumero(row[21]),
+            meta2026: this.convertirNumero(row[22]),
+            meta2027: this.convertirNumero(row[23])
         }));
     }
 
@@ -439,12 +464,18 @@ export class PdmDataService {
                 return sum + total;
             }, 0);
 
+            // Usar estado específico del año si existe, sino usar estado general
+            const metasCumplidasAnio = metasAnio.filter(p => {
+                const estadoDelAnio = p.estadosPorAnio?.[anio as 2024 | 2025 | 2026 | 2027];
+                return estadoDelAnio === EstadoMeta.CUMPLIDA;
+            }).length;
+
             return {
                 anio,
                 totalMetas: metasAnio.length,
-                metasCumplidas: metasAnio.filter(p => p.estado === EstadoMeta.CUMPLIDA).length,
+                metasCumplidas: metasCumplidasAnio,
                 porcentajeCumplimiento: metasAnio.length > 0
-                    ? (metasAnio.filter(p => p.estado === EstadoMeta.CUMPLIDA).length / metasAnio.length) * 100
+                    ? (metasCumplidasAnio / metasAnio.length) * 100
                     : 0,
                 presupuestoTotal
             };
@@ -968,7 +999,11 @@ export class PdmDataService {
         }
 
         if (filtros.secretaria) {
-            productos = productos.filter(p => (p.secretariaAsignada || '') === filtros.secretaria);
+            if (filtros.secretaria === 'SIN_ASIGNAR') {
+                productos = productos.filter(p => !p.secretariaAsignada || p.secretariaAsignada.trim() === '');
+            } else {
+                productos = productos.filter(p => p.secretariaAsignada === filtros.secretaria);
+            }
         }
 
         if (filtros.ods) {
@@ -1006,5 +1041,233 @@ export class PdmDataService {
         this.pdmDataSubject.next(null);
         this.analisisSubject.next(null);
         this.limpiarCache();
+    }
+
+    // ============================================================================
+    // MÉTODOS PARA GESTIÓN DE ARCHIVO EXCEL EN BD
+    // ============================================================================
+
+    /**
+     * Sube un archivo Excel a la base de datos
+     */
+    async subirExcelABaseDatos(file: File, entitySlug: string): Promise<ExcelUploadResponse> {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await firstValueFrom(
+                this.http.post<ExcelUploadResponse>(
+                    `${this.apiUrl}/pdm/${entitySlug}/upload-excel`,
+                    formData
+                )
+            );
+            return response;
+        } catch (error) {
+            console.error('Error al subir Excel a BD:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Obtiene información sobre el archivo Excel almacenado en BD
+     */
+    async obtenerInfoExcelBD(entitySlug: string): Promise<ExcelInfoResponse> {
+        try {
+            const response = await firstValueFrom(
+                this.http.get<ExcelInfoResponse>(
+                    `${this.apiUrl}/pdm/${entitySlug}/excel-info`
+                )
+            );
+            return response;
+        } catch (error) {
+            console.error('Error al obtener info de Excel:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Descarga el archivo Excel desde la base de datos y lo procesa
+     */
+    async descargarYProcesarExcelDesdeBD(entitySlug: string): Promise<PDMData> {
+        this.cargandoSubject.next(true);
+
+        try {
+            // Descargar el archivo como blob
+            const blob = await firstValueFrom(
+                this.http.get(
+                    `${this.apiUrl}/pdm/${entitySlug}/download-excel`,
+                    { responseType: 'blob' }
+                )
+            );
+
+            // Convertir blob a File para procesarlo con la lógica existente
+            const file = new File([blob], 'pdm.xlsx', {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+
+            // Procesar el archivo usando la lógica existente
+            const pdmData = await this.procesarArchivoExcel(file);
+
+            return pdmData;
+        } catch (error) {
+            this.cargandoSubject.next(false);
+            console.error('Error al descargar y procesar Excel desde BD:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Elimina el archivo Excel de la base de datos
+     */
+    async eliminarExcelDeBD(entitySlug: string): Promise<void> {
+        try {
+            await firstValueFrom(
+                this.http.delete(
+                    `${this.apiUrl}/pdm/${entitySlug}/delete-excel`
+                )
+            );
+        } catch (error) {
+            console.error('Error al eliminar Excel de BD:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Descarga el Excel de la base de datos directamente al dispositivo del usuario
+     */
+    async descargarExcelAlDispositivo(entitySlug: string): Promise<void> {
+        try {
+            // Obtener info del archivo primero
+            const info = await this.obtenerInfoExcelBD(entitySlug);
+            const nombreArchivo = info.nombre_archivo || 'PDM.xlsx';
+
+            // Descargar el blob
+            const blob = await firstValueFrom(
+                this.http.get(
+                    `${this.apiUrl}/pdm/${entitySlug}/download-excel`,
+                    { responseType: 'blob' }
+                )
+            );
+
+            // Crear un enlace temporal y descargar
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = nombreArchivo;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Error al descargar Excel al dispositivo:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Flujo completo: Primera carga
+     * 1. Sube el Excel a BD
+     * 2. Procesa el archivo localmente
+     * 3. Guarda datos en localStorage
+     */
+    async primeraCargaExcel(file: File, entitySlug: string): Promise<PDMData> {
+        this.cargandoSubject.next(true);
+
+        try {
+            // 1. Subir a BD
+            await this.subirExcelABaseDatos(file, entitySlug);
+
+            // 2. Procesar localmente
+            const pdmData = await this.procesarArchivoExcel(file);
+
+            // Los datos ya se guardan en cache en procesarArchivoExcel
+            return pdmData;
+        } catch (error) {
+            this.cargandoSubject.next(false);
+            throw error;
+        }
+    }
+
+    /**
+     * Flujo completo: Análisis y seguimiento
+     * 1. Descarga Excel de BD
+     * 2. Procesa localmente
+     * 3. Guarda datos en localStorage
+     */
+    async cargarExcelParaAnalisis(entitySlug: string): Promise<PDMData> {
+        return this.descargarYProcesarExcelDesdeBD(entitySlug);
+    }
+
+    /**
+     * Regenera el archivo Excel con los datos modificados y lo sube a la BD
+     */
+    async guardarCambiosEnExcel(pdmData: PDMData, entitySlug: string): Promise<void> {
+        this.cargandoSubject.next(true);
+
+        try {
+            // Crear un nuevo libro de Excel
+            const wb = XLSX.utils.book_new();
+
+            // 1. Hoja: Líneas Estratégicas
+            if (pdmData.lineasEstrategicas.length > 0) {
+                const wsLineas = XLSX.utils.json_to_sheet(pdmData.lineasEstrategicas);
+                XLSX.utils.book_append_sheet(wb, wsLineas, 'LÍNEAS ESTRATÉGICAS');
+            }
+
+            // 2. Hoja: Indicadores de Resultado
+            if (pdmData.indicadoresResultado.length > 0) {
+                const wsIndicadores = XLSX.utils.json_to_sheet(pdmData.indicadoresResultado);
+                XLSX.utils.book_append_sheet(wb, wsIndicadores, 'INDICADORES DE RESULTADO');
+            }
+
+            // 3. Hoja: Plan Indicativo de Productos (principal)
+            if (pdmData.planIndicativoProductos.length > 0) {
+                // Limpiar campos calculados antes de exportar
+                const productosLimpios = pdmData.planIndicativoProductos.map(p => {
+                    const { estado, avance, estadosPorAnio, meta2024, meta2025, meta2026, meta2027,
+                        secretariaAsignada, avances, actividades, ...resto } = p;
+                    return resto;
+                });
+                const wsProductos = XLSX.utils.json_to_sheet(productosLimpios);
+                XLSX.utils.book_append_sheet(wb, wsProductos, 'PLAN INDICATIVO DE PRODUCT');
+            }
+
+            // 4. Hoja: Iniciativas SGR
+            if (pdmData.iniciativasSGR.length > 0) {
+                const wsIniciativas = XLSX.utils.json_to_sheet(pdmData.iniciativasSGR);
+                XLSX.utils.book_append_sheet(wb, wsIniciativas, 'INICIATIVAS SGR');
+            }
+
+            // 5. Hoja: Plan Indicativo SGR
+            if (pdmData.planIndicativoSGR.length > 0) {
+                const wsPlanSGR = XLSX.utils.json_to_sheet(pdmData.planIndicativoSGR);
+                XLSX.utils.book_append_sheet(wb, wsPlanSGR, 'PLAN INDICATIVO SGR');
+            }
+
+            // Convertir el libro a un blob
+            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+
+            // Crear un File desde el Blob
+            const fileName = pdmData.metadata.nombreArchivo || 'PDM.xlsx';
+            const file = new File([blob], fileName, {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+
+            // Subir a la base de datos
+            await this.subirExcelABaseDatos(file, entitySlug);
+
+            // Recalcular análisis y actualizar caché local
+            const analisis = this.generarAnalisis(pdmData);
+            this.guardarDatosEnCache(pdmData, analisis);
+
+            this.cargandoSubject.next(false);
+        } catch (error) {
+            this.cargandoSubject.next(false);
+            console.error('Error al guardar cambios en Excel:', error);
+            throw error;
+        }
     }
 }
