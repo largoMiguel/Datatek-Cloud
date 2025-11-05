@@ -43,136 +43,148 @@ def check_column_exists(table_name: str, column_name: str) -> bool:
     return column_name in columns
 
 def run_pdm_migrations(db: Session) -> List[str]:
-    """Ejecuta migraciones relacionadas con PDM"""
+    """Ejecuta migraciones relacionadas con PDM alineadas al modelo actual."""
     results = []
-    
+
     try:
-        # 1. Verificar y crear tabla pdm_actividades si no existe
+        # 1) pdm_actividades
         if not check_table_exists("pdm_actividades"):
-            log_migration("Creando tabla pdm_actividades...")
-            db.execute(text("""
+            log_migration("Creando tabla pdm_actividades (modelo actual)...")
+            db.execute(text(
+                """
                 CREATE TABLE pdm_actividades (
                     id SERIAL PRIMARY KEY,
-                    entity_id INTEGER NOT NULL,
-                    producto TEXT NOT NULL,
-                    indicador TEXT,
-                    linea_base TEXT,
-                    meta_cuatrienio TEXT,
-                    tipo_indicador TEXT,
-                    responsable TEXT,
-                    corresponsables TEXT,
-                    observaciones TEXT,
-                    componente TEXT,
-                    proceso TEXT,
-                    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE
+                    entity_id INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+                    codigo_indicador_producto VARCHAR(128) NOT NULL,
+                    nombre VARCHAR(512) NOT NULL,
+                    descripcion VARCHAR(1024),
+                    responsable VARCHAR(256),
+                    fecha_inicio TIMESTAMP,
+                    fecha_fin TIMESTAMP,
+                    porcentaje_avance DOUBLE PRECISION DEFAULT 0 NOT NULL,
+                    anio INTEGER,
+                    meta_ejecutar DOUBLE PRECISION DEFAULT 0 NOT NULL,
+                    valor_ejecutado DOUBLE PRECISION DEFAULT 0 NOT NULL,
+                    estado TEXT DEFAULT 'pendiente' NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            """))
+                """
+            ))
             db.commit()
             results.append("✓ Tabla pdm_actividades creada")
         else:
             results.append("✓ Tabla pdm_actividades ya existe")
-        
-        # 2. Agregar columnas de programación por año si no existen
-        year_columns = [
-            ("anio_1_meta", "TEXT"),
-            ("anio_1_valor", "TEXT"),
-            ("anio_2_meta", "TEXT"),
-            ("anio_2_valor", "TEXT"),
-            ("anio_3_meta", "TEXT"),
-            ("anio_3_valor", "TEXT"),
-            ("anio_4_meta", "TEXT"),
-            ("anio_4_valor", "TEXT"),
-        ]
-        
-        for col_name, col_type in year_columns:
-            if not check_column_exists("pdm_actividades", col_name):
-                log_migration(f"Agregando columna {col_name}...")
-                db.execute(text(f"ALTER TABLE pdm_actividades ADD COLUMN {col_name} {col_type}"))
-                db.commit()
-                results.append(f"✓ Columna {col_name} agregada")
-        
-        # 3. Verificar y crear tabla actividades_evidencias si no existe
-        if not check_table_exists("actividades_evidencias"):
-            log_migration("Creando tabla actividades_evidencias...")
-            db.execute(text("""
-                CREATE TABLE actividades_evidencias (
-                    id SERIAL PRIMARY KEY,
-                    actividad_id INTEGER NOT NULL,
-                    entity_id INTEGER NOT NULL,
-                    nombre_archivo TEXT NOT NULL,
-                    ruta_archivo TEXT NOT NULL,
-                    tipo_archivo TEXT,
-                    tamano_bytes INTEGER,
-                    descripcion TEXT,
-                    subido_por INTEGER,
-                    fecha_subida TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (actividad_id) REFERENCES pdm_actividades(id) ON DELETE CASCADE,
-                    FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE,
-                    FOREIGN KEY (subido_por) REFERENCES users(id) ON DELETE SET NULL
-                )
-            """))
-            db.commit()
-            results.append("✓ Tabla actividades_evidencias creada")
-        else:
-            results.append("✓ Tabla actividades_evidencias ya existe")
-        
-        # 4. Agregar índices para mejorar performance
+
+            # Asegurar columnas clave según modelo
+            required_cols = {
+                "codigo_indicador_producto": "VARCHAR(128)",
+                "nombre": "VARCHAR(512)",
+                "descripcion": "VARCHAR(1024)",
+                "responsable": "VARCHAR(256)",
+                "fecha_inicio": "TIMESTAMP",
+                "fecha_fin": "TIMESTAMP",
+                "porcentaje_avance": "DOUBLE PRECISION DEFAULT 0",
+                "anio": "INTEGER",
+                "meta_ejecutar": "DOUBLE PRECISION DEFAULT 0",
+                "valor_ejecutado": "DOUBLE PRECISION DEFAULT 0",
+                "estado": "TEXT DEFAULT 'pendiente'",
+                "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "updated_at": "TIMESTAMP"
+            }
+            for col, tipo in required_cols.items():
+                if not check_column_exists("pdm_actividades", col):
+                    log_migration(f"Agregando columna {col} a pdm_actividades...")
+                    db.execute(text(f"ALTER TABLE pdm_actividades ADD COLUMN {col} {tipo}"))
+                    db.commit()
+                    results.append(f"✓ Columna {col} agregada a pdm_actividades")
+
+        # 2) Índices para pdm_actividades
         try:
             db.execute(text("CREATE INDEX IF NOT EXISTS idx_pdm_actividades_entity ON pdm_actividades(entity_id)"))
-            db.execute(text("CREATE INDEX IF NOT EXISTS idx_pdm_actividades_responsable ON pdm_actividades(responsable)"))
+            db.execute(text("CREATE INDEX IF NOT EXISTS idx_pdm_actividades_codigo ON pdm_actividades(codigo_indicador_producto)"))
             db.execute(text("CREATE INDEX IF NOT EXISTS idx_pdm_actividades_entity_codigo ON pdm_actividades(entity_id, codigo_indicador_producto)"))
-            db.execute(text("CREATE INDEX IF NOT EXISTS idx_evidencias_actividad ON actividades_evidencias(actividad_id)"))
             db.commit()
-            results.append("✓ Índices creados/verificados")
+            results.append("✓ Índices pdm_actividades verificados")
         except Exception as e:
-            results.append(f"⚠ Índices: {str(e)}")
-        
+            results.append(f"⚠ Índices pdm_actividades: {str(e)}")
+
+        # 3) Evidencias de PDM: pdm_actividades_evidencias
+        if not check_table_exists("pdm_actividades_evidencias"):
+            log_migration("Creando tabla pdm_actividades_evidencias...")
+            db.execute(text(
+                """
+                CREATE TABLE pdm_actividades_evidencias (
+                    id SERIAL PRIMARY KEY,
+                    actividad_id INTEGER NOT NULL REFERENCES pdm_actividades(id) ON DELETE CASCADE,
+                    entity_id INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
+                    descripcion TEXT,
+                    url VARCHAR(512),
+                    nombre_imagen VARCHAR(256),
+                    mime_type VARCHAR(64),
+                    tamano INTEGER,
+                    contenido BYTEA,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            ))
+            db.commit()
+            results.append("✓ Tabla pdm_actividades_evidencias creada")
+        else:
+            results.append("✓ Tabla pdm_actividades_evidencias ya existe")
+
+        try:
+            db.execute(text("CREATE INDEX IF NOT EXISTS idx_pdm_evidencias_actividad ON pdm_actividades_evidencias(actividad_id)"))
+            db.commit()
+            results.append("✓ Índices evidencias PDM verificados")
+        except Exception as e:
+            results.append(f"⚠ Índices evidencias PDM: {str(e)}")
+
     except Exception as e:
         error_msg = f"❌ Error en migraciones PDM: {str(e)}"
         log_migration(error_msg)
         results.append(error_msg)
         db.rollback()
-    
+
     return results
 
 def run_planes_migrations(db: Session) -> List[str]:
-    """Ejecuta migraciones relacionadas con Planes Institucionales"""
-    results = []
-    
+    """Ejecuta migraciones relacionadas con Planes Institucionales (idempotentes)."""
+    results: List[str] = []
+
     try:
-        # Verificar que la tabla planes_institucionales existe
+        # ===================== Planes =====================
         if check_table_exists("planes_institucionales"):
             results.append("✓ Tabla planes_institucionales existe")
-            
-            # Agregar columna entity_id si no existe
+
+            # Asegurar FK a entities
             if not check_column_exists("planes_institucionales", "entity_id"):
                 log_migration("Agregando entity_id a planes_institucionales...")
-                db.execute(text("""
+                db.execute(text(
+                    """
                     ALTER TABLE planes_institucionales 
                     ADD COLUMN entity_id INTEGER REFERENCES entities(id) ON DELETE CASCADE
-                """))
+                    """
+                ))
                 db.commit()
                 results.append("✓ Columna entity_id agregada a planes_institucionales")
 
-            # Asegurar columnas críticas según el modelo
+            # Columnas críticas (usamos tipos compatibles para evitar problemas con ENUMs existentes)
             columnas_requeridas = {
                 "anio": "INTEGER",
                 "nombre": "TEXT",
                 "descripcion": "TEXT",
                 "periodo_inicio": "DATE",
                 "periodo_fin": "DATE",
-                # Evitar crear ENUM aquí: usamos TEXT por compatibilidad
                 "estado": "TEXT",
                 "porcentaje_avance": "NUMERIC(5,2) DEFAULT 0",
                 "responsable_elaboracion": "TEXT",
                 "responsable_aprobacion": "TEXT",
                 "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
                 "updated_at": "TIMESTAMP",
-                "created_by": "TEXT"
+                "created_by": "TEXT",
             }
-
             for col, tipo in columnas_requeridas.items():
                 if not check_column_exists("planes_institucionales", col):
                     log_migration(f"Agregando columna {col} a planes_institucionales...")
@@ -180,7 +192,7 @@ def run_planes_migrations(db: Session) -> List[str]:
                     db.commit()
                     results.append(f"✓ Columna {col} agregada a planes_institucionales")
 
-            # Índices recomendados
+            # Índices
             try:
                 db.execute(text("CREATE INDEX IF NOT EXISTS idx_planes_entity ON planes_institucionales(entity_id)"))
                 db.execute(text("CREATE INDEX IF NOT EXISTS idx_planes_anio ON planes_institucionales(anio)"))
@@ -190,34 +202,138 @@ def run_planes_migrations(db: Session) -> List[str]:
                 results.append("✓ Índices de planes verificados")
             except Exception as e:
                 results.append(f"⚠ Índices de planes: {str(e)}")
-        
-        # Verificar tabla componentes_procesos (nombre correcto)
+        else:
+            results.append("⚠ Tabla planes_institucionales no existe (se crea con Base.metadata.create_all)")
+
+        # ===================== Componentes / Procesos =====================
         if check_table_exists("componentes_procesos"):
             results.append("✓ Tabla componentes_procesos existe")
-        
-        # Verificar tabla actividades
+
+            columnas_comp = {
+                "nombre": "TEXT",
+                "estado": "TEXT",
+                "porcentaje_avance": "NUMERIC(5,2) DEFAULT 0",
+                "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "updated_at": "TIMESTAMP",
+                "plan_id": "INTEGER REFERENCES planes_institucionales(id) ON DELETE CASCADE",
+            }
+            for col, tipo in columnas_comp.items():
+                if not check_column_exists("componentes_procesos", col):
+                    log_migration(f"Agregando columna {col} a componentes_procesos...")
+                    db.execute(text(f"ALTER TABLE componentes_procesos ADD COLUMN {col} {tipo}"))
+                    db.commit()
+                    results.append(f"✓ Columna {col} agregada a componentes_procesos")
+
+            # Índices
+            try:
+                db.execute(text("CREATE INDEX IF NOT EXISTS idx_componentes_plan ON componentes_procesos(plan_id)"))
+                db.execute(text("CREATE INDEX IF NOT EXISTS idx_componentes_estado ON componentes_procesos(estado)"))
+                db.commit()
+                results.append("✓ Índices de componentes verificados")
+            except Exception as e:
+                results.append(f"⚠ Índices de componentes: {str(e)}")
+        else:
+            results.append("⚠ Tabla componentes_procesos no existe (se crea con Base.metadata.create_all)")
+
+        # ===================== Actividades =====================
         if check_table_exists("actividades"):
             results.append("✓ Tabla actividades existe")
-            
-            # Verificar columna responsable existe
-            if check_column_exists("actividades", "responsable"):
-                results.append("✓ Columna responsable existe en actividades")
-            else:
-                log_migration("Agregando columna responsable a actividades...")
-                db.execute(text("ALTER TABLE actividades ADD COLUMN responsable TEXT"))
+
+            columnas_act = {
+                "objetivo_especifico": "TEXT",
+                "fecha_inicio_prevista": "DATE",
+                "fecha_fin_prevista": "DATE",
+                "responsable": "TEXT",
+                "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "updated_at": "TIMESTAMP",
+                "componente_id": "INTEGER REFERENCES componentes_procesos(id) ON DELETE CASCADE",
+            }
+            for col, tipo in columnas_act.items():
+                if not check_column_exists("actividades", col):
+                    log_migration(f"Agregando columna {col} a actividades...")
+                    db.execute(text(f"ALTER TABLE actividades ADD COLUMN {col} {tipo}"))
+                    db.commit()
+                    results.append(f"✓ Columna {col} agregada a actividades")
+
+            # Índices
+            try:
+                db.execute(text("CREATE INDEX IF NOT EXISTS idx_actividades_resp ON actividades(responsable)"))
+                db.execute(text("CREATE INDEX IF NOT EXISTS idx_actividades_comp ON actividades(componente_id)"))
+                db.execute(text("CREATE INDEX IF NOT EXISTS idx_actividades_inicio ON actividades(fecha_inicio_prevista)"))
                 db.commit()
-                results.append("✓ Columna responsable agregada")
-        
-        # Verificar tabla actividades_ejecucion
+                results.append("✓ Índices de actividades verificados")
+            except Exception as e:
+                results.append(f"⚠ Índices de actividades: {str(e)}")
+        else:
+            results.append("⚠ Tabla actividades no existe (se crea con Base.metadata.create_all)")
+
+        # ===================== Actividades de Ejecución =====================
         if check_table_exists("actividades_ejecucion"):
             results.append("✓ Tabla actividades_ejecucion existe")
-            
+
+            columnas_eje = {
+                "fecha_registro": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "descripcion": "TEXT",
+                "evidencia_url": "VARCHAR(500)",
+                "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "updated_at": "TIMESTAMP",
+                "actividad_id": "INTEGER REFERENCES actividades(id) ON DELETE CASCADE",
+            }
+            for col, tipo in columnas_eje.items():
+                if not check_column_exists("actividades_ejecucion", col):
+                    log_migration(f"Agregando columna {col} a actividades_ejecucion...")
+                    db.execute(text(f"ALTER TABLE actividades_ejecucion ADD COLUMN {col} {tipo}"))
+                    db.commit()
+                    results.append(f"✓ Columna {col} agregada a actividades_ejecucion")
+
+            # Índices
+            try:
+                db.execute(text("CREATE INDEX IF NOT EXISTS idx_ejecucion_actividad ON actividades_ejecucion(actividad_id)"))
+                db.execute(text("CREATE INDEX IF NOT EXISTS idx_ejecucion_fecha ON actividades_ejecucion(fecha_registro)"))
+                db.commit()
+                results.append("✓ Índices de actividades_ejecucion verificados")
+            except Exception as e:
+                results.append(f"⚠ Índices de actividades_ejecucion: {str(e)}")
+        else:
+            results.append("⚠ Tabla actividades_ejecucion no existe (se crea con Base.metadata.create_all)")
+
+        # ===================== Evidencias de Ejecución =====================
+        if check_table_exists("actividades_evidencias"):
+            results.append("✓ Tabla actividades_evidencias existe")
+
+            columnas_evid = {
+                "tipo": "TEXT",
+                "contenido": "TEXT",
+                "nombre_archivo": "VARCHAR(255)",
+                "mime_type": "VARCHAR(100)",
+                "orden": "INTEGER DEFAULT 0",
+                "created_at": "TIMESTAMP DEFAULT CURRENT_TIMESTAMP",
+                "actividad_ejecucion_id": "INTEGER REFERENCES actividades_ejecucion(id) ON DELETE CASCADE",
+            }
+            for col, tipo in columnas_evid.items():
+                if not check_column_exists("actividades_evidencias", col):
+                    log_migration(f"Agregando columna {col} a actividades_evidencias...")
+                    db.execute(text(f"ALTER TABLE actividades_evidencias ADD COLUMN {col} {tipo}"))
+                    db.commit()
+                    results.append(f"✓ Columna {col} agregada a actividades_evidencias")
+
+            # Índices
+            try:
+                db.execute(text("CREATE INDEX IF NOT EXISTS idx_evidencias_actividad_ejecucion ON actividades_evidencias(actividad_ejecucion_id)"))
+                db.execute(text("CREATE INDEX IF NOT EXISTS idx_evidencias_tipo ON actividades_evidencias(tipo)"))
+                db.commit()
+                results.append("✓ Índices de actividades_evidencias verificados")
+            except Exception as e:
+                results.append(f"⚠ Índices de actividades_evidencias: {str(e)}")
+        else:
+            results.append("⚠ Tabla actividades_evidencias no existe (se crea con Base.metadata.create_all)")
+
     except Exception as e:
         error_msg = f"❌ Error en migraciones Planes: {str(e)}"
         log_migration(error_msg)
         results.append(error_msg)
         db.rollback()
-    
+
     return results
 
 def run_secretarias_migrations(db: Session) -> List[str]:
@@ -401,8 +517,10 @@ async def get_migration_status(db: Session = Depends(get_db)):
             "planes_institucionales": check_table_exists("planes_institucionales"),
             "componentes_procesos": check_table_exists("componentes_procesos"),
             "actividades": check_table_exists("actividades"),
-            "pdm_actividades": check_table_exists("pdm_actividades"),
+            "actividades_ejecucion": check_table_exists("actividades_ejecucion"),
             "actividades_evidencias": check_table_exists("actividades_evidencias"),
+            "pdm_actividades": check_table_exists("pdm_actividades"),
+            "pdm_actividades_evidencias": check_table_exists("pdm_actividades_evidencias"),
             "secretarias": check_table_exists("secretarias"),
             "alerts": check_table_exists("alerts"),
         }
