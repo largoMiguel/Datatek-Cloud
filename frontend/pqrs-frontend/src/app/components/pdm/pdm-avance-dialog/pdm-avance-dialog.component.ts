@@ -67,6 +67,11 @@ export class PdmAvanceDialogComponent implements OnInit {
         this.actividades = this.data.actividades || [];
         if (this.actividades.length) {
             this.actividadId = this.actividades[0].id ?? null;
+            // Inicializar la actividad seleccionada
+            if (this.actividadId) {
+                this.actividadSeleccionada = this.actividades[0];
+                this.cargarHistorialEjecuciones();
+            }
         }
     }
 
