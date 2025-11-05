@@ -50,9 +50,84 @@
             <ng-container *ngFor="let act of actividades">
                 <ng-container *ngIf="act.id === aid">
                     <i class="fas fa-info-circle me-2"></i>
-                    Año: <strong>{{ act.anio }}</strong> | Meta a ejecutar: <strong>{{ act.meta_ejecutar }}</strong>
+                    Año: <strong>{{ act.anio }}</strong> |
+                    Meta a ejecutar: <strong>{{ act.meta_ejecutar }}</strong> |
+                    Ejecutado: <strong>{{ totalEjecutado }}</strong>
                 </ng-container>
             </ng-container>
+        </div>
+
+        <!-- Historial de Ejecuciones -->
+        <div class="card mb-3 border-success" *ngIf="actividadId">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="fas fa-list-ul me-2"></i>
+                    Historial de Ejecuciones ({{ ejecuciones.length }})
+                </h6>
+                <button type="button" class="btn btn-sm btn-outline-primary" (click)="toggleHistorial()">
+                    <i class="fas" [ngClass]="mostrarHistorial ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                    {{ mostrarHistorial ? 'Ocultar' : 'Mostrar' }}
+                </button>
+            </div>
+            <div class="card-body" *ngIf="mostrarHistorial">
+                <div *ngIf="cargandoHistorial" class="text-center py-3">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                    Cargando historial...
+                </div>
+                <div *ngIf="!cargandoHistorial && ejecuciones.length === 0" class="text-muted text-center py-3">
+                    <i class="fas fa-inbox me-2"></i>
+                    No hay ejecuciones registradas aún
+                </div>
+                <div *ngIf="!cargandoHistorial && ejecuciones.length > 0" class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Valor</th>
+                                <th>Descripción</th>
+                                <th>Evidencias</th>
+                                <th>Registrado por</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngFor="let ej of ejecuciones">
+                                <td class="text-nowrap">
+                                    <small>{{ ej.created_at | date:'short' }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">{{ ej.valor_ejecutado_incremento }}</span>
+                                </td>
+                                <td>
+                                    <small>{{ ej.descripcion || '—' }}</small>
+                                </td>
+                                <td>
+                                    <span *ngIf="ej.url_evidencia" class="badge bg-info me-1">
+                                        <i class="fas fa-link"></i> URL
+                                    </span>
+                                    <span *ngIf="ej.imagenes && ej.imagenes.length > 0" class="badge bg-primary">
+                                        <i class="fas fa-images"></i> {{ ej.imagenes.length }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>{{ ej.registrado_por }}</small>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="alert alert-success mb-0 mt-2">
+                        <strong>Total ejecutado acumulado:</strong> {{ totalEjecutado }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label for="valorEjecutado" class="form-label fw-bold">
+                <i class="fas fa-plus-circle me-2"></i>Valor a Ejecutar *
+            </label>
+            <input type="number" class="form-control form-control-lg" id="valorEjecutado" [(ngModel)]="valorEjecutado"
+                min="0.01" step="0.01" placeholder="Ingrese el valor ejecutado (ej: 10)">
+            <small class="text-muted">Este valor se sumará al total ejecutado de la actividad</small>
         </div>
 
         <div class="mb-3">

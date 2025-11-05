@@ -100,6 +100,50 @@ export interface EvidenciasListResponse {
     evidencias: EvidenciaResponse[];
 }
 
+// Interfaces para Ejecuciones
+export interface EjecucionImagenBase {
+    nombre_imagen: string;
+    mime_type: string;
+    tamano: number;
+    contenido: string; // base64
+}
+
+export interface EjecucionCreateRequest {
+    actividad_id: number;
+    valor_ejecutado_incremento: number;
+    descripcion?: string;
+    url_evidencia?: string;
+    imagenes?: EjecucionImagenBase[];
+    registrado_por?: string;
+}
+
+export interface EvidenciaImagenResponse {
+    id: number;
+    nombre_imagen: string;
+    mime_type: string;
+    tamano: number;
+    contenido: string; // base64
+}
+
+export interface EjecucionResponse {
+    id: number;
+    actividad_id: number;
+    entity_id: number;
+    valor_ejecutado_incremento: number;
+    descripcion?: string;
+    url_evidencia?: string;
+    registrado_por: string;
+    created_at: string;
+    updated_at: string;
+    imagenes: EvidenciaImagenResponse[];
+}
+
+export interface EjecucionesListResponse {
+    actividad_id: number;
+    total_ejecutado: number;
+    ejecuciones: EjecucionResponse[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class PdmBackendService {
     private http = inject(HttpClient);
@@ -152,6 +196,19 @@ export class PdmBackendService {
 
     deleteEvidencia(slug: string, actividadId: number, evidenciaId: number): Observable<void> {
         return this.http.delete<void>(`${this.baseUrl}/${slug}/actividades/${actividadId}/evidencias/${evidenciaId}`);
+    }
+
+    // Ejecuciones
+    createEjecucion(slug: string, actividadId: number, payload: EjecucionCreateRequest): Observable<EjecucionResponse> {
+        return this.http.post<EjecucionResponse>(`${this.baseUrl}/${slug}/actividades/${actividadId}/ejecuciones`, payload);
+    }
+
+    getEjecuciones(slug: string, actividadId: number): Observable<EjecucionesListResponse> {
+        return this.http.get<EjecucionesListResponse>(`${this.baseUrl}/${slug}/actividades/${actividadId}/ejecuciones`);
+    }
+
+    deleteEjecucion(slug: string, actividadId: number, ejecucionId: number): Observable<void> {
+        return this.http.delete<void>(`${this.baseUrl}/${slug}/actividades/${actividadId}/ejecuciones/${ejecucionId}`);
     }
 
     // Excel management

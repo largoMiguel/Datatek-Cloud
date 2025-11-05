@@ -557,7 +557,8 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
                 this.avanceDialogData = {
                     codigo: row.codigoIndicadorProducto,
                     avances: row.avances,
-                    actividades
+                    actividades,
+                    entitySlug: slug
                 } as any;
 
                 // Usar requestAnimationFrame para asegurar que el DOM esté listo
@@ -579,6 +580,7 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
 
     onAvanceSave(result: {
         actividadId: number;
+        valorEjecutado: number;
         descripcion: string;
         url: string;
         imagenes: Array<{
@@ -605,68 +607,34 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
             return;
         }
 
-        // Calcular parámetros desde la actividad
-        const anio = actividad.anio;
-        const valor_ejecutado = Number(actividad.meta_ejecutar || 0);
-
-        // Primero registrar el avance
-        this.pdmBackend.upsertAvance(slug, {
-            codigo_indicador_producto: row.codigoIndicadorProducto,
-            anio,
-            valor_ejecutado,
-            comentario: result.descripcion,
-        }).subscribe({
-            next: () => {
-                // Actualizar avances por año en la fila
-                if (!row.avances) row.avances = {};
-                row.avances[anio] = {
-                    valor: valor_ejecutado,
-                    comentario: result.descripcion
-                };
-                // Mantener la métrica general de avance como promedio simple de avances cargados
-                const valores = Object.values(row.avances).map(a => a.valor).filter(v => typeof v === 'number');
-                row.avance = valores.length ? (valores.reduce((a, b) => a + b, 0) / valores.length) : row.avance;
-                this.actualizarTabla();
-                this.calcularEstadisticasAvanzadas();
-
-                // Luego crear las evidencias
-                this.crearEvidencias(slug, result.actividadId, result.descripcion, result.url, result.imagenes);
-            },
-            error: () => {
-                this.showToast('No se pudo registrar el avance', 'error');
-                // Resetear estado de guardando en el modal
-                if (this.avanceDialogData) {
-                    (this.avanceDialogData as any).guardando = false;
-                }
-            }
-        });
-    }
-
-    private crearEvidencias(
-        slug: string,
-        actividadId: number,
-        descripcion: string,
-        url: string,
-        imagenes: Array<{ base64: string; nombre: string; mimeType: string; tamano: number }>
-    ) {
         // Preparar imágenes para el backend
-        const imagenesPayload = imagenes.map(img => ({
-            nombre: img.nombre,
+        const imagenesPayload = result.imagenes.map(img => ({
+            nombre_imagen: img.nombre,
             mime_type: img.mimeType,
             tamano: img.tamano,
-            contenido_base64: img.base64.split(',')[1] || img.base64 // Remover data:image/...;base64,
+            contenido: img.base64.split(',')[1] || img.base64 // Remover data:image/...;base64,
         }));
 
+        // Crear la ejecución con evidencias
         const payload = {
-            actividad_id: actividadId,
-            descripcion: descripcion.trim() || undefined,
-            url: url.trim() || undefined,
+            actividad_id: result.actividadId,
+            valor_ejecutado_incremento: result.valorEjecutado,
+            descripcion: result.descripcion.trim() || undefined,
+            url_evidencia: result.url.trim() || undefined,
             imagenes: imagenesPayload.length > 0 ? imagenesPayload : undefined
         };
 
-        this.pdmBackend.createEvidencia(slug, actividadId, payload).subscribe({
-            next: () => {
-                this.showToast('Avance y evidencias registrados exitosamente', 'success');
+        this.pdmBackend.createEjecucion(slug, result.actividadId, payload).subscribe({
+            next: async (ejecucion) => {
+                this.showToast('Ejecución registrada exitosamente', 'success');
+
+                // Recargar datos del PDM para reflejar los cambios
+                try {
+                    await this.pdmService.descargarYProcesarExcelDesdeBD(slug);
+                } catch (error) {
+                    console.error('Error al recargar datos:', error);
+                }
+
                 // Cerrar modal
                 if (this.avanceModalInstance) {
                     this.avanceModalInstance.hide();
@@ -674,13 +642,12 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
                 this.avanceDialogData = null;
             },
             error: (err) => {
-                console.error('Error al crear evidencias:', err);
-                this.showToast('Avance registrado pero hubo un error al guardar evidencias', 'error');
-                // Cerrar modal igualmente
-                if (this.avanceModalInstance) {
-                    this.avanceModalInstance.hide();
+                console.error('Error al crear ejecución:', err);
+                this.showToast('No se pudo registrar la ejecución', 'error');
+                // Resetear estado de guardando en el modal
+                if (this.avanceDialogData) {
+                    (this.avanceDialogData as any).guardando = false;
                 }
-                this.avanceDialogData = null;
             }
         });
     }

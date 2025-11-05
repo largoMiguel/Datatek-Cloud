@@ -1,12 +1,14 @@
-import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, Input, Output, EventEmitter, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Actividad } from '../pdm.models';
+import { PdmBackendService, EjecucionResponse } from '../../../services/pdm-backend.service';
 
 export interface AvanceDialogData {
     codigo: string;
     avances?: { [anio: number]: { valor: number; comentario?: string } };
     actividades?: Actividad[];
+    entitySlug?: string;
 }
 
 export interface ImagenSeleccionada {
@@ -32,19 +34,29 @@ export class PdmAvanceDialogComponent implements OnInit {
     @Input() data!: AvanceDialogData;
     @Output() onSave = new EventEmitter<{
         actividadId: number;
+        valorEjecutado: number;
         descripcion: string;
         url: string;
         imagenes: ImagenSeleccionada[];
     }>();
     @Output() onCancel = new EventEmitter<void>();
 
+    private pdmBackend = inject(PdmBackendService);
+
     actividades: Actividad[] = [];
     actividadId: number | null = null;
+    valorEjecutado: number = 0;
     descripcion: string = '';
     url: string = '';
     imagenesSeleccionadas: ImagenSeleccionada[] = [];
     error: string | null = null;
     guardando = false;
+    cargandoHistorial = false;
+
+    // Historial de ejecuciones
+    ejecuciones: EjecucionResponse[] = [];
+    totalEjecutado = 0;
+    mostrarHistorial = false;
 
     readonly MAX_IMAGENES = 4;
     readonly MAX_TAMANO_MB = 2;
@@ -61,6 +73,28 @@ export class PdmAvanceDialogComponent implements OnInit {
 
     onActividadChange(): void {
         this.error = null;
+        this.cargarHistorialEjecuciones();
+    }
+
+    cargarHistorialEjecuciones(): void {
+        if (!this.actividadId || !this.data.entitySlug) return;
+
+        this.cargandoHistorial = true;
+        this.pdmBackend.getEjecuciones(this.data.entitySlug, this.actividadId).subscribe({
+            next: (response) => {
+                this.ejecuciones = response.ejecuciones;
+                this.totalEjecutado = response.total_ejecutado;
+                this.cargandoHistorial = false;
+            },
+            error: (err) => {
+                console.error('Error al cargar historial:', err);
+                this.cargandoHistorial = false;
+            }
+        });
+    }
+
+    toggleHistorial(): void {
+        this.mostrarHistorial = !this.mostrarHistorial;
     }
 
     onFileSelected(event: Event): void {
@@ -124,6 +158,11 @@ export class PdmAvanceDialogComponent implements OnInit {
             return;
         }
 
+        if (!this.valorEjecutado || this.valorEjecutado <= 0) {
+            this.error = 'El valor ejecutado debe ser mayor a 0.';
+            return;
+        }
+
         // Validar que al menos un campo esté presente
         const tieneDescripcion = this.descripcion && this.descripcion.trim().length > 0;
         const tieneUrl = this.url && this.url.trim().length > 0;
@@ -137,6 +176,7 @@ export class PdmAvanceDialogComponent implements OnInit {
         this.guardando = true;
         this.onSave.emit({
             actividadId: this.actividadId,
+            valorEjecutado: this.valorEjecutado,
             descripcion: this.descripcion.trim(),
             url: this.url.trim(),
             imagenes: this.imagenesSeleccionadas
