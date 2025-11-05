@@ -46,15 +46,22 @@
             </select>
         </div>
 
-        <div class="alert alert-info" *ngIf="actividadId as aid">
-            <ng-container *ngFor="let act of actividades">
-                <ng-container *ngIf="act.id === aid">
-                    <i class="fas fa-info-circle me-2"></i>
-                    Año: <strong>{{ act.anio }}</strong> |
-                    Meta a ejecutar: <strong>{{ act.meta_ejecutar }}</strong> |
-                    Ejecutado: <strong>{{ totalEjecutado }}</strong>
-                </ng-container>
-            </ng-container>
+        <!-- Info de la Actividad Seleccionada -->
+        <div class="alert alert-success mb-3" *ngIf="actividadSeleccionada">
+            <div class="d-flex align-items-center mb-2">
+                <i class="fas fa-check-circle me-2"></i>
+                <strong>Actividad seleccionada:</strong>
+            </div>
+            <div class="ms-4">
+                <div><strong>Año:</strong> {{ actividadSeleccionada.anio }}</div>
+                <div><strong>Meta asignada:</strong> {{ actividadSeleccionada.meta_ejecutar }}</div>
+                <div><strong>Ya ejecutado:</strong> {{ totalEjecutado }}</div>
+                <div class="mt-2">
+                    <span class="badge bg-info">
+                        Al registrar este avance, se cumplirá con la meta de {{ actividadSeleccionada.meta_ejecutar }}
+                    </span>
+                </div>
+            </div>
         </div>
 
         <!-- Historial de Ejecuciones -->
@@ -121,13 +128,10 @@
             </div>
         </div>
 
-        <div class="mb-3">
-            <label for="valorEjecutado" class="form-label fw-bold">
-                <i class="fas fa-plus-circle me-2"></i>Valor a Ejecutar *
-            </label>
-            <input type="number" class="form-control form-control-lg" id="valorEjecutado" [(ngModel)]="valorEjecutado"
-                min="0.01" step="0.01" placeholder="Ingrese el valor ejecutado (ej: 10)">
-            <small class="text-muted">Este valor se sumará al total ejecutado de la actividad</small>
+        <!-- Evidencias del Cumplimiento -->
+        <div class="alert alert-warning mb-3">
+            <i class="fas fa-clipboard-check me-2"></i>
+            <strong>Registre evidencias del cumplimiento de la actividad</strong>
         </div>
 
         <div class="mb-3">

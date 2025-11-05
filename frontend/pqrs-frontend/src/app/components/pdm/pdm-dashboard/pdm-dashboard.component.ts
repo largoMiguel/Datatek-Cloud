@@ -580,7 +580,6 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
 
     onAvanceSave(result: {
         actividadId: number;
-        valorEjecutado: number;
         descripcion: string;
         url: string;
         imagenes: Array<{
@@ -607,6 +606,9 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
             return;
         }
 
+        // El valor ejecutado es la meta_ejecutar de la actividad
+        const valorEjecutado = Number(actividad.meta_ejecutar || 0);
+
         // Preparar imágenes para el backend
         const imagenesPayload = result.imagenes.map(img => ({
             nombre_imagen: img.nombre,
@@ -618,7 +620,7 @@ export class PdmDashboardComponent implements OnInit, OnDestroy {
         // Crear la ejecución con evidencias
         const payload = {
             actividad_id: result.actividadId,
-            valor_ejecutado_incremento: result.valorEjecutado,
+            valor_ejecutado_incremento: valorEjecutado,
             descripcion: result.descripcion.trim() || undefined,
             url_evidencia: result.url.trim() || undefined,
             imagenes: imagenesPayload.length > 0 ? imagenesPayload : undefined

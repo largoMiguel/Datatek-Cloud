@@ -34,7 +34,6 @@ export class PdmAvanceDialogComponent implements OnInit {
     @Input() data!: AvanceDialogData;
     @Output() onSave = new EventEmitter<{
         actividadId: number;
-        valorEjecutado: number;
         descripcion: string;
         url: string;
         imagenes: ImagenSeleccionada[];
@@ -45,7 +44,7 @@ export class PdmAvanceDialogComponent implements OnInit {
 
     actividades: Actividad[] = [];
     actividadId: number | null = null;
-    valorEjecutado: number = 0;
+    actividadSeleccionada: Actividad | null = null;
     descripcion: string = '';
     url: string = '';
     imagenesSeleccionadas: ImagenSeleccionada[] = [];
@@ -73,6 +72,8 @@ export class PdmAvanceDialogComponent implements OnInit {
 
     onActividadChange(): void {
         this.error = null;
+        // Actualizar la actividad seleccionada
+        this.actividadSeleccionada = this.actividades.find(a => a.id === this.actividadId) || null;
         this.cargarHistorialEjecuciones();
     }
 
@@ -153,13 +154,8 @@ export class PdmAvanceDialogComponent implements OnInit {
     guardar(): void {
         this.error = null;
 
-        if (!this.actividadId) {
+        if (!this.actividadId || !this.actividadSeleccionada) {
             this.error = 'Selecciona una actividad.';
-            return;
-        }
-
-        if (!this.valorEjecutado || this.valorEjecutado <= 0) {
-            this.error = 'El valor ejecutado debe ser mayor a 0.';
             return;
         }
 
@@ -176,7 +172,6 @@ export class PdmAvanceDialogComponent implements OnInit {
         this.guardando = true;
         this.onSave.emit({
             actividadId: this.actividadId,
-            valorEjecutado: this.valorEjecutado,
             descripcion: this.descripcion.trim(),
             url: this.url.trim(),
             imagenes: this.imagenesSeleccionadas
