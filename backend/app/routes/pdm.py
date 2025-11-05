@@ -1,14 +1,23 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from typing import List, Dict
 from io import BytesIO
 from app.config.database import get_db
 from app.models.entity import Entity
 from app.models.user import User, UserRole
-from app.models.pdm import PdmMetaAssignment, PdmAvance, PdmActividad, PdmArchivoExcel
+from app.models.pdm import (
+    PdmMetaAssignment, 
+    PdmAvance, 
+    PdmActividad, 
+    PdmArchivoExcel,
+    PdmActividadEjecucion,
+    PdmActividadEvidencia
+)
 from app.models.alert import Alert
 import json
+import base64
 from app.schemas.pdm import (
     AssignmentUpsertRequest,
     AssignmentResponse,
@@ -24,6 +33,10 @@ from app.schemas.pdm import (
     ActividadesBulkResponse,
     ExcelUploadResponse,
     ExcelInfoResponse,
+    EjecucionCreateRequest,
+    EjecucionResponse,
+    EjecucionesListResponse,
+    EvidenciaImagenResponse,
     EvidenciaCreateRequest,
     EvidenciaResponse,
     EvidenciasListResponse,
@@ -669,6 +682,222 @@ async def delete_evidencia(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidencia no encontrada")
 
     db.delete(evidencia)
+    db.commit()
+    return None
+
+
+# ============================================================================
+# ENDPOINTS PARA GESTIÓN DE EJECUCIONES DE ACTIVIDADES
+# ============================================================================
+
+@router.post("/{slug}/actividades/{actividad_id}/ejecuciones", response_model=EjecucionResponse)
+async def crear_ejecucion(
+    slug: str,
+    actividad_id: int,
+    ejecucion_data: EjecucionCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Crea una nueva ejecución de actividad con evidencias opcionales.
+    El valor_ejecutado_incremento se suma al total ejecutado de la actividad.
+    """
+    entity = get_entity_or_404(db, slug)
+    ensure_user_can_manage_entity(current_user, entity)
+
+    # Verificar que la actividad existe
+    actividad = db.query(PdmActividad).filter(
+        PdmActividad.id == actividad_id,
+        PdmActividad.entity_id == entity.id,
+    ).first()
+
+    if not actividad:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Actividad no encontrada")
+
+    # Crear la ejecución
+    nueva_ejecucion = PdmActividadEjecucion(
+        actividad_id=actividad_id,
+        entity_id=entity.id,
+        valor_ejecutado_incremento=ejecucion_data.valor_ejecutado_incremento,
+        descripcion=ejecucion_data.descripcion,
+        url_evidencia=ejecucion_data.url_evidencia,
+        registrado_por=ejecucion_data.registrado_por or current_user.email,
+    )
+
+    db.add(nueva_ejecucion)
+    db.flush()  # Para obtener el ID de la ejecución
+
+    # Crear las evidencias si existen
+    evidencias_response = []
+    if ejecucion_data.imagenes:
+        for imagen in ejecucion_data.imagenes:
+            # Decodificar el contenido base64
+            try:
+                contenido_bytes = base64.b64decode(imagen.contenido)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Error al decodificar imagen base64: {str(e)}"
+                )
+
+            evidencia = PdmActividadEvidencia(
+                ejecucion_id=nueva_ejecucion.id,
+                entity_id=entity.id,
+                nombre_imagen=imagen.nombre_imagen,
+                mime_type=imagen.mime_type,
+                tamano=imagen.tamano,
+                contenido=contenido_bytes,
+            )
+            db.add(evidencia)
+            db.flush()
+
+            evidencias_response.append(EvidenciaImagenResponse(
+                id=evidencia.id,
+                nombre_imagen=evidencia.nombre_imagen,
+                mime_type=evidencia.mime_type,
+                tamano=evidencia.tamano,
+                contenido=imagen.contenido,  # Ya está en base64
+            ))
+
+    # Actualizar el valor_ejecutado de la actividad (suma de todas las ejecuciones)
+    total_ejecutado = db.query(func.sum(PdmActividadEjecucion.valor_ejecutado_incremento)).filter(
+        PdmActividadEjecucion.actividad_id == actividad_id
+    ).scalar() or 0.0
+
+    actividad.valor_ejecutado = float(total_ejecutado)
+
+    db.commit()
+    db.refresh(nueva_ejecucion)
+
+    return EjecucionResponse(
+        id=nueva_ejecucion.id,
+        actividad_id=nueva_ejecucion.actividad_id,
+        entity_id=nueva_ejecucion.entity_id,
+        valor_ejecutado_incremento=nueva_ejecucion.valor_ejecutado_incremento,
+        descripcion=nueva_ejecucion.descripcion,
+        url_evidencia=nueva_ejecucion.url_evidencia,
+        registrado_por=nueva_ejecucion.registrado_por,
+        created_at=nueva_ejecucion.created_at.isoformat() if nueva_ejecucion.created_at else '',
+        updated_at=nueva_ejecucion.updated_at.isoformat() if nueva_ejecucion.updated_at else '',
+        imagenes=evidencias_response,
+    )
+
+
+@router.get("/{slug}/actividades/{actividad_id}/ejecuciones", response_model=EjecucionesListResponse)
+async def get_ejecuciones(
+    slug: str,
+    actividad_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Obtiene el historial de ejecuciones de una actividad con sus evidencias.
+    Incluye el total ejecutado acumulado.
+    """
+    entity = get_entity_or_404(db, slug)
+    
+    # Verificar que la actividad existe
+    actividad = db.query(PdmActividad).filter(
+        PdmActividad.id == actividad_id,
+        PdmActividad.entity_id == entity.id,
+    ).first()
+
+    if not actividad:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Actividad no encontrada")
+
+    # Obtener todas las ejecuciones ordenadas por fecha (más reciente primero)
+    ejecuciones = db.query(PdmActividadEjecucion).filter(
+        PdmActividadEjecucion.actividad_id == actividad_id,
+        PdmActividadEjecucion.entity_id == entity.id,
+    ).order_by(PdmActividadEjecucion.created_at.desc()).all()
+
+    # Calcular total ejecutado
+    total_ejecutado = db.query(func.sum(PdmActividadEjecucion.valor_ejecutado_incremento)).filter(
+        PdmActividadEjecucion.actividad_id == actividad_id
+    ).scalar() or 0.0
+
+    # Convertir a response con evidencias
+    ejecuciones_response = []
+    for ejecucion in ejecuciones:
+        # Obtener evidencias de esta ejecución
+        evidencias = db.query(PdmActividadEvidencia).filter(
+            PdmActividadEvidencia.ejecucion_id == ejecucion.id,
+            PdmActividadEvidencia.entity_id == entity.id,
+        ).all()
+
+        evidencias_response = []
+        for ev in evidencias:
+            contenido_base64 = None
+            if ev.contenido:
+                contenido_base64 = base64.b64encode(ev.contenido).decode('utf-8')
+            
+            evidencias_response.append(EvidenciaImagenResponse(
+                id=ev.id,
+                nombre_imagen=ev.nombre_imagen,
+                mime_type=ev.mime_type,
+                tamano=ev.tamano,
+                contenido=contenido_base64,
+            ))
+
+        ejecuciones_response.append(EjecucionResponse(
+            id=ejecucion.id,
+            actividad_id=ejecucion.actividad_id,
+            entity_id=ejecucion.entity_id,
+            valor_ejecutado_incremento=ejecucion.valor_ejecutado_incremento,
+            descripcion=ejecucion.descripcion,
+            url_evidencia=ejecucion.url_evidencia,
+            registrado_por=ejecucion.registrado_por,
+            created_at=ejecucion.created_at.isoformat() if ejecucion.created_at else '',
+            updated_at=ejecucion.updated_at.isoformat() if ejecucion.updated_at else '',
+            imagenes=evidencias_response,
+        ))
+
+    return EjecucionesListResponse(
+        actividad_id=actividad_id,
+        total_ejecutado=float(total_ejecutado),
+        ejecuciones=ejecuciones_response,
+    )
+
+
+@router.delete("/{slug}/actividades/{actividad_id}/ejecuciones/{ejecucion_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_ejecucion(
+    slug: str,
+    actividad_id: int,
+    ejecucion_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Elimina una ejecución específica y recalcula el valor_ejecutado de la actividad.
+    Las evidencias asociadas se eliminan automáticamente por cascade.
+    """
+    entity = get_entity_or_404(db, slug)
+    ensure_user_can_manage_entity(current_user, entity)
+
+    ejecucion = db.query(PdmActividadEjecucion).filter(
+        PdmActividadEjecucion.id == ejecucion_id,
+        PdmActividadEjecucion.actividad_id == actividad_id,
+        PdmActividadEjecucion.entity_id == entity.id,
+    ).first()
+
+    if not ejecucion:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Ejecución no encontrada")
+
+    db.delete(ejecucion)
+    
+    # Recalcular el valor_ejecutado de la actividad
+    total_ejecutado = db.query(func.sum(PdmActividadEjecucion.valor_ejecutado_incremento)).filter(
+        PdmActividadEjecucion.actividad_id == actividad_id
+    ).scalar() or 0.0
+
+    actividad = db.query(PdmActividad).filter(
+        PdmActividad.id == actividad_id,
+        PdmActividad.entity_id == entity.id,
+    ).first()
+
+    if actividad:
+        actividad.valor_ejecutado = float(total_ejecutado)
+
     db.commit()
     return None
 
