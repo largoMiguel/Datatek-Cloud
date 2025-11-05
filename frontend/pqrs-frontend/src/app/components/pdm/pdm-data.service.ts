@@ -14,6 +14,7 @@ import {
     FiltrosPDM
 } from './pdm.models';
 import { environment } from '../../../environments/environment';
+import { PdmBackendService } from '../../services/pdm-backend.service';
 
 interface ExcelInfoResponse {
     existe: boolean;
@@ -47,6 +48,7 @@ export class PdmDataService {
     cargando$ = this.cargandoSubject.asObservable();
 
     private http = inject(HttpClient);
+    private pdmBackend = inject(PdmBackendService);
     private apiUrl = environment.apiUrl;
 
     constructor() {
@@ -387,19 +389,22 @@ export class PdmDataService {
             // NUEVA LÓGICA: Calcular avance basándose en actividades con ejecución real
             const actividades = producto.actividades || [];
 
-            // Sumar meta_ejecutar y valor_ejecutado de todas las actividades
-            const totalMetaEjecutar = actividades.reduce((sum, act) => sum + (act.meta_ejecutar || 0), 0);
+            // Calcular meta total del cuatrienio
+            const metaTotalCuatrienio = producto.metaCuatrienio || 0;
+
+            // Sumar valor_ejecutado de todas las actividades (lo realmente ejecutado)
             const totalValorEjecutado = actividades.reduce((sum, act) => sum + (act.valor_ejecutado || 0), 0);
 
             // Si no hay actividades con ejecución registrada, el avance es 0
-            if (totalValorEjecutado === 0 || totalMetaEjecutar === 0) {
+            if (totalValorEjecutado === 0) {
                 producto.avance = 0;
-                producto.estado = totalMetaEjecutar > 0 ? EstadoMeta.POR_CUMPLIR : EstadoMeta.SIN_DEFINIR;
+                const tieneActividadesAsignadas = actividades.some(act => (act.meta_ejecutar || 0) > 0);
+                producto.estado = tieneActividadesAsignadas ? EstadoMeta.POR_CUMPLIR : EstadoMeta.SIN_DEFINIR;
                 return;
             }
 
-            // Calcular avance basándose en lo realmente ejecutado vs lo planeado ejecutar
-            producto.avance = totalMetaEjecutar > 0 ? (totalValorEjecutado / totalMetaEjecutar) * 100 : 0;
+            // Calcular avance: lo ejecutado vs la meta total del producto
+            producto.avance = metaTotalCuatrienio > 0 ? (totalValorEjecutado / metaTotalCuatrienio) * 100 : 0;
 
             // Determinar estado basándose en avance real
             if (producto.avance >= 100) {
@@ -1090,6 +1095,24 @@ export class PdmDataService {
 
             // Procesar el archivo usando la lógica existente
             const pdmData = await this.procesarArchivoExcel(file);
+
+            // Cargar actividades desde el backend para cada producto
+            const codigos = pdmData.planIndicativoProductos.map(p => p.codigoIndicadorProducto);
+            if (codigos.length > 0) {
+                try {
+                    const actividadesResp = await firstValueFrom(
+                        this.pdmBackend.getActividadesBulk(entitySlug, codigos)
+                    );
+
+                    // Asociar actividades a cada producto
+                    pdmData.planIndicativoProductos.forEach(producto => {
+                        producto.actividades = actividadesResp.items[producto.codigoIndicadorProducto] || [];
+                    });
+                } catch (error) {
+                    console.warn('Error al cargar actividades desde backend:', error);
+                    // Continuar sin actividades si falla
+                }
+            }
 
             return pdmData;
         } catch (error) {
