@@ -157,6 +157,52 @@ def run_planes_migrations(db: Session) -> List[str]:
         # ===================== Planes =====================
         if check_table_exists("planes_institucionales"):
             results.append("✓ Tabla planes_institucionales existe")
+            
+            # CRITICAL: Convertir ENUM estadoplan a TEXT y actualizar valores
+            try:
+                # Verificar si estado es ENUM
+                inspector = inspect(engine)
+                columns = inspector.get_columns("planes_institucionales")
+                estado_col = next((c for c in columns if c["name"] == "estado"), None)
+                
+                if estado_col and str(estado_col.get("type", "")).startswith("ENUM"):
+                    log_migration("Convirtiendo columna estado de ENUM a TEXT...")
+                    
+                    # Paso 1: Crear columna temporal
+                    db.execute(text("ALTER TABLE planes_institucionales ADD COLUMN estado_temp TEXT"))
+                    
+                    # Paso 2: Copiar valores actualizando el formato
+                    db.execute(text("""
+                        UPDATE planes_institucionales 
+                        SET estado_temp = CASE 
+                            WHEN estado::text = 'formulacion' THEN 'formulacion'
+                            WHEN estado::text = 'aprobado' THEN 'aprobado'
+                            WHEN estado::text = 'en_ejecucion' THEN 'en_ejecucion'
+                            WHEN estado::text = 'EN_EJECUCION' THEN 'en_ejecucion'
+                            WHEN estado::text = 'finalizado' THEN 'finalizado'
+                            WHEN estado::text = 'suspendido' THEN 'suspendido'
+                            WHEN estado::text = 'cancelado' THEN 'cancelado'
+                            ELSE 'formulacion'
+                        END
+                    """))
+                    
+                    # Paso 3: Eliminar columna vieja
+                    db.execute(text("ALTER TABLE planes_institucionales DROP COLUMN estado"))
+                    
+                    # Paso 4: Renombrar columna temporal
+                    db.execute(text("ALTER TABLE planes_institucionales RENAME COLUMN estado_temp TO estado"))
+                    
+                    # Paso 5: Eliminar el tipo ENUM si existe
+                    db.execute(text("DROP TYPE IF EXISTS estadoplan CASCADE"))
+                    
+                    db.commit()
+                    results.append("✓ Columna estado convertida de ENUM a TEXT")
+                else:
+                    results.append("✓ Columna estado ya es TEXT")
+            except Exception as e:
+                log_migration(f"Error al convertir estado: {str(e)}")
+                db.rollback()
+                results.append(f"⚠ Error al convertir estado: {str(e)}")
 
             # Asegurar FK a entities
             if not check_column_exists("planes_institucionales", "entity_id"):
