@@ -336,6 +336,150 @@ def run_planes_migrations(db: Session) -> List[str]:
 
     return results
 
+def run_pdm_ejecuciones_migration(db: Session) -> List[str]:
+    """
+    Migración para agregar tabla pdm_actividades_ejecuciones y refactorizar evidencias.
+    Esta migración:
+    1. Crea la tabla pdm_actividades_ejecuciones (historial de avances)
+    2. Migra evidencias existentes de actividad_id a ejecucion_id
+    3. Crea una ejecución por cada actividad existente con valor_ejecutado > 0
+    """
+    results = []
+    
+    try:
+        # Verificar si la tabla pdm_actividades existe
+        if not check_table_exists("pdm_actividades"):
+            results.append("⚠ Tabla pdm_actividades no existe. Saltando migración de ejecuciones.")
+            return results
+        
+        # 1. Crear tabla de ejecuciones si no existe
+        if not check_table_exists("pdm_actividades_ejecuciones"):
+            log_migration("Creando tabla pdm_actividades_ejecuciones...")
+            db.execute(text("""
+                CREATE TABLE pdm_actividades_ejecuciones (
+                    id SERIAL PRIMARY KEY,
+                    actividad_id INTEGER NOT NULL,
+                    entity_id INTEGER NOT NULL,
+                    valor_ejecutado_incremento DOUBLE PRECISION NOT NULL,
+                    descripcion VARCHAR(2048),
+                    url_evidencia VARCHAR(512),
+                    registrado_por VARCHAR(256),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (actividad_id) REFERENCES pdm_actividades(id) ON DELETE CASCADE,
+                    FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE
+                )
+            """))
+            db.execute(text("""
+                CREATE INDEX idx_pdm_ejecuciones_actividad 
+                ON pdm_actividades_ejecuciones(actividad_id)
+            """))
+            db.execute(text("""
+                CREATE INDEX idx_pdm_ejecuciones_entity 
+                ON pdm_actividades_ejecuciones(entity_id)
+            """))
+            db.commit()
+            results.append("✓ Tabla pdm_actividades_ejecuciones creada")
+            
+            # 2. Migrar actividades existentes a ejecuciones
+            log_migration("Migrando actividades existentes a ejecuciones...")
+            result = db.execute(text("""
+                SELECT id, entity_id, valor_ejecutado, descripcion, created_at 
+                FROM pdm_actividades 
+                WHERE valor_ejecutado > 0
+            """))
+            actividades = result.fetchall()
+            
+            count = 0
+            for actividad in actividades:
+                db.execute(text("""
+                    INSERT INTO pdm_actividades_ejecuciones 
+                    (actividad_id, entity_id, valor_ejecutado_incremento, descripcion, registrado_por, created_at, updated_at)
+                    VALUES (:actividad_id, :entity_id, :valor, :descripcion, 'Sistema - Migración', :created_at, :created_at)
+                """), {
+                    'actividad_id': actividad[0],
+                    'entity_id': actividad[1],
+                    'valor': actividad[2],
+                    'descripcion': actividad[3] or 'Ejecución migrada automáticamente',
+                    'created_at': actividad[4]
+                })
+                count += 1
+            
+            db.commit()
+            results.append(f"✓ Migradas {count} actividades a ejecuciones")
+            
+            # 3. Actualizar estructura de evidencias si es necesario
+            log_migration("Verificando estructura de evidencias...")
+            if check_column_exists("pdm_actividades_evidencias", "actividad_id"):
+                log_migration("Migrando evidencias de actividad_id a ejecucion_id...")
+                
+                # Crear tabla temporal con nueva estructura
+                db.execute(text("""
+                    CREATE TABLE pdm_actividades_evidencias_new (
+                        id SERIAL PRIMARY KEY,
+                        ejecucion_id INTEGER NOT NULL,
+                        entity_id INTEGER NOT NULL,
+                        nombre_imagen VARCHAR(512) NOT NULL,
+                        mime_type VARCHAR(128) NOT NULL,
+                        tamano INTEGER NOT NULL,
+                        contenido BYTEA NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (ejecucion_id) REFERENCES pdm_actividades_ejecuciones(id) ON DELETE CASCADE,
+                        FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE
+                    )
+                """))
+                
+                # Migrar evidencias existentes a la primera ejecución de cada actividad
+                db.execute(text("""
+                    INSERT INTO pdm_actividades_evidencias_new 
+                    (ejecucion_id, entity_id, nombre_imagen, mime_type, tamano, contenido, created_at, updated_at)
+                    SELECT 
+                        e.id as ejecucion_id,
+                        ev.entity_id,
+                        ev.nombre_imagen,
+                        ev.mime_type,
+                        ev.tamano,
+                        ev.contenido,
+                        ev.created_at,
+                        ev.updated_at
+                    FROM pdm_actividades_evidencias ev
+                    INNER JOIN pdm_actividades_ejecuciones e ON e.actividad_id = ev.actividad_id
+                    WHERE ev.nombre_imagen IS NOT NULL 
+                    AND ev.mime_type IS NOT NULL 
+                    AND ev.tamano IS NOT NULL 
+                    AND ev.contenido IS NOT NULL
+                """))
+                
+                # Eliminar tabla antigua y renombrar
+                db.execute(text("DROP TABLE pdm_actividades_evidencias"))
+                db.execute(text("ALTER TABLE pdm_actividades_evidencias_new RENAME TO pdm_actividades_evidencias"))
+                
+                # Crear índices
+                db.execute(text("""
+                    CREATE INDEX idx_pdm_evidencias_ejecucion 
+                    ON pdm_actividades_evidencias(ejecucion_id)
+                """))
+                db.execute(text("""
+                    CREATE INDEX idx_pdm_evidencias_entity 
+                    ON pdm_actividades_evidencias(entity_id)
+                """))
+                
+                db.commit()
+                results.append("✓ Evidencias migradas a nueva estructura (ejecucion_id)")
+            else:
+                results.append("✓ Evidencias ya tienen la estructura correcta")
+        else:
+            results.append("✓ Tabla pdm_actividades_ejecuciones ya existe")
+        
+    except Exception as e:
+        error_msg = f"❌ Error en migración de ejecuciones PDM: {str(e)}"
+        log_migration(error_msg)
+        results.append(error_msg)
+        db.rollback()
+    
+    return results
+
 def run_secretarias_migrations(db: Session) -> List[str]:
     """Ejecuta migraciones relacionadas con Secretarías"""
     results = []
@@ -457,6 +601,11 @@ async def run_migrations(
         pdm_results = run_pdm_migrations(db)
         all_results.extend(pdm_results)
         
+        # 2.1 Migración de Ejecuciones PDM
+        log_migration("Ejecutando migración de ejecuciones PDM...")
+        ejecuciones_results = run_pdm_ejecuciones_migration(db)
+        all_results.extend(ejecuciones_results)
+        
         # 3. Migraciones Planes
         log_migration("Ejecutando migraciones Planes...")
         planes_results = run_planes_migrations(db)
@@ -528,6 +677,7 @@ async def get_migration_status(db: Session = Depends(get_db)):
             "actividades_ejecucion": check_table_exists("actividades_ejecucion"),
             "actividades_evidencias": check_table_exists("actividades_evidencias"),
             "pdm_actividades": check_table_exists("pdm_actividades"),
+            "pdm_actividades_ejecuciones": check_table_exists("pdm_actividades_ejecuciones"),
             "pdm_actividades_evidencias": check_table_exists("pdm_actividades_evidencias"),
             "secretarias": check_table_exists("secretarias"),
             "alerts": check_table_exists("alerts"),
