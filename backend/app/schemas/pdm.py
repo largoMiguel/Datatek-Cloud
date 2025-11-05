@@ -112,6 +112,15 @@ class ActividadesListResponse(BaseModel):
     actividades: List[ActividadResponse]
 
 
+class ActividadesBulkRequest(BaseModel):
+    codigos: List[str]
+
+
+class ActividadesBulkResponse(BaseModel):
+    # Mapa codigo -> lista de actividades
+    items: Dict[str, List[ActividadResponse]]
+
+
 # Schemas para evidencias de actividades
 class EvidenciaBase(BaseModel):
     descripcion: Optional[str] = Field(None, max_length=2048)

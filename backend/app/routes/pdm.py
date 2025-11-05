@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Dict
 from io import BytesIO
 from app.config.database import get_db
 from app.models.entity import Entity
@@ -20,6 +20,8 @@ from app.schemas.pdm import (
     ActividadUpdateRequest,
     ActividadResponse,
     ActividadesListResponse,
+    ActividadesBulkRequest,
+    ActividadesBulkResponse,
     ExcelUploadResponse,
     ExcelInfoResponse,
     EvidenciaCreateRequest,
@@ -233,6 +235,54 @@ async def get_actividades(
             for row in rows
         ],
     )
+
+
+@router.post("/{slug}/actividades/bulk", response_model=ActividadesBulkResponse)
+async def get_actividades_bulk(
+    slug: str,
+    payload: ActividadesBulkRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Obtiene actividades para múltiples códigos en una sola consulta."""
+    entity = get_entity_or_404(db, slug)
+    ensure_user_can_manage_entity(current_user, entity)
+
+    codigos = [c for c in (payload.codigos or []) if c]
+    if not codigos:
+        return {"items": {}}
+
+    rows = (
+        db.query(PdmActividad)
+        .filter(
+            PdmActividad.entity_id == entity.id,
+            PdmActividad.codigo_indicador_producto.in_(codigos),
+        )
+        .order_by(PdmActividad.codigo_indicador_producto.asc(), PdmActividad.created_at.desc())
+        .all()
+    )
+
+    items: Dict[str, List[ActividadResponse]] = {c: [] for c in codigos}
+    for row in rows:
+        ar = ActividadResponse(
+            id=row.id,
+            entity_id=row.entity_id,
+            codigo_indicador_producto=row.codigo_indicador_producto,
+            nombre=row.nombre,
+            descripcion=row.descripcion,
+            responsable=row.responsable,
+            fecha_inicio=row.fecha_inicio.isoformat() if row.fecha_inicio else None,
+            fecha_fin=row.fecha_fin.isoformat() if row.fecha_fin else None,
+            estado=row.estado,
+            anio=row.anio if row.anio is not None else 0,
+            meta_ejecutar=row.meta_ejecutar if row.meta_ejecutar is not None else 0.0,
+            valor_ejecutado=row.valor_ejecutado if row.valor_ejecutado is not None else 0.0,
+            created_at=row.created_at.isoformat() if row.created_at else '',
+            updated_at=row.updated_at.isoformat() if row.updated_at else '',
+        )
+        items.setdefault(row.codigo_indicador_producto, []).append(ar)
+
+    return {"items": items}
 
 
 @router.post("/{slug}/actividades", response_model=ActividadResponse, status_code=status.HTTP_201_CREATED)

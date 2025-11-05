@@ -125,6 +125,10 @@ export class PdmBackendService {
         return this.http.get<{ codigo_indicador_producto: string; actividades: ActividadResponse[] }>(`${this.baseUrl}/${slug}/actividades`, { params: { codigo } });
     }
 
+    getActividadesBulk(slug: string, codigos: string[]): Observable<{ items: Record<string, ActividadResponse[]> }> {
+        return this.http.post<{ items: Record<string, ActividadResponse[]> }>(`${this.baseUrl}/${slug}/actividades/bulk`, { codigos });
+    }
+
     createActividad(slug: string, payload: ActividadCreateRequest): Observable<ActividadResponse> {
         return this.http.post<ActividadResponse>(`${this.baseUrl}/${slug}/actividades`, payload);
     }

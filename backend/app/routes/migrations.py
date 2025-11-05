@@ -122,6 +122,7 @@ def run_pdm_migrations(db: Session) -> List[str]:
         try:
             db.execute(text("CREATE INDEX IF NOT EXISTS idx_pdm_actividades_entity ON pdm_actividades(entity_id)"))
             db.execute(text("CREATE INDEX IF NOT EXISTS idx_pdm_actividades_responsable ON pdm_actividades(responsable)"))
+            db.execute(text("CREATE INDEX IF NOT EXISTS idx_pdm_actividades_entity_codigo ON pdm_actividades(entity_id, codigo_indicador_producto)"))
             db.execute(text("CREATE INDEX IF NOT EXISTS idx_evidencias_actividad ON actividades_evidencias(actividad_id)"))
             db.commit()
             results.append("✓ Índices creados/verificados")
