@@ -372,60 +372,30 @@ export class PdmDataService {
     }
 
     private calcularEstadosYAvances(pdmData: PDMData): void {
-        const añoActual = new Date().getFullYear();
-
         pdmData.planIndicativoProductos.forEach(producto => {
             const presupuestoTotalProducto = (producto.total2024 || 0) + (producto.total2025 || 0) + (producto.total2026 || 0) + (producto.total2027 || 0);
 
-            // Si no tiene presupuesto, marcamos como Sin Definir y avance 0
+            // Si no tiene presupuesto, marcamos como Sin Definir
             if (presupuestoTotalProducto <= 0) {
                 producto.avance = 0;
                 producto.estado = EstadoMeta.SIN_DEFINIR;
                 return;
             }
 
-            // Solo contar años del producto que tienen presupuesto > 0
-            const años = [2024, 2025, 2026, 2027] as const;
-            const incluirAño = (anio: number) => {
-                switch (anio) {
-                    case 2024: return (producto.total2024 || 0) > 0;
-                    case 2025: return (producto.total2025 || 0) > 0;
-                    case 2026: return (producto.total2026 || 0) > 0;
-                    case 2027: return (producto.total2027 || 0) > 0;
-                    default: return false;
-                }
-            };
+            // NUEVA LÓGICA: Una actividad se considera cumplida solo si tiene al menos 1 avance registrado
+            // Los avances están en producto.avances que es un objeto con años como claves
+            const tieneAvances = producto.avances && Object.keys(producto.avances).some(anio => {
+                const avanceAnio = producto.avances![anio as unknown as keyof typeof producto.avances];
+                return avanceAnio && avanceAnio.valor > 0;
+            });
 
-            const getProgramacion = (anio: number) => {
-                switch (anio) {
-                    case 2024: return producto.programacion2024 || 0;
-                    case 2025: return producto.programacion2025 || 0;
-                    case 2026: return producto.programacion2026 || 0;
-                    case 2027: return producto.programacion2027 || 0;
-                    default: return 0;
-                }
-            };
-
-            const totalProgramado = años
-                .filter(incluirAño)
-                .reduce((sum, anio) => sum + getProgramacion(anio), 0);
-
-            const totalEjecutado = años
-                .filter(incluirAño)
-                .filter(anio => añoActual >= anio)
-                .reduce((sum, anio) => sum + getProgramacion(anio), 0);
-
-            // Calcular avance
-            producto.avance = totalProgramado > 0 ? (totalEjecutado / totalProgramado) * 100 : 0;
-
-            // Determinar estado
-            if (producto.avance >= 100) {
+            // NO calculamos porcentaje de avance basado en tiempo
+            // El estado es binario: cumplida (si tiene avances) o por cumplir (si no tiene)
+            if (tieneAvances) {
+                producto.avance = 100; // Marcamos como 100% solo para efectos visuales
                 producto.estado = EstadoMeta.CUMPLIDA;
-            } else if (producto.avance >= 50) {
-                producto.estado = EstadoMeta.EN_PROGRESO;
-            } else if (producto.avance > 0) {
-                producto.estado = EstadoMeta.PENDIENTE;
             } else {
+                producto.avance = 0;
                 producto.estado = EstadoMeta.POR_CUMPLIR;
             }
         });
