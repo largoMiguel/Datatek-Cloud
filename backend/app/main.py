@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import inspect, text
 from app.config.database import engine, get_db, Base
@@ -92,6 +93,9 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"]
 )
+
+# Comprimir respuestas grandes para optimizar ancho de banda
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Middleware para manejar excepciones y asegurar CORS headers
 from fastapi import Request, Response
