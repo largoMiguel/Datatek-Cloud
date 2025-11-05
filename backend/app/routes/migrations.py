@@ -51,14 +51,39 @@ def run_pdm_migrations(db: Session) -> List[str]:
         if not check_table_exists("pdm_actividades"):
             log_migration("Creando tabla pdm_actividades (modelo actual)...")
             db.execute(text(
-                """
-                CREATE TABLE pdm_actividades (
-                    id SERIAL PRIMARY KEY,
-                    entity_id INTEGER NOT NULL REFERENCES entities(id) ON DELETE CASCADE,
-                    codigo_indicador_producto VARCHAR(128) NOT NULL,
-                    nombre VARCHAR(512) NOT NULL,
-                    descripcion VARCHAR(1024),
-                    responsable VARCHAR(256),
+            # Verificar y agregar columnas necesarias de forma idempotente
+            required_columns = {
+                "tipo": "TEXT",
+                "titulo": "TEXT",
+                "mensaje": "TEXT",
+                "leido": "BOOLEAN DEFAULT FALSE",
+                "user_id": "INTEGER",
+                "entity_id": "INTEGER",
+            }
+
+            missing_cols = []
+            for col, col_type in required_columns.items():
+                if not check_column_exists("alerts", col):
+                    missing_cols.append(col)
+                    log_migration(f"Agregando columna {col} a alerts...")
+                    db.execute(text(f"ALTER TABLE alerts ADD COLUMN {col} {col_type}"))
+                    # Añadir FK cuando aplique
+                    if col == "user_id":
+                        try:
+                            db.execute(text("ALTER TABLE alerts ADD CONSTRAINT fk_alerts_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL"))
+                        except Exception:
+                            # Ignore FK creation failures (por ejemplo, si ya existe o faltan permisos)
+                            pass
+                    if col == "entity_id":
+                        try:
+                            db.execute(text("ALTER TABLE alerts ADD CONSTRAINT fk_alerts_entity FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE"))
+                        except Exception:
+                            pass
+                    db.commit()
+                    results.append(f"✓ Columna {col} agregada a alerts")
+
+            if not missing_cols:
+                results.append("✓ Todas las columnas de alerts están presentes")
                     fecha_inicio TIMESTAMP,
                     fecha_fin TIMESTAMP,
                     porcentaje_avance DOUBLE PRECISION DEFAULT 0 NOT NULL,
