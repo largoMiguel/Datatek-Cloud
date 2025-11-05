@@ -11,18 +11,20 @@ NC='\033[0m' # No Color
 
 echo -e "${YELLOW}=== Script de Migraciones - Producción ===${NC}\n"
 
-# Verificar que se proporcione el token
+# Verificar que se proporcione la clave de migración
 if [ -z "$1" ]; then
-    echo -e "${RED}Error: Debes proporcionar el token de autenticación${NC}"
-    echo "Uso: ./run_migration_prod.sh YOUR_SUPERADMIN_TOKEN [API_URL]"
+    echo -e "${RED}Error: Debes proporcionar la clave de migración${NC}"
+    echo "Uso: ./run_migration_prod.sh MIGRATION_SECRET_KEY [API_URL]"
     echo ""
     echo "Ejemplo:"
-    echo "  ./run_migration_prod.sh eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-    echo "  ./run_migration_prod.sh YOUR_TOKEN https://tu-api.onrender.com"
+    echo "  ./run_migration_prod.sh tu-clave-secreta-2024"
+    echo "  ./run_migration_prod.sh tu-clave-secreta-2024 https://tu-api.onrender.com"
+    echo ""
+    echo "La clave debe coincidir con la variable MIGRATION_SECRET_KEY en Render"
     exit 1
 fi
 
-TOKEN=$1
+MIGRATION_KEY=$1
 API_URL=${2:-"https://pqrs-alcaldia-backend.onrender.com"}
 
 echo -e "${YELLOW}API URL:${NC} $API_URL"
@@ -37,7 +39,7 @@ echo ""
 # 2. Ejecutar migraciones
 echo -e "${YELLOW}2. Ejecutando migraciones...${NC}"
 MIGRATION_RESPONSE=$(curl -s -X POST "$API_URL/api/migrations/run" \
-  -H "Authorization: Bearer $TOKEN" \
+  -H "X-Migration-Key: $MIGRATION_KEY" \
   -H "Content-Type: application/json")
 
 echo "$MIGRATION_RESPONSE" | python -m json.tool 2>/dev/null || echo "$MIGRATION_RESPONSE"

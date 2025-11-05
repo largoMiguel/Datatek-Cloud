@@ -56,24 +56,17 @@ curl -s https://pqrs-alcaldia-backend.onrender.com/api/migrations/status | pytho
 }
 ```
 
-## 2. Ejecutar Migraciones (Requiere Token SUPERADMIN)
+## 2. Ejecutar Migraciones (Requiere Clave Secreta)
 
-### Paso 1: Obtener Token
-```bash
-# Login como SUPERADMIN
-TOKEN=$(curl -s -X POST https://pqrs-alcaldia-backend.onrender.com/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@tudominio.com","password":"tu_password"}' \
-  | python -c "import sys, json; print(json.load(sys.stdin)['access_token'])")
+### Configurar la Clave en Render
+1. Ve a Render Dashboard → Tu servicio backend → Environment
+2. Agrega variable: `MIGRATION_SECRET_KEY` = `tu-clave-secreta-2024`
+3. Guarda (Render redesplegará automáticamente)
 
-echo "Token: $TOKEN"
-```
-
-### Paso 2: Ejecutar Migraciones
+### Ejecutar Migraciones
 ```bash
 curl -X POST https://pqrs-alcaldia-backend.onrender.com/api/migrations/run \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
+  -H "X-Migration-Key: tu-clave-secreta-2024" \
   | python -m json.tool
 ```
 
@@ -110,12 +103,12 @@ curl -X POST https://pqrs-alcaldia-backend.onrender.com/api/migrations/run \
 ### Método Simple
 ```bash
 # Desde el directorio backend/
-./run_migration_prod.sh YOUR_SUPERADMIN_TOKEN
+./run_migration_prod.sh tu-clave-secreta-2024
 ```
 
 ### Con URL Personalizada
 ```bash
-./run_migration_prod.sh YOUR_TOKEN https://tu-api-custom.com
+./run_migration_prod.sh tu-clave-secreta-2024 https://tu-api-custom.com
 ```
 
 ### Output del Script
@@ -161,13 +154,12 @@ async checkMigrationStatus() {
   console.log('Estado de BD:', status);
 }
 
-// Ejecutar migraciones (solo SUPERADMIN)
-async runMigrations(token: string) {
+// Ejecutar migraciones (con clave secreta)
+async runMigrations(migrationKey: string) {
   const response = await fetch('https://pqrs-alcaldia-backend.onrender.com/api/migrations/run', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json'
+      'X-Migration-Key': migrationKey
     }
   });
   const result = await response.json();
@@ -184,11 +176,11 @@ const status = await axios.get('https://pqrs-alcaldia-backend.onrender.com/api/m
 console.log(status.data);
 
 // Ejecutar migraciones
-const token = 'YOUR_TOKEN';
+const migrationKey = 'tu-clave-secreta-2024';
 const result = await axios.post(
   'https://pqrs-alcaldia-backend.onrender.com/api/migrations/run',
   {},
-  { headers: { Authorization: `Bearer ${token}` } }
+  { headers: { 'X-Migration-Key': migrationKey } }
 );
 console.log(result.data);
 ```
@@ -215,7 +207,7 @@ STATUS=$(curl -s https://pqrs-alcaldia-backend.onrender.com/api/migrations/statu
 echo "$STATUS" | python -m json.tool
 
 echo "Ejecutando migraciones..."
-./run_migration_prod.sh $SUPERADMIN_TOKEN
+./run_migration_prod.sh tu-clave-secreta-2024
 
 echo "Deploy completado!"
 ```
@@ -228,26 +220,18 @@ watch -n 300 'curl -s https://pqrs-alcaldia-backend.onrender.com/api/migrations/
 
 ## 6. Troubleshooting por Endpoint
 
-### Error 401: Unauthorized
+### Error 403: Clave Inválida
 ```bash
-# Verificar que el token sea válido
+# Verificar que la clave sea correcta
 curl -X POST https://pqrs-alcaldia-backend.onrender.com/api/migrations/run \
-  -H "Authorization: Bearer WRONG_TOKEN" \
-  -H "Content-Type: application/json"
+  -H "X-Migration-Key: CLAVE_INCORRECTA"
 
 # Respuesta:
-# {"detail": "Could not validate credentials"}
+# {"detail": "Clave de migración inválida. Usa el header X-Migration-Key con la clave correcta."}
 
-# Solución: Obtener un nuevo token con /api/auth/login
-```
-
-### Error 403: Forbidden
-```bash
-# El usuario no es SUPERADMIN
-# Respuesta:
-# {"detail": "Solo SUPERADMIN puede ejecutar migraciones"}
-
-# Solución: Usar un token de usuario con rol SUPERADMIN
+# Solución: Usar la clave configurada en MIGRATION_SECRET_KEY en Render
+curl -X POST https://pqrs-alcaldia-backend.onrender.com/api/migrations/run \
+  -H "X-Migration-Key: tu-clave-secreta-2024"
 ```
 
 ### Error 500: Already Running
@@ -288,9 +272,10 @@ curl -s https://pqrs-alcaldia-backend.onrender.com/api/migrations/status \
 ## Notas Importantes
 
 ⚠️ **SEGURIDAD**
-- Nunca compartas tu token de SUPERADMIN
-- Los tokens expiran después de cierto tiempo
-- Usa variables de entorno para tokens en scripts
+- Nunca compartas tu MIGRATION_SECRET_KEY
+- Configura una clave segura y única en producción
+- Usa variables de entorno para claves en scripts
+- Cambia la clave si crees que fue comprometida
 
 ⚠️ **IDEMPOTENCIA**
 - Las migraciones pueden ejecutarse múltiples veces

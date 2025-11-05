@@ -4,13 +4,12 @@ Uso:
 - POST /api/migrations/run - Ejecuta todas las migraciones pendientes
 - GET /api/migrations/status - Verifica el estado de la base de datos
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import text, inspect, Table, Column, String, Integer, Float, Date, Boolean
 from app.config.database import get_db, engine, Base
-from app.models.user import UserRole
-from app.utils.auth import get_current_user
-from typing import Dict, Any, List
+from app.config.settings import settings
+from typing import Dict, Any, List, Optional
 import traceback
 
 router = APIRouter()
@@ -253,21 +252,24 @@ def run_alerts_migrations(db: Session) -> List[str]:
 @router.post("/migrations/run")
 async def run_migrations(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    x_migration_key: Optional[str] = Header(None)
 ):
     """
     Ejecuta todas las migraciones pendientes en la base de datos.
-    Solo accesible para SUPERADMIN.
+    Requiere clave secreta en header X-Migration-Key.
     
     Uso con curl:
     ```bash
     curl -X POST https://tu-dominio.com/api/migrations/run \
-      -H "Authorization: Bearer TU_TOKEN_AQUI"
+      -H "X-Migration-Key: tu-clave-secreta-2024"
     ```
     """
-    # Verificar que sea SUPERADMIN
-    if current_user.get("role") != UserRole.SUPERADMIN.value:
-        raise HTTPException(status_code=403, detail="Solo SUPERADMIN puede ejecutar migraciones")
+    # Verificar clave de migración
+    if not x_migration_key or x_migration_key != settings.migration_secret_key:
+        raise HTTPException(
+            status_code=403, 
+            detail="Clave de migración inválida. Usa el header X-Migration-Key con la clave correcta."
+        )
     
     if migration_status["running"]:
         return {

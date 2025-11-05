@@ -36,12 +36,11 @@ Este endpoint:
 ### 2. Ejecutar Migraciones
 ```bash
 curl -X POST https://pqrs-alcaldia-backend.onrender.com/api/migrations/run \
-  -H "Authorization: Bearer YOUR_SUPERADMIN_TOKEN" \
-  -H "Content-Type: application/json"
+  -H "X-Migration-Key: tu-clave-secreta-2024"
 ```
 
 Este endpoint:
-- 🔒 Requiere autenticación con token de SUPERADMIN
+- 🔒 Requiere clave secreta en header X-Migration-Key
 - Ejecuta todas las migraciones pendientes
 - Crea tablas faltantes
 - Agrega columnas nuevas
@@ -65,24 +64,22 @@ Este endpoint:
 }
 ```
 
-## Obtener Token de SUPERADMIN
+## Configurar Clave de Migración en Render
 
-### Método 1: Login via API
+### Paso 1: Agregar Variable de Entorno
+1. Ve a [Render Dashboard](https://dashboard.render.com)
+2. Selecciona tu servicio backend
+3. Ve a **Environment** → **Environment Variables**
+4. Agrega:
+   - **Key:** `MIGRATION_SECRET_KEY`
+   - **Value:** `tu-clave-secreta-2024` (usa una clave segura)
+5. Guarda los cambios
+
+### Paso 2: Usar la Clave
 ```bash
-curl -X POST https://pqrs-alcaldia-backend.onrender.com/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@tudominio.com",
-    "password": "tu_password"
-  }'
+curl -X POST https://pqrs-alcaldia-backend.onrender.com/api/migrations/run \
+  -H "X-Migration-Key: tu-clave-secreta-2024"
 ```
-
-### Método 2: Desde el Frontend
-1. Ingresa al sistema como SUPERADMIN
-2. Abre las DevTools (F12)
-3. Ve a Application > Local Storage
-4. Busca la clave `authToken`
-5. Copia el valor del token
 
 ## Script Automático (Recomendado)
 
@@ -92,11 +89,11 @@ Usa el script `run_migration_prod.sh` para ejecutar todas las migraciones:
 # Dar permisos de ejecución
 chmod +x run_migration_prod.sh
 
-# Ejecutar con tu token
-./run_migration_prod.sh YOUR_SUPERADMIN_TOKEN
+# Ejecutar con tu clave secreta
+./run_migration_prod.sh tu-clave-secreta-2024
 
 # O especificar URL personalizada
-./run_migration_prod.sh YOUR_TOKEN https://tu-api-custom.com
+./run_migration_prod.sh tu-clave-secreta-2024 https://tu-api-custom.com
 ```
 
 ## Migraciones Incluidas
@@ -126,9 +123,9 @@ chmod +x run_migration_prod.sh
 
 ## Troubleshooting
 
-### Error: "Solo SUPERADMIN puede ejecutar migraciones"
-**Causa:** El token proporcionado no es de un usuario SUPERADMIN.
-**Solución:** Verifica que estés usando el token correcto de un SUPERADMIN.
+### Error: "Clave de migración inválida"
+**Causa:** La clave en el header no coincide con MIGRATION_SECRET_KEY en Render.
+**Solución:** Verifica que estés usando la misma clave configurada en las variables de entorno de Render.
 
 ### Error: "Ya hay una migración en ejecución"
 **Causa:** Otra migración está corriendo o quedó bloqueada.
@@ -161,9 +158,9 @@ chmod +x run_migration_prod.sh
    curl https://pqrs-alcaldia-backend.onrender.com/api/migrations/status
    ```
 
-5. **Ejecutar migraciones:** Con token SUPERADMIN
+5. **Ejecutar migraciones:** Con clave secreta
    ```bash
-   ./run_migration_prod.sh YOUR_TOKEN
+   ./run_migration_prod.sh tu-clave-secreta-2024
    ```
 
 6. **Validar:** Verificar que todo funciona correctamente
