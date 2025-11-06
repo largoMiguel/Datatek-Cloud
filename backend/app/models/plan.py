@@ -73,7 +73,8 @@ class PlanInstitucional(Base):
     descripcion = Column(Text, nullable=False)
     periodo_inicio = Column(Date, nullable=False, index=True)
     periodo_fin = Column(Date, nullable=False, index=True)
-    estado = Column(SQLEnum(EstadoPlan), default=EstadoPlan.FORMULACION, nullable=False, index=True)
+    # Cambio de SQLEnum a String para evitar problemas con valores en mayúsculas
+    estado = Column(String(50), default=EstadoPlan.FORMULACION.value, nullable=False, index=True)
     
     # Avance calculado automáticamente desde los componentes
     porcentaje_avance = Column(Numeric(5, 2), default=0, nullable=False)
@@ -109,7 +110,7 @@ class ComponenteProceso(Base):
     nombre = Column(String(300), nullable=False)
 
     # Estado y avance (se mantiene porcentaje para análisis)
-    estado = Column(SQLEnum(EstadoComponente), default=EstadoComponente.NO_INICIADO, nullable=False, index=True)
+    estado = Column(String(50), default=EstadoComponente.NO_INICIADO.value, nullable=False, index=True)
     porcentaje_avance = Column(Numeric(5, 2), default=0, nullable=False)
     
     # Auditoría
