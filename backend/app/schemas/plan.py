@@ -14,16 +14,16 @@ class PlanInstitucionalBase(BaseModel):
     anio: int = Field(..., ge=2000, le=2100, description="Año del plan")
     nombre: str = Field(..., min_length=5, max_length=300)
     descripcion: str = Field(..., min_length=20)
-    periodo_inicio: date
-    periodo_fin: date
+    fecha_inicio: date
+    fecha_fin: date
     estado: EstadoPlan = EstadoPlan.FORMULACION
     responsable_elaboracion: str = Field(..., min_length=3, max_length=200)
     responsable_aprobacion: Optional[str] = Field(None, max_length=200)
 
-    @field_validator('periodo_fin')
+    @field_validator('fecha_fin')
     @classmethod
     def validar_fechas(cls, v, info):
-        if 'periodo_inicio' in info.data and v <= info.data['periodo_inicio']:
+        if 'fecha_inicio' in info.data and v <= info.data['fecha_inicio']:
             raise ValueError('La fecha de fin debe ser posterior a la fecha de inicio')
         return v
 
@@ -38,8 +38,8 @@ class PlanInstitucionalUpdate(BaseModel):
     anio: Optional[int] = Field(None, ge=2000, le=2100)
     nombre: Optional[str] = Field(None, min_length=5, max_length=300)
     descripcion: Optional[str] = Field(None, min_length=20)
-    periodo_inicio: Optional[date] = None
-    periodo_fin: Optional[date] = None
+    fecha_inicio: Optional[date] = None
+    fecha_fin: Optional[date] = None
     estado: Optional[EstadoPlan] = None
     responsable_elaboracion: Optional[str] = Field(None, min_length=3, max_length=200)
     responsable_aprobacion: Optional[str] = Field(None, max_length=200)

@@ -152,8 +152,8 @@ def puede_registrar_ejecucion(user: User, actividad: Actividad, db: Session) -> 
 def listar_planes(
     estado: Optional[EstadoPlan] = Query(None, description="Filtrar por estado"),
     anio: Optional[int] = Query(None, description="Filtrar por año"),
-    periodo_inicio: Optional[date] = Query(None, description="Filtrar por periodo inicio"),
-    periodo_fin: Optional[date] = Query(None, description="Filtrar por periodo fin"),
+    fecha_inicio: Optional[date] = Query(None, description="Filtrar por fecha inicio"),
+    fecha_fin: Optional[date] = Query(None, description="Filtrar por fecha fin"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _feature: bool = Depends(require_feature_enabled('enable_planes_institucionales'))
@@ -174,13 +174,13 @@ def listar_planes(
     if anio:
         query = query.filter(PlanInstitucional.anio == anio)
     
-    if periodo_inicio:
-        query = query.filter(PlanInstitucional.periodo_inicio >= periodo_inicio)
+    if fecha_inicio:
+        query = query.filter(PlanInstitucional.fecha_inicio >= fecha_inicio)
     
-    if periodo_fin:
-        query = query.filter(PlanInstitucional.periodo_fin <= periodo_fin)
+    if fecha_fin:
+        query = query.filter(PlanInstitucional.fecha_fin <= fecha_fin)
     
-    return query.order_by(PlanInstitucional.anio.desc(), PlanInstitucional.periodo_inicio.desc()).all()
+    return query.order_by(PlanInstitucional.anio.desc(), PlanInstitucional.fecha_inicio.desc()).all()
 
 
 @router.get("/{plan_id}", response_model=plan_schemas.PlanInstitucional)

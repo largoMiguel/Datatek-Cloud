@@ -71,8 +71,8 @@ class PlanInstitucional(Base):
     anio = Column(Integer, nullable=False, index=True)
     nombre = Column(String(300), nullable=False)
     descripcion = Column(Text, nullable=False)
-    periodo_inicio = Column(Date, nullable=False, index=True)
-    periodo_fin = Column(Date, nullable=False, index=True)
+    fecha_inicio = Column(Date, nullable=False, index=True)
+    fecha_fin = Column(Date, nullable=False, index=True)
     # Cambio de SQLEnum a String para evitar problemas con valores en mayúsculas
     estado = Column(String(50), default=EstadoPlan.FORMULACION.value, nullable=False, index=True)
     
