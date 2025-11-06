@@ -257,23 +257,43 @@ async def get_actividades_bulk(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Obtiene actividades para múltiples códigos en una sola consulta."""
-    entity = get_entity_or_404(db, slug)
-    ensure_user_can_manage_entity(current_user, entity)
+    """Obtiene actividades para múltiples códigos en una sola consulta.
+    Límite: máximo 100 códigos por request para evitar timeouts.
+    """
+    try:
+        entity = get_entity_or_404(db, slug)
+        ensure_user_can_manage_entity(current_user, entity)
 
-    codigos = [c for c in (payload.codigos or []) if c]
-    if not codigos:
-        return {"items": {}}
+        codigos = [c for c in (payload.codigos or []) if c]
+        if not codigos:
+            return {"items": {}}
+        
+        # Limitar cantidad de códigos para evitar queries muy pesadas
+        if len(codigos) > 100:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Máximo 100 códigos por request. Divida la consulta en lotes más pequeños."
+            )
 
-    rows = (
-        db.query(PdmActividad)
-        .filter(
-            PdmActividad.entity_id == entity.id,
-            PdmActividad.codigo_indicador_producto.in_(codigos),
+        # Query optimizada con limit para evitar cargar todo en memoria
+        rows = (
+            db.query(PdmActividad)
+            .filter(
+                PdmActividad.entity_id == entity.id,
+                PdmActividad.codigo_indicador_producto.in_(codigos),
+            )
+            .order_by(PdmActividad.codigo_indicador_producto.asc(), PdmActividad.created_at.desc())
+            .limit(1000)  # Límite de seguridad
+            .all()
         )
-        .order_by(PdmActividad.codigo_indicador_producto.asc(), PdmActividad.created_at.desc())
-        .all()
-    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error en actividades/bulk: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error cargando actividades: {str(e)}"
+        )
 
     items: Dict[str, List[ActividadResponse]] = {c: [] for c in codigos}
     for row in rows:

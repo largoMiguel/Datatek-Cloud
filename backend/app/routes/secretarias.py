@@ -18,16 +18,19 @@ async def list_secretarias(
     current_user: User = Depends(get_current_user)
 ):
     """Lista secretarías por entidad.
-    - SUPERADMIN: puede especificar entity_id, de lo contrario retorna [].
+    - SUPERADMIN: puede especificar entity_id o ver todas; si no especifica entity_id, usa su entity_id asignado o retorna todas.
     - ADMIN/SECRETARIO: retorna de su entidad.
     """
     query = db.query(Secretaria)
 
     if current_user.role == UserRole.SUPERADMIN:
         if entity_id:
+            # Filtrar por entity_id específico
             query = query.filter(Secretaria.entity_id == entity_id)
-        else:
-            return []
+        elif current_user.entity_id:
+            # Si el superadmin tiene entity_id asignado, usar ese
+            query = query.filter(Secretaria.entity_id == current_user.entity_id)
+        # Si no tiene entity_id ni se especifica uno, retorna todas (sin filtro)
     else:
         if not current_user.entity_id:
             return []
