@@ -208,6 +208,24 @@ async def create_user(
                 raise HTTPException(status_code=400, detail="user_type inválido (use 'secretario' o 'contratista')")
             normalized_user_type = ut_str
 
+    # Si se proporciona una secretaría, asegurar que existe en la tabla secretarias (idempotente)
+    secretaria_nombre = (user_data.secretaria or '').strip() if user_data.secretaria else None
+    if secretaria_nombre and user_data.entity_id:
+        from app.models.secretaria import Secretaria
+        existing_secretaria = db.query(Secretaria).filter(
+            Secretaria.entity_id == user_data.entity_id,
+            Secretaria.nombre.ilike(secretaria_nombre)
+        ).first()
+        if not existing_secretaria:
+            # Crear automáticamente la secretaría
+            new_secretaria = Secretaria(
+                entity_id=user_data.entity_id,
+                nombre=secretaria_nombre,
+                is_active=True
+            )
+            db.add(new_secretaria)
+            db.flush()  # Asegurar que se crea antes del usuario
+
     # Crear el usuario
     db_user = User(
         username=user_data.username,
@@ -218,7 +236,7 @@ async def create_user(
         entity_id=user_data.entity_id,
         user_type=normalized_user_type,
         allowed_modules=user_data.allowed_modules or [],
-        secretaria=user_data.secretaria,
+        secretaria=secretaria_nombre,
         is_active=True
     )
     
@@ -326,6 +344,26 @@ async def update_user(
             if ut_str not in {UserType.SECRETARIO.value, UserType.CONTRATISTA.value}:
                 raise HTTPException(status_code=400, detail="user_type inválido (use 'secretario' o 'contratista')")
             update_data["user_type"] = ut_str
+
+    # Si se está actualizando la secretaría, asegurar que existe en la tabla secretarias (idempotente)
+    if "secretaria" in update_data:
+        secretaria_nombre = (update_data["secretaria"] or '').strip() if update_data["secretaria"] else None
+        if secretaria_nombre and user.entity_id:
+            from app.models.secretaria import Secretaria
+            existing_secretaria = db.query(Secretaria).filter(
+                Secretaria.entity_id == user.entity_id,
+                Secretaria.nombre.ilike(secretaria_nombre)
+            ).first()
+            if not existing_secretaria:
+                # Crear automáticamente la secretaría
+                new_secretaria = Secretaria(
+                    entity_id=user.entity_id,
+                    nombre=secretaria_nombre,
+                    is_active=True
+                )
+                db.add(new_secretaria)
+                db.flush()  # Asegurar que se crea antes de actualizar usuario
+        update_data["secretaria"] = secretaria_nombre
 
     # Aplicar las actualizaciones
     for field, value in update_data.items():
