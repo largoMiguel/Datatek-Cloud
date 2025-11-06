@@ -99,8 +99,18 @@ def drop_enum_type_safe(db: Session, enum_name: str) -> bool:
         return False
 
 
-def convert_enum_to_text(db: Session, table_name: str, column_name: str, enum_name: str, default_value: str = None) -> bool:
-    """Convierte una columna ENUM a TEXT de forma segura"""
+def convert_enum_to_text(
+    db: Session,
+    table_name: str,
+    column_name: str,
+    enum_name: str,
+    default_value: str = None,
+    set_not_null: bool = False,
+) -> bool:
+    """Convierte una columna ENUM a TEXT de forma segura.
+    - default_value: valor por defecto para la columna (opcional)
+    - set_not_null: si True, aplica NOT NULL; si False, deja la nulabilidad tal cual (recomendado para columnas opcionales)
+    """
     try:
         data_type, udt_name = get_column_type(table_name, column_name, db)
         
@@ -123,8 +133,23 @@ def convert_enum_to_text(db: Session, table_name: str, column_name: str, enum_na
             # Renombrar columna temporal
             db.execute(text(f"ALTER TABLE {table_name} RENAME COLUMN {column_name}_temp TO {column_name}"))
             
-            # Agregar NOT NULL si es necesario
-            db.execute(text(f"ALTER TABLE {table_name} ALTER COLUMN {column_name} SET NOT NULL"))
+            # Agregar NOT NULL si es requerido explícitamente y no hay NULLs
+            if set_not_null:
+                try:
+                    # Verificar si hay NULLs antes de forzar NOT NULL
+                    nulls = db.execute(text(
+                        f"SELECT COUNT(*) FROM {table_name} WHERE {column_name} IS NULL"
+                    )).scalar()
+                    if nulls == 0:
+                        db.execute(text(
+                            f"ALTER TABLE {table_name} ALTER COLUMN {column_name} SET NOT NULL"
+                        ))
+                    else:
+                        log_msg(
+                            f"⚠ No se aplica NOT NULL a {table_name}.{column_name} porque existen {nulls} valores NULL"
+                        )
+                except Exception as e:
+                    log_msg(f"⚠ No se pudo aplicar NOT NULL a {table_name}.{column_name}: {str(e)}")
             
             # Agregar default si se especifica
             if default_value:
@@ -235,8 +260,9 @@ def migrate_users(db: Session) -> List[str]:
     results.append("✓ Tabla users existe")
     
     # Convertir ENUMs a TEXT
-    convert_enum_to_text(db, "users", "role", "userrole", "secretario")
-    convert_enum_to_text(db, "users", "user_type", "usertype")
+    # role debe ser NOT NULL; user_type es opcional (nullable)
+    convert_enum_to_text(db, "users", "role", "userrole", "secretario", set_not_null=True)
+    convert_enum_to_text(db, "users", "user_type", "usertype", set_not_null=False)
     
     # Columnas requeridas
     columns = {
@@ -907,9 +933,90 @@ def migrate_pdm(db: Session) -> List[str]:
             db.rollback()
     else:
         results.append("✓ Tabla pdm_actividades_evidencias existe")
+        # Si existe pero no tiene la columna ejecucion_id (esquema legado), migrar estructura
+        try:
+            has_ejec = column_exists("pdm_actividades_evidencias", "ejecucion_id")
+            has_act = column_exists("pdm_actividades_evidencias", "actividad_id")
+            if not has_ejec:
+                log_msg("Detectado esquema legado de evidencias (sin ejecucion_id). Migrando estructura...")
+                # 1) Agregar columna ejecucion_id (nullable inicialmente)
+                db.execute(text(
+                    "ALTER TABLE pdm_actividades_evidencias ADD COLUMN IF NOT EXISTS ejecucion_id INTEGER"
+                ))
+                db.commit()
+
+                # 2) Asegurar tabla de ejecuciones
+                if not table_exists("pdm_actividades_ejecuciones"):
+                    log_msg("Creando tabla pdm_actividades_ejecuciones para migración...")
+                    db.execute(text("""
+                        CREATE TABLE pdm_actividades_ejecuciones (
+                            id SERIAL PRIMARY KEY,
+                            actividad_id INTEGER NOT NULL,
+                            entity_id INTEGER NOT NULL,
+                            valor_ejecutado_incremento DOUBLE PRECISION DEFAULT 0 NOT NULL,
+                            descripcion VARCHAR(2048),
+                            url_evidencia VARCHAR(512),
+                            registrado_por VARCHAR(256),
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            CONSTRAINT fk_pdm_ejecucion_actividad FOREIGN KEY (actividad_id) 
+                                REFERENCES pdm_actividades(id) ON DELETE CASCADE,
+                            CONSTRAINT fk_pdm_ejecucion_entity FOREIGN KEY (entity_id) 
+                                REFERENCES entities(id) ON DELETE CASCADE
+                        )
+                    """))
+                    db.commit()
+
+                # 3) Crear ejecuciones placeholder por actividad si no existen
+                log_msg("Creando ejecuciones placeholder por actividad (si faltan)...")
+                db.execute(text("""
+                    INSERT INTO pdm_actividades_ejecuciones (actividad_id, entity_id, valor_ejecutado_incremento, descripcion, registrado_por, created_at, updated_at)
+                    SELECT a.id, a.entity_id, 0, 'Migración automática - placeholder', 'Sistema', NOW(), NOW()
+                    FROM pdm_actividades a
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM pdm_actividades_ejecuciones e WHERE e.actividad_id = a.id
+                    )
+                """))
+                db.commit()
+
+                # 4) Rellenar ejecucion_id de evidencias basándose en actividad_id (si existe)
+                if has_act:
+                    log_msg("Asignando ejecucion_id en evidencias basándose en actividad_id...")
+                    db.execute(text("""
+                        UPDATE pdm_actividades_evidencias ev
+                        SET ejecucion_id = e.id
+                        FROM pdm_actividades_ejecuciones e
+                        WHERE e.actividad_id = ev.actividad_id
+                        AND (ev.ejecucion_id IS NULL)
+                    """))
+                    db.commit()
+
+                # 5) Crear FK y NOT NULL si es posible (solo si no hay NULLs)
+                nulls = db.execute(text(
+                    "SELECT COUNT(*) FROM pdm_actividades_evidencias WHERE ejecucion_id IS NULL"
+                )).scalar()
+                if nulls == 0:
+                    log_msg("Aplicando NOT NULL y FK a ejecucion_id en evidencias...")
+                    try:
+                        db.execute(text(
+                            "ALTER TABLE pdm_actividades_evidencias ALTER COLUMN ejecucion_id SET NOT NULL"
+                        ))
+                        db.execute(text(
+                            "ALTER TABLE pdm_actividades_evidencias ADD CONSTRAINT fk_pdm_evidencia_ejecucion FOREIGN KEY (ejecucion_id) REFERENCES pdm_actividades_ejecuciones(id) ON DELETE CASCADE"
+                        ))
+                        db.commit()
+                    except Exception as e:
+                        log_msg(f"⚠ No se pudo aplicar NOT NULL/FK en ejecucion_id: {str(e)}")
+                        db.rollback()
+                else:
+                    log_msg(f"⚠ ejecucion_id tiene {nulls} filas NULL; se mantendrá nullable por ahora")
+        except Exception as e:
+            log_msg(f"⚠ Error migrando estructura de evidencias PDM: {str(e)}")
+            db.rollback()
     
-    # Índices
-    create_index_safe(db, "idx_pdm_evidencia_ejecucion", "pdm_actividades_evidencias", "ejecucion_id")
+    # Índices (solo si existe la columna)
+    if column_exists("pdm_actividades_evidencias", "ejecucion_id"):
+        create_index_safe(db, "idx_pdm_evidencia_ejecucion", "pdm_actividades_evidencias", "ejecucion_id")
     create_index_safe(db, "idx_pdm_evidencia_entity", "pdm_actividades_evidencias", "entity_id")
     
     results.append("✓ Migración de PDM completada")
