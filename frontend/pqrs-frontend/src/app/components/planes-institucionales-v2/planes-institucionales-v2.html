@@ -119,8 +119,8 @@
                         <div class="plan-meta mb-3">
                             <div class="meta-item">
                                 <i class="fas fa-calendar"></i>
-                                <span>{{ formatearFecha(plan.periodo_inicio) }} - {{
-                                    formatearFecha(plan.periodo_fin)
+                                <span>{{ formatearFecha(plan.fecha_inicio) }} - {{
+                                    formatearFecha(plan.fecha_fin)
                                     }}</span>
                             </div>
 
@@ -172,8 +172,8 @@
                         <div class="plan-details">
                             <span class="me-3">
                                 <i class="fas fa-calendar"></i>
-                                {{ formatearFecha(planSeleccionado.periodo_inicio) }} - {{
-                                formatearFecha(planSeleccionado.periodo_fin) }}
+                                {{ formatearFecha(planSeleccionado.fecha_inicio) }} - {{
+                                formatearFecha(planSeleccionado.fecha_fin) }}
                             </span>
                             <span [class]="BADGE_CLASS_ESTADO_PLAN[planSeleccionado.estado]">
                                 {{ LABELS_ESTADO_PLAN[planSeleccionado.estado] }}
@@ -540,8 +540,8 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Fecha Inicio *</label>
-                                <input type="date" class="form-control" [(ngModel)]="planForm.periodo_inicio"
-                                    name="periodo_inicio" required #iniCtrl="ngModel"
+                                <input type="date" class="form-control" [(ngModel)]="planForm.fecha_inicio"
+                                    name="fecha_inicio" required #iniCtrl="ngModel"
                                     [ngClass]="{'is-invalid': iniCtrl.invalid && iniCtrl.touched}">
                                 <div class="invalid-feedback" *ngIf="iniCtrl.invalid && iniCtrl.touched">La
                                     fecha de
@@ -549,8 +549,8 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Fecha Fin *</label>
-                                <input type="date" class="form-control" [(ngModel)]="planForm.periodo_fin"
-                                    name="periodo_fin" required #finCtrl="ngModel"
+                                <input type="date" class="form-control" [(ngModel)]="planForm.fecha_fin"
+                                    name="fecha_fin" required #finCtrl="ngModel"
                                     [ngClass]="{'is-invalid': finCtrl.invalid && finCtrl.touched}">
                                 <div class="invalid-feedback" *ngIf="finCtrl.invalid && finCtrl.touched">La
                                     fecha de

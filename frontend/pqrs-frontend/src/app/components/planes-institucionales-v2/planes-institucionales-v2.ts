@@ -347,8 +347,8 @@ export class PlanesInstitucionalesV2Component implements OnInit, OnDestroy {
                 anio: plan.anio,
                 nombre: plan.nombre,
                 descripcion: plan.descripcion,
-                periodo_inicio: (plan.periodo_inicio || '').slice(0, 10),
-                periodo_fin: (plan.periodo_fin || '').slice(0, 10),
+                fecha_inicio: (plan.fecha_inicio || '').slice(0, 10),
+                fecha_fin: (plan.fecha_fin || '').slice(0, 10),
                 estado: plan.estado,
                 responsable_elaboracion: plan.responsable_elaboracion
             } as any;

@@ -28,12 +28,12 @@ export class PlanV2Service {
     private baseUrl = `${environment.apiUrl}/planes`;
 
     // ============== PLANES ==============
-    listarPlanes(options?: { estado?: EstadoPlan; anio?: number; periodo_inicio?: string; periodo_fin?: string }): Observable<PlanInstitucional[]> {
+    listarPlanes(options?: { estado?: EstadoPlan; anio?: number; fecha_inicio?: string; fecha_fin?: string }): Observable<PlanInstitucional[]> {
         let params = new HttpParams();
         if (options?.estado) params = params.set('estado', options.estado);
-        if (options?.anio != null) params = params.set('anio', String(options.anio));
-        if (options?.periodo_inicio) params = params.set('periodo_inicio', options.periodo_inicio);
-        if (options?.periodo_fin) params = params.set('periodo_fin', options.periodo_fin);
+        if (options?.anio) params = params.set('anio', options.anio.toString());
+        if (options?.fecha_inicio) params = params.set('fecha_inicio', options.fecha_inicio);
+        if (options?.fecha_fin) params = params.set('fecha_fin', options.fecha_fin);
         return this.http.get<PlanInstitucional[]>(`${this.baseUrl}/`, { params });
     }
 

@@ -25,8 +25,8 @@ export interface PlanInstitucional {
     anio: number;
     nombre: string;
     descripcion: string;
-    periodo_inicio: string;
-    periodo_fin: string;
+    fecha_inicio: string;
+    fecha_fin: string;
     estado: EstadoPlan;
     responsable_elaboracion: string;
     porcentaje_avance: number;
@@ -38,8 +38,8 @@ export interface PlanInstitucionalCreate {
     anio: number;
     nombre: string;
     descripcion: string;
-    periodo_inicio: string; // YYYY-MM-DD
-    periodo_fin: string;    // YYYY-MM-DD
+    fecha_inicio: string; // YYYY-MM-DD
+    fecha_fin: string;    // YYYY-MM-DD
     estado: EstadoPlan;
     responsable_elaboracion: string;
 }
