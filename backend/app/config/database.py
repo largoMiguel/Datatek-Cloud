@@ -23,7 +23,7 @@ if "sqlite" in db_url:
 else:
     # PostgreSQL - Configuración para Render y producción
     connect_args = {
-        "connect_timeout": 10,
+        "connect_timeout": 30,  # Aumentado para dar más tiempo en free tier
         "keepalives": 1,
         "keepalives_idle": 30,
         "keepalives_interval": 10,
@@ -36,10 +36,10 @@ engine = create_engine(
     db_url,
     connect_args=connect_args,
     pool_pre_ping=True,      # Verifica la conexión antes de usarla
-    pool_recycle=300,        # Recicla conexiones cada 5 min (más agresivo para evitar timeouts)
-    pool_size=5,             # Reducido para free tier de Render
-    max_overflow=10,         # Reducido para evitar saturar el servidor
-    pool_timeout=30,         # Timeout esperando conexión del pool
+    pool_recycle=300,        # Recicla conexiones cada 5 min
+    pool_size=3,             # Muy reducido para free tier de Render (máximo 5 conexiones totales)
+    max_overflow=2,          # Solo 2 adicionales para evitar saturar
+    pool_timeout=60,         # Timeout más largo para esperar conexión disponible
     echo=False               # No mostrar SQL en logs (cambiar a True para debug)
 )
 
@@ -50,24 +50,6 @@ Base = declarative_base()
 def get_db():
     db = SessionLocal()
     try:
-        # Verificar que la conexión funciona antes de usarla
-        try:
-            db.execute("SELECT 1")
-        except (OperationalError, SQLAlchemyError) as e:
-            print(f"⚠️ Error de conexión inicial, reintentando: {str(e)}")
-            db.close()
-            # Reintentar una vez
-            db = SessionLocal()
-            try:
-                db.execute("SELECT 1")
-            except (OperationalError, SQLAlchemyError) as retry_error:
-                print(f"❌ Error de conexión en reintento: {str(retry_error)}")
-                db.close()
-                raise HTTPException(
-                    status_code=503,
-                    detail="Servicio de base de datos temporalmente no disponible. Intenta nuevamente en unos segundos."
-                )
-        
         yield db
     finally:
         # Algunos proveedores pueden cerrar la conexión de forma abrupta.
