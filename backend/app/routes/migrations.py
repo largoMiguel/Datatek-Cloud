@@ -259,7 +259,7 @@ def migrate_users(db: Session) -> List[str]:
     
     results.append("✓ Tabla users existe")
     
-    # Convertir ENUMs a TEXT
+    # Convertir ENUMs a TEXT (si aplica)
     # role debe ser NOT NULL; user_type es opcional (nullable)
     convert_enum_to_text(db, "users", "role", "userrole", "secretario", set_not_null=True)
     convert_enum_to_text(db, "users", "user_type", "usertype", set_not_null=False)
@@ -286,6 +286,16 @@ def migrate_users(db: Session) -> List[str]:
     for col, col_type in columns.items():
         ensure_column(db, "users", col, col_type)
     
+    # Normalizar datos a minúsculas para evitar conflictos de mapeo (idempotente)
+    try:
+        db.execute(text("UPDATE users SET role = LOWER(role) WHERE role IS NOT NULL"))
+        db.execute(text("UPDATE users SET user_type = LOWER(user_type) WHERE user_type IS NOT NULL"))
+        db.commit()
+        results.append("✓ Normalizados users.role y users.user_type a minúsculas")
+    except Exception as e:
+        log_msg(f"⚠ No se pudo normalizar roles a minúsculas: {str(e)}")
+        db.rollback()
+
     # Índices
     create_index_safe(db, "idx_users_username", "users", "username")
     create_index_safe(db, "idx_users_email", "users", "email")

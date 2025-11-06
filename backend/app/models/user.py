@@ -22,13 +22,14 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     full_name = Column(String, nullable=False)
     hashed_password = Column(String, nullable=False)
-    # Usar los NOMBRES del Enum (SUPERADMIN, ADMIN, SECRETARIO, CIUDADANO) para coincidir con el tipo ENUM de Postgres
+    # Usar los VALORES en minúscula del Enum para almacenar en la BD (coincide con el frontend)
+    # native_enum=False evita depender de tipos ENUM en Postgres y mapea contra texto
     role = Column(
         Enum(
             UserRole,
             name="userrole",
-            native_enum=True,
-            values_callable=lambda enum_cls: [e.name for e in enum_cls]
+            native_enum=False,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls]
         ),
         nullable=False,
         default=UserRole.SECRETARIO
