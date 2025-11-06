@@ -160,45 +160,58 @@ def run_planes_migrations(db: Session) -> List[str]:
             
             # CRITICAL: Convertir ENUM estadoplan a TEXT y actualizar valores
             try:
-                # Verificar si estado es ENUM
-                inspector = inspect(engine)
-                columns = inspector.get_columns("planes_institucionales")
-                estado_col = next((c for c in columns if c["name"] == "estado"), None)
+                # Verificar si estado es ENUM usando información del sistema
+                result = db.execute(text("""
+                    SELECT data_type, udt_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'planes_institucionales' 
+                    AND column_name = 'estado'
+                """)).fetchone()
                 
-                if estado_col and str(estado_col.get("type", "")).startswith("ENUM"):
-                    log_migration("Convirtiendo columna estado de ENUM a TEXT...")
+                if result:
+                    data_type, udt_name = result
+                    log_migration(f"Estado columna: data_type={data_type}, udt_name={udt_name}")
                     
-                    # Paso 1: Crear columna temporal
-                    db.execute(text("ALTER TABLE planes_institucionales ADD COLUMN estado_temp TEXT"))
-                    
-                    # Paso 2: Copiar valores actualizando el formato
-                    db.execute(text("""
-                        UPDATE planes_institucionales 
-                        SET estado_temp = CASE 
-                            WHEN estado::text = 'formulacion' THEN 'formulacion'
-                            WHEN estado::text = 'aprobado' THEN 'aprobado'
-                            WHEN estado::text = 'en_ejecucion' THEN 'en_ejecucion'
-                            WHEN estado::text = 'EN_EJECUCION' THEN 'en_ejecucion'
-                            WHEN estado::text = 'finalizado' THEN 'finalizado'
-                            WHEN estado::text = 'suspendido' THEN 'suspendido'
-                            WHEN estado::text = 'cancelado' THEN 'cancelado'
-                            ELSE 'formulacion'
-                        END
-                    """))
-                    
-                    # Paso 3: Eliminar columna vieja
-                    db.execute(text("ALTER TABLE planes_institucionales DROP COLUMN estado"))
-                    
-                    # Paso 4: Renombrar columna temporal
-                    db.execute(text("ALTER TABLE planes_institucionales RENAME COLUMN estado_temp TO estado"))
-                    
-                    # Paso 5: Eliminar el tipo ENUM si existe
-                    db.execute(text("DROP TYPE IF EXISTS estadoplan CASCADE"))
-                    
-                    db.commit()
-                    results.append("✓ Columna estado convertida de ENUM a TEXT")
+                    # Si es USER-DEFINED o el udt_name es estadoplan, convertir
+                    if data_type == 'USER-DEFINED' or udt_name == 'estadoplan':
+                        log_migration("Convirtiendo columna estado de ENUM a TEXT...")
+                        
+                        # Paso 1: Crear columna temporal
+                        db.execute(text("ALTER TABLE planes_institucionales ADD COLUMN IF NOT EXISTS estado_temp TEXT"))
+                        
+                        # Paso 2: Copiar valores normalizando a minúsculas con guión bajo
+                        db.execute(text("""
+                            UPDATE planes_institucionales 
+                            SET estado_temp = CASE 
+                                WHEN LOWER(estado::text) = 'formulacion' THEN 'formulacion'
+                                WHEN LOWER(estado::text) = 'aprobado' THEN 'aprobado'
+                                WHEN LOWER(estado::text) = 'en_ejecucion' THEN 'en_ejecucion'
+                                WHEN LOWER(estado::text) = 'finalizado' THEN 'finalizado'
+                                WHEN LOWER(estado::text) = 'suspendido' THEN 'suspendido'
+                                WHEN LOWER(estado::text) = 'cancelado' THEN 'cancelado'
+                                ELSE 'formulacion'
+                            END
+                            WHERE estado_temp IS NULL
+                        """))
+                        
+                        # Paso 3: Eliminar columna vieja con CASCADE
+                        db.execute(text("ALTER TABLE planes_institucionales DROP COLUMN estado CASCADE"))
+                        
+                        # Paso 4: Renombrar columna temporal
+                        db.execute(text("ALTER TABLE planes_institucionales RENAME COLUMN estado_temp TO estado"))
+                        
+                        # Paso 5: Agregar constraint NOT NULL
+                        db.execute(text("ALTER TABLE planes_institucionales ALTER COLUMN estado SET NOT NULL"))
+                        
+                        # Paso 6: Eliminar el tipo ENUM si existe (CASCADE para eliminar dependencias)
+                        db.execute(text("DROP TYPE IF EXISTS estadoplan CASCADE"))
+                        
+                        db.commit()
+                        results.append("✓ Columna estado convertida de ENUM a TEXT")
+                    else:
+                        results.append(f"✓ Columna estado ya es {data_type} (no usa ENUM)")
                 else:
-                    results.append("✓ Columna estado ya es TEXT")
+                    results.append("⚠ No se encontró columna estado")
             except Exception as e:
                 log_migration(f"Error al convertir estado: {str(e)}")
                 db.rollback()
@@ -254,6 +267,39 @@ def run_planes_migrations(db: Session) -> List[str]:
         # ===================== Componentes / Procesos =====================
         if check_table_exists("componentes_procesos"):
             results.append("✓ Tabla componentes_procesos existe")
+            
+            # Convertir ENUM estadocomponente a TEXT si existe
+            try:
+                result = db.execute(text("""
+                    SELECT data_type, udt_name 
+                    FROM information_schema.columns 
+                    WHERE table_name = 'componentes_procesos' 
+                    AND column_name = 'estado'
+                """)).fetchone()
+                
+                if result:
+                    data_type, udt_name = result
+                    if data_type == 'USER-DEFINED' or udt_name == 'estadocomponente':
+                        log_migration("Convirtiendo componentes_procesos.estado de ENUM a TEXT...")
+                        
+                        db.execute(text("ALTER TABLE componentes_procesos ADD COLUMN IF NOT EXISTS estado_temp TEXT"))
+                        db.execute(text("""
+                            UPDATE componentes_procesos 
+                            SET estado_temp = LOWER(estado::text)
+                            WHERE estado_temp IS NULL
+                        """))
+                        db.execute(text("ALTER TABLE componentes_procesos DROP COLUMN estado CASCADE"))
+                        db.execute(text("ALTER TABLE componentes_procesos RENAME COLUMN estado_temp TO estado"))
+                        db.execute(text("ALTER TABLE componentes_procesos ALTER COLUMN estado SET NOT NULL"))
+                        db.execute(text("DROP TYPE IF EXISTS estadocomponente CASCADE"))
+                        
+                        db.commit()
+                        results.append("✓ Columna componentes_procesos.estado convertida a TEXT")
+                    else:
+                        results.append(f"✓ Columna componentes_procesos.estado ya es {data_type}")
+            except Exception as e:
+                log_migration(f"Error al convertir componentes_procesos.estado: {str(e)}")
+                results.append(f"⚠ Error: {str(e)}")
 
             columnas_comp = {
                 "nombre": "TEXT",
