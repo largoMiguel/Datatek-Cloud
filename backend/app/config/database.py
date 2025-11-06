@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.exc import OperationalError, SQLAlchemyError
+from fastapi import HTTPException
 from app.config.settings import settings
 
 # Resolver ruta SQLite relativa a absoluta basada en la carpeta backend
@@ -34,11 +35,12 @@ else:
 engine = create_engine(
     db_url,
     connect_args=connect_args,
-    pool_pre_ping=True,  # Verifica la conexión antes de usarla
-    pool_recycle=900,    # Recicla conexiones cada 15 min para evitar timeouts de idle
-    pool_size=10,        # Tamaño del pool
-    max_overflow=20,     # Conexiones adicionales permitidas
-    echo=False           # No mostrar SQL en logs (cambiar a True para debug)
+    pool_pre_ping=True,      # Verifica la conexión antes de usarla
+    pool_recycle=300,        # Recicla conexiones cada 5 min (más agresivo para evitar timeouts)
+    pool_size=5,             # Reducido para free tier de Render
+    max_overflow=10,         # Reducido para evitar saturar el servidor
+    pool_timeout=30,         # Timeout esperando conexión del pool
+    echo=False               # No mostrar SQL en logs (cambiar a True para debug)
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -48,6 +50,24 @@ Base = declarative_base()
 def get_db():
     db = SessionLocal()
     try:
+        # Verificar que la conexión funciona antes de usarla
+        try:
+            db.execute("SELECT 1")
+        except (OperationalError, SQLAlchemyError) as e:
+            print(f"⚠️ Error de conexión inicial, reintentando: {str(e)}")
+            db.close()
+            # Reintentar una vez
+            db = SessionLocal()
+            try:
+                db.execute("SELECT 1")
+            except (OperationalError, SQLAlchemyError) as retry_error:
+                print(f"❌ Error de conexión en reintento: {str(retry_error)}")
+                db.close()
+                raise HTTPException(
+                    status_code=503,
+                    detail="Servicio de base de datos temporalmente no disponible. Intenta nuevamente en unos segundos."
+                )
+        
         yield db
     finally:
         # Algunos proveedores pueden cerrar la conexión de forma abrupta.

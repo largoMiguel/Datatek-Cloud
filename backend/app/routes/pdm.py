@@ -1015,30 +1015,46 @@ async def download_excel(
     """
     Descarga el archivo Excel almacenado en la base de datos.
     """
-    entity = get_entity_or_404(db, slug)
-    ensure_user_can_manage_entity(current_user, entity)
+    try:
+        entity = get_entity_or_404(db, slug)
+        ensure_user_can_manage_entity(current_user, entity)
 
-    archivo = db.query(PdmArchivoExcel).filter(
-        PdmArchivoExcel.entity_id == entity.id
-    ).first()
+        archivo = db.query(PdmArchivoExcel).filter(
+            PdmArchivoExcel.entity_id == entity.id
+        ).first()
 
-    if not archivo:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No se ha cargado ningún archivo Excel para esta entidad"
+        if not archivo:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No se ha cargado ningún archivo Excel para esta entidad"
+            )
+
+        # Copiar contenido a memoria y cerrar sesión DB antes de streaming
+        contenido_bytes = bytes(archivo.contenido) if archivo.contenido else b''
+        nombre_archivo = archivo.nombre_archivo or "archivo.xlsx"
+        
+        # Cerrar explícitamente la sesión DB antes del streaming
+        db.close()
+        
+        # Crear un stream del contenido
+        excel_stream = BytesIO(contenido_bytes)
+        excel_stream.seek(0)
+
+        return StreamingResponse(
+            excel_stream,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={
+                "Content-Disposition": f"attachment; filename={nombre_archivo}"
+            }
         )
-
-    # Crear un stream del contenido
-    excel_stream = BytesIO(archivo.contenido)
-    excel_stream.seek(0)
-
-    return StreamingResponse(
-        excel_stream,
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={
-            "Content-Disposition": f"attachment; filename={archivo.nombre_archivo}"
-        }
-    )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Error en download_excel: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error descargando archivo: {str(e)}"
+        )
 
 
 @router.delete("/{slug}/delete-excel", status_code=status.HTTP_204_NO_CONTENT)
