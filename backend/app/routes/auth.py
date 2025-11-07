@@ -287,7 +287,7 @@ async def initialize_superadmin(db: Session = Depends(get_db)):
                     UPDATE users
                     SET hashed_password = :hp,
                         is_active = TRUE,
-                        role = 'SUPERADMIN'
+                        role = 'superadmin'
                     WHERE id = :id
                     """
                 ),
@@ -312,7 +312,7 @@ async def initialize_superadmin(db: Session = Depends(get_db)):
                     entity_id, secretaria, cedula, telefono, direccion,
                     is_active
                 ) VALUES (
-                    :u, :e, :fn, :hp, 'SUPERADMIN',
+                    :u, :e, :fn, :hp, 'superadmin',
                     NULL, NULL, NULL, NULL, NULL,
                     TRUE
                 )
