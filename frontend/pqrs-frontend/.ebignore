@@ -1,0 +1,5 @@
+# Ignorar todo
+*
+
+# Excepto la carpeta de la app Node.js
+!frontend/pqrs-frontend/**
